@@ -1,6 +1,6 @@
 # Phase 6 — results (player)
 
-Status (2026-10-28): **built; device verification pending** (owner runs real workouts).
+Status (2026-10-28 evening): **GO** — first real run on the owner's phone: "this is sick, the player works really cool". The 5-workout count accrues in daily use.
 
 ## What was built
 - `src/player/timeline.ts` (pure, tested): saved workout + framework → steps. Blocks in order, rounds
@@ -19,7 +19,7 @@ Status (2026-10-28): **built; device verification pending** (owner runs real wor
 ## Acceptance
 | Criterion | Result |
 |---|---|
-| Owner completes 5 real workouts without touching the phone except start/end | _pending — owner_ |
+| Owner completes 5 real workouts without touching the phone except start/end | **first run done on device, hands-free flow confirmed**; count continues in daily use (sessions are recorded) |
 
 ## Notes
 - Reps-based steps count down an *estimate*; tapping skip ends them early. Adaptive dosage from

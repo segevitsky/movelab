@@ -149,14 +149,15 @@ export function fitTime(w: GenWorkout, ctx: GenContext): GenWorkout {
       items = items.filter((i) => slotKey(i.blockId, i.slotId) !== k);
     }
   }
-  // 2. scale dosages
+  // 2. scale dosages — but never inflate a workout that is short because cards are missing
   const base = current();
   if (base > 0) {
-    const f = Math.min(1.5, Math.max(0.5, target / base));
+    const up = w.unfilled.length === 0 ? 1.25 : 1.0;
+    const f = Math.min(up, Math.max(0.5, target / base));
     if (Math.abs(1 - f) > 0.02) {
       items = items.map((i) => {
         const ex = byId.get(i.exerciseId);
-        const value = i.dosage.type === 'time' ? Math.max(10, Math.round((i.dosage.value * f) / 5) * 5) : Math.max(3, Math.round(i.dosage.value * f));
+        const value = i.dosage.type === 'time' ? Math.min(120, Math.max(10, Math.round((i.dosage.value * f) / 5) * 5)) : Math.min(20, Math.max(3, Math.round(i.dosage.value * f)));
         const dosage = { ...i.dosage, value };
         return { ...i, dosage, seconds: itemSeconds(ex, dosage) };
       });
@@ -196,5 +197,6 @@ export function explain(w: GenWorkout, ctx: GenContext): string {
   }
   if (w.unfilled.length) parts.push(`no card yet for ${w.unfilled.map((u) => u.tags[0]).join(', ')}`);
   const minutes = Math.round(w.totalSeconds / 60);
+  if (ctx.inputs.timeAvailableMin && minutes < ctx.inputs.timeAvailableMin * 0.8) parts.push(`shorter than ${ctx.inputs.timeAvailableMin} min until more cards exist`);
   return `${[...slotsUsed].slice(0, 4).join(' + ')} today · ${parts.join(' · ')} · ≈ ${minutes} min`;
 }

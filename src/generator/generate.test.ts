@@ -67,8 +67,8 @@ describe('generator properties (200 random libraries)', () => {
       const total = totalSeconds(w, segev.blocks.blocks);
       const unscaled = generate(ctxFor(trial, lib, [], {}));
       const base = totalSeconds(unscaled, segev.blocks.blocks);
-      // reachable with 0.5×…1.5× scaling + optional drop?
-      if (base * 0.5 <= minutes * 60 * 1.1 && base * 1.5 >= minutes * 60 * 0.9) {
+      // reachable with 0.5×…1.25× scaling + optional drop (and the 120 s / 20-rep caps)?
+      if (base * 0.5 <= minutes * 60 * 1.1 && base * 1.25 >= minutes * 60 * 0.9) {
         expect(Math.abs(total - minutes * 60) / (minutes * 60)).toBeLessThanOrEqual(0.1);
         checked++;
       }

@@ -5,7 +5,7 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
 import { clipFromExercise } from '../../src/db/repo';
-import { loadGenContext, recentWorkouts, saveWorkout } from '../../src/db/workoutRepo';
+import { deleteWorkout, loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
 import type { Workout } from '../../src/db/schema';
 import type { WorkoutInputs } from '../../src/db/types';
 import { SLOTS, type Slot } from '../../src/db/vocab';
@@ -246,14 +246,21 @@ export default function Today() {
         <View style={[styles.panel, shadow.card]}>
           <Text style={styles.label}>Recent workouts</Text>
           {recentList.map((r: Workout) => (
-            <Pressable key={r.id} style={styles.recentRow} onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: r.id } })}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{new Date(r.createdAt).toLocaleDateString()} · {frameworks?.find((f) => f.id === r.frameworkId)?.name ?? 'workout'}</Text>
-                <Text style={styles.small} numberOfLines={1}>{r.why ?? `${r.items.length} items`}</Text>
-              </View>
-              <Ionicons name="play-circle" size={28} color={colors.accent} />
-            </Pressable>
+            <SwipeRow key={r.id} actions={[{ label: 'Delete', icon: 'trash-outline', color: colors.danger, onPress: () => Alert.alert('Delete this workout?', 'It leaves your history too.', [{ text: 'Cancel' }, { text: 'Delete', style: 'destructive', onPress: () => deleteWorkout(db, r.id) }]) }]}>
+              <Pressable
+                style={styles.recentRow}
+                onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: r.id } })}
+                onLongPress={() => Alert.alert('Delete this workout?', 'It leaves your history too.', [{ text: 'Cancel' }, { text: 'Delete', style: 'destructive', onPress: () => deleteWorkout(db, r.id) }])}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>{new Date(r.createdAt).toLocaleDateString()} · {frameworks?.find((f) => f.id === r.frameworkId)?.name ?? 'workout'}</Text>
+                  <Text style={styles.small} numberOfLines={1}>{r.why ?? `${r.items.length} items`}</Text>
+                </View>
+                <Ionicons name="play-circle" size={28} color={colors.accent} />
+              </Pressable>
+            </SwipeRow>
           ))}
+          <Text style={styles.small}>swipe left or long-press to delete</Text>
         </View>
       )}
     </ScrollView>

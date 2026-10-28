@@ -85,3 +85,9 @@ export async function endSession(db: Db, id: string, feedback: SessionFeedback, 
 export async function toggleFavourite(db: Db, id: string, value: boolean) {
   await db.update(workout).set({ favourite: value }).where(eq(workout.id, id));
 }
+
+/** Delete a workout and its sessions (history for the generator shrinks accordingly). */
+export async function deleteWorkout(db: Db, id: string) {
+  await db.delete(session).where(eq(session.workoutId, id));
+  await db.delete(workout).where(eq(workout.id, id));
+}

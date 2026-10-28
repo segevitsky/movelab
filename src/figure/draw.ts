@@ -17,7 +17,7 @@ export const COLORS = {
   floorLine: '#dad3c7',
   horizon: '#ded8ce',
   shadow: '#d4ccbf',
-  accent: '#d85a30',
+  accent: '#c9a12f',
 } as const;
 
 type Side = { sh: number; el: number; wr: number; hp: number; kn: number; an: number; idx: 0 | 1 };

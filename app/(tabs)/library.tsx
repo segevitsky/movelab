@@ -3,12 +3,14 @@ import { Dimensions, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInpu
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { desc } from 'drizzle-orm';
+import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
 import { clipFromExercise, filterExercises } from '../../src/db/repo';
 import { EQUIPMENT, PATTERNS, SLOTS } from '../../src/db/vocab';
 import { useFilters } from '../../src/state/filters';
 import { FigureCard } from '../../src/figure';
-import { Button, Chip } from '../../src/ui/Button';
+import { Chip, Tag } from '../../src/ui/Button';
+import { colors, patternColor, radius, shadow, slotColor } from '../../src/ui/theme';
 import type { Exercise } from '../../src/db/schema';
 
 const COLS = 2;
@@ -26,21 +28,27 @@ export default function Library() {
   }, [params.pattern, params.slot, params.equipment, params.text]);
   const rows = useMemo(() => filterExercises(data ?? [], { pattern: f.pattern, slot: f.slot, equipment: f.equipment, text: f.text }), [data, f.pattern, f.slot, f.equipment, f.text]);
   const W = Dimensions.get('window').width;
-  const cardW = Math.floor((W - 16 * 2 - 10 * (COLS - 1)) / COLS);
+  const cardW = Math.floor((W - 16 * 2 - 12 * (COLS - 1)) / COLS);
+  const active = !!(f.pattern || f.slot || f.equipment || f.text);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={styles.filters}>
-        <TextInput style={styles.search} placeholder="Search name or alias" value={f.text} onChangeText={(t) => f.set({ text: t })} autoCorrect={false} />
+        <View style={styles.searchRow}>
+          <Ionicons name="search" size={16} color={colors.muted} />
+          <TextInput style={styles.search} placeholder="Search name or alias" placeholderTextColor={colors.muted} value={f.text} onChangeText={(t) => f.set({ text: t })} autoCorrect={false} />
+          {active && (
+            <Pressable onPress={f.clear} hitSlop={8}><Ionicons name="close-circle" size={18} color={colors.muted} /></Pressable>
+          )}
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {PATTERNS.map((p) => <Chip key={p} label={p} on={f.pattern === p} onPress={() => f.set({ pattern: f.pattern === p ? null : p })} />)}
+          {PATTERNS.map((p) => <Chip key={p} label={p} color={patternColor[p]} on={f.pattern === p} onPress={() => f.set({ pattern: f.pattern === p ? null : p })} />)}
         </ScrollView>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {SLOTS.map((s) => <Chip key={s} label={`slot: ${s}`} on={f.slot === s} onPress={() => f.set({ slot: f.slot === s ? null : s })} />)}
+          {SLOTS.map((s) => <Chip key={s} label={s} color={slotColor[s] ?? colors.inkSoft} on={f.slot === s} onPress={() => f.set({ slot: f.slot === s ? null : s })} />)}
         </ScrollView>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {EQUIPMENT.map((e) => <Chip key={e} label={e} on={f.equipment === e} onPress={() => f.set({ equipment: f.equipment === e ? null : e })} />)}
-          {(f.pattern || f.slot || f.equipment || f.text) ? <Chip label="clear ✕" on={false} onPress={f.clear} /> : null}
+          {EQUIPMENT.map((e) => <Chip key={e} label={e} color={colors.muted} on={f.equipment === e} onPress={() => f.set({ equipment: f.equipment === e ? null : e })} />)}
         </ScrollView>
       </View>
       <FlatList
@@ -49,50 +57,75 @@ export default function Library() {
         numColumns={COLS}
         keyExtractor={(e) => e.id}
         contentContainerStyle={styles.grid}
-        columnWrapperStyle={{ gap: 10 }}
+        columnWrapperStyle={{ gap: 12 }}
         renderItem={({ item }) => <ExerciseTile e={item} width={cardW} onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: item.id } })} />}
         ListEmptyComponent={
-          <View style={{ padding: 24, gap: 8 }}>
-            <Text style={{ color: '#666' }}>{data && data.length > 0 ? 'Nothing matches these filters.' : 'Your library is empty. Add an exercise, or capture a reel from the Dev tab.'}</Text>
+          <View style={styles.empty}>
+            <Ionicons name={data && data.length > 0 ? 'filter-outline' : 'albums-outline'} size={36} color={colors.muted} />
+            <Text style={styles.emptyText}>{data && data.length > 0 ? 'Nothing matches these filters.' : 'Your library is empty.\nAdd an exercise, or capture a reel from the Dev tab.'}</Text>
           </View>
         }
         ListFooterComponent={<Text style={styles.count}>{rows.length} of {data?.length ?? 0} exercises</Text>}
         initialNumToRender={6}
         windowSize={5}
       />
-      <View style={styles.fab}>
-        <Button title="+ Add exercise" onPress={() => router.push('/exercise/new')} />
-      </View>
+      <Pressable style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85 }]} onPress={() => router.push('/exercise/new')}>
+        <Ionicons name="add" size={26} color="#fff" />
+      </Pressable>
     </View>
   );
 }
 
+/** Tags shown on a tile: pattern first, then slots that differ from it. */
+export function tileTags(e: Pick<Exercise, 'pattern' | 'slots'>) {
+  const out: { label: string; color: string }[] = [];
+  if (e.pattern) out.push({ label: e.pattern, color: patternColor[e.pattern] });
+  for (const s of e.slots) if (s !== e.pattern && !out.some((t) => t.label === s)) out.push({ label: s, color: slotColor[s] ?? colors.muted });
+  return out.slice(0, 3);
+}
+
 function ExerciseTile({ e, width, onPress }: { e: Exercise; width: number; onPress: () => void }) {
   const clip = useMemo(() => clipFromExercise(e), [e.figure]);
-  const h = Math.round(width * 1.15);
+  const h = Math.round(width * 1.1);
+  const stripe = e.pattern ? patternColor[e.pattern] : colors.line;
   return (
-    <Pressable onPress={onPress} style={[styles.tile, { width }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, { width }, shadow.card, pressed && { transform: [{ scale: 0.98 }] }]}>
+      <View style={[styles.stripe, { backgroundColor: stripe }]} />
       {clip ? (
         <FigureCard clip={clip} width={width} height={h} />
       ) : (
-        <View style={[styles.noFigure, { width, height: h }]}><Text style={styles.noFigureText}>no figure</Text></View>
+        <View style={[styles.noFigure, { width, height: h }]}>
+          <Ionicons name="body-outline" size={40} color={colors.muted} />
+          <Text style={styles.noFigureText}>no figure yet</Text>
+        </View>
       )}
-      <Text style={styles.name} numberOfLines={1}>{e.name}</Text>
-      <Text style={styles.tags} numberOfLines={1}>{[e.pattern, ...e.slots].filter(Boolean).join(' · ') || '—'}</Text>
+      <View style={styles.tileBody}>
+        <Text style={styles.name} numberOfLines={1}>{e.name}</Text>
+        <View style={styles.tagRow}>
+          {tileTags(e).map((t) => <Tag key={t.label} label={t.label} color={t.color} />)}
+          {e.repSeconds ? <Text style={styles.meta}>{e.repSeconds.toFixed(1)} s/rep</Text> : null}
+        </View>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  filters: { paddingTop: 8, paddingBottom: 4, gap: 6, backgroundColor: '#fff', borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ddd' },
-  search: { marginHorizontal: 16, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 8, fontSize: 14, backgroundColor: '#fafafa' },
+  filters: { paddingTop: 6, paddingBottom: 8, gap: 6, backgroundColor: colors.bg },
+  searchRow: { marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: radius.m, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.line },
+  search: { flex: 1, paddingVertical: 9, fontSize: 15, color: colors.ink },
   chips: { paddingHorizontal: 16, gap: 6 },
-  grid: { padding: 16, gap: 10, paddingBottom: 100 },
-  tile: { borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', gap: 2, paddingBottom: 8 },
-  noFigure: { backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' },
-  noFigureText: { color: '#999', fontSize: 12 },
-  name: { fontWeight: '600', paddingHorizontal: 8, paddingTop: 6 },
-  tags: { fontSize: 11, color: '#777', paddingHorizontal: 8 },
-  count: { textAlign: 'center', color: '#999', fontSize: 12, paddingVertical: 10 },
-  fab: { position: 'absolute', left: 16, right: 16, bottom: 16 },
+  grid: { padding: 16, gap: 12, paddingBottom: 110 },
+  tile: { borderRadius: radius.l, overflow: 'hidden', backgroundColor: colors.surface },
+  stripe: { height: 4 },
+  tileBody: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10, gap: 6 },
+  noFigure: { backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  noFigureText: { color: colors.muted, fontSize: 12 },
+  name: { fontWeight: '700', fontSize: 15, color: colors.ink },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, alignItems: 'center' },
+  meta: { fontSize: 11, color: colors.muted, marginLeft: 'auto' },
+  count: { textAlign: 'center', color: colors.muted, fontSize: 12, paddingVertical: 10 },
+  empty: { padding: 32, alignItems: 'center', gap: 10 },
+  emptyText: { color: colors.muted, textAlign: 'center', lineHeight: 20 },
+  fab: { position: 'absolute', right: 18, bottom: 18, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow.card },
 });

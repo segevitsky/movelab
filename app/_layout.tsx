@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { sql } from 'drizzle-orm';
 import { db, useDbMigrations } from '../src/db';
 import { seedIfNeeded } from '../src/db/seed';
+import { colors } from '../src/ui/theme';
 import { importLabReels } from '../src/db/devImport';
 import Constants from 'expo-constants';
 
@@ -44,7 +45,7 @@ export default function Layout() {
     );
   }
   return (
-    <Stack screenOptions={{ headerTitleStyle: { fontSize: 16 }, headerTransparent: false, headerShadowVisible: true, headerStyle: { backgroundColor: '#fff' }, contentStyle: { backgroundColor: '#fafafa' } }}>
+    <Stack screenOptions={{ headerTitleStyle: { fontSize: 16, fontWeight: '700', color: colors.ink }, headerTintColor: colors.accent, headerTransparent: false, headerShadowVisible: false, headerStyle: { backgroundColor: colors.bg }, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="exercise/[id]" options={{ title: 'Exercise' }} />
       <Stack.Screen name="exercise/new" options={{ title: 'New exercise', presentation: 'modal' }} />

@@ -8,6 +8,7 @@ import { clipFromExercise, deleteExercise, updateExercise } from '../../src/db/r
 import { EQUIPMENT, INTENSITY, PATTERNS, SLOTS, type Equipment, type Intensity, type Pattern, type Slot } from '../../src/db/vocab';
 import { FigurePlayer } from '../../src/figure';
 import { Button, Chip } from '../../src/ui/Button';
+import { colors, patternColor, radius, slotColor } from '../../src/ui/theme';
 
 export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,9 +49,9 @@ export default function ExerciseDetail() {
       <TextInput style={styles.input} value={name} onChangeText={setName} onBlur={() => name.trim() && name !== e.name && save({ name: name.trim() })} />
 
       <Text style={styles.label}>Pattern</Text>
-      <View style={styles.chips}>{PATTERNS.map((p) => <Chip key={p} label={p} on={e.pattern === p} onPress={() => save({ pattern: e.pattern === p ? null : (p as Pattern) })} />)}</View>
+      <View style={styles.chips}>{PATTERNS.map((p) => <Chip key={p} label={p} color={patternColor[p]} on={e.pattern === p} onPress={() => save({ pattern: e.pattern === p ? null : (p as Pattern) })} />)}</View>
       <Text style={styles.label}>Slots</Text>
-      <View style={styles.chips}>{SLOTS.map((s) => <Chip key={s} label={s} on={e.slots.includes(s)} onPress={() => save({ slots: toggle<Slot>(e.slots, s) })} />)}</View>
+      <View style={styles.chips}>{SLOTS.map((s) => <Chip key={s} label={s} color={slotColor[s] ?? colors.inkSoft} on={e.slots.includes(s)} onPress={() => save({ slots: toggle<Slot>(e.slots, s) })} />)}</View>
       <Text style={styles.label}>Equipment</Text>
       <View style={styles.chips}>{EQUIPMENT.filter((x) => x !== 'none').map((q) => <Chip key={q} label={q} on={e.equipment.includes(q)} onPress={() => save({ equipment: toggle<Equipment>(e.equipment, q) })} />)}</View>
       <Text style={styles.label}>Intensity</Text>
@@ -92,14 +93,14 @@ export default function ExerciseDetail() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 8, paddingBottom: 80 },
-  player: { borderRadius: 14 },
-  noFigure: { backgroundColor: '#eee', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  container: { padding: 16, gap: 8, paddingBottom: 80, backgroundColor: colors.bg },
+  player: { borderRadius: radius.l },
+  noFigure: { backgroundColor: colors.surfaceAlt, borderRadius: radius.l, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  label: { fontWeight: '700', marginTop: 8 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, backgroundColor: '#fff', fontSize: 15 },
+  label: { fontWeight: '700', marginTop: 10, color: colors.ink, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 },
+  input: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.m, padding: 10, backgroundColor: colors.surface, fontSize: 15, color: colors.ink },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  small: { fontSize: 12, color: '#777' },
-  link: { color: '#1a5fb4', fontSize: 13 },
+  small: { fontSize: 12, color: colors.muted },
+  link: { color: colors.accent, fontSize: 13 },
 });

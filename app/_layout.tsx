@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, AppState, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, I18nManager, Text, View } from 'react-native';
+
+// The UI is English/LTR; on Hebrew devices iOS would mirror rows (close buttons end up on the far edge).
+if (I18nManager.isRTL) { I18nManager.allowRTL(false); I18nManager.forceRTL(false); }
 import { Stack, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { parseReel } from '../src/capture/embed';

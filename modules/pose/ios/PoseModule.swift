@@ -40,6 +40,15 @@ public final class PoseModule: Module {
       return ["uri": url.absoluteString, "width": w, "height": h]
     }
 
+    /// Architecture §5a: auto-crop of the reel area + floor-mat quad (+ camera-static flag).
+    AsyncFunction("sceneAnalysis") { (fileUri: URL) -> [String: Any] in
+      let r = try SceneAnalysis.analyze(url: fileUri)
+      var out: [String: Any] = ["width": r.width, "height": r.height, "cameraStatic": r.cameraStatic, "samples": r.samples, "ms": r.ms]
+      if let c = r.cropRect { out["cropRect"] = ["x": c.minX, "y": c.minY, "width": c.width, "height": c.height] }
+      if let q = r.matQuad { out["matQuad"] = q.map { [$0.x, $0.y] } }
+      return out
+    }
+
     AsyncFunction("process") { (fileUri: URL, options: ProcessOptions) -> [String: Any] in
       try self.runMediaPipe(url: fileUri, options: options)
     }

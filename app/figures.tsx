@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   container: { padding: 16, gap: 10, paddingBottom: 80 },
   row: { flexDirection: 'row', gap: 8 },
   card: { borderRadius: 10, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', gap: 4, flex: 1 },
-  cardSel: { borderColor: '#c9a12f' },
+  cardSel: { borderColor: '#2f6b8f' },
   player: { borderRadius: 14 },
   mono: { fontFamily: 'Menlo', fontSize: 11, color: '#333' },
   small: { fontSize: 11, color: '#555' },

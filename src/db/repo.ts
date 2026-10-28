@@ -24,10 +24,12 @@ export function filterExercises(rows: Exercise[], f: ExerciseFilter): Exercise[]
   });
 }
 
-export function clipFromExercise(e: Pick<Exercise, 'figure'>): FigureClip | null {
+export function clipFromExercise(e: Pick<Exercise, 'figure' | 'scene'>): FigureClip | null {
   if (!e.figure) return null;
   try {
-    return decodeClip(fromBase64(e.figure));
+    const clip = decodeClip(fromBase64(e.figure));
+    if (e.scene?.matQuad) clip.scene = { matQuad: e.scene.matQuad.map((p) => [p[0], p[1]]) };
+    return clip;
   } catch {
     return null;
   }

@@ -65,7 +65,7 @@ export default function DevHome() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 1 });
     if (res.canceled || !res.assets[0]) return;
     const a = res.assets[0];
-    router.push({ pathname: '/debug', params: { uri: a.uri, title: a.fileName ?? 'photos video' } });
+    router.push({ pathname: '/review', params: { uri: a.uri, title: a.fileName ?? 'photos video' } });
   };
   const shareLog = async () => {
     if (!(await Sharing.isAvailableAsync())) return;
@@ -84,6 +84,9 @@ export default function DevHome() {
         <View style={styles.row}>
           <View style={{ flex: 1 }}><Button title="Pick a video from Photos" onPress={pickVideo} secondary /></View>
           <View style={{ flex: 1 }}><Button title="Instagram login" onPress={() => router.push('/login')} secondary /></View>
+        </View>
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}><Button title="Pose debug (pick a video)" onPress={async () => { const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 1 }); if (!res.canceled && res.assets[0]) router.push({ pathname: '/debug', params: { uri: res.assets[0].uri, title: res.assets[0].fileName ?? 'video' } }); }} secondary /></View>
         </View>
         <Text style={styles.hint}>Reel won't play? Log in once inside the app, then use "Open reel page (logged-in)".</Text>
       </Section>

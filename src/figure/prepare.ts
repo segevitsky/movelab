@@ -15,6 +15,8 @@ export type FigureClip = {
   loop?: { i0: number; i1: number };
   /** optional HUD: two joints with per-frame angles in degrees */
   hud?: { name: string; angles: number[] }[];
+  /** Architecture §5a: floor mat quad in the same pixel space as xy (TL, TR, BR, BL) */
+  scene?: { matQuad?: XY[] };
 };
 
 export type PreparedFrame = {
@@ -36,6 +38,7 @@ export type Prepared = {
   ground: number;
   frames: PreparedFrame[];
   loop: { i0: number; i1: number };
+  matQuad?: XY[];
 };
 
 export const HEAD = 33;
@@ -100,7 +103,7 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
     cam: { x0: cx[i] - width / (2 * scale), y0: ground - (0.87 * height) / scale, scale },
   }));
 
-  return { width, height, fps, torso, th, ground, frames, loop: clip.loop ?? { i0: 0, i1: n - 1 } };
+  return { width, height, fps, torso, th, ground, frames, loop: clip.loop ?? { i0: 0, i1: n - 1 }, matQuad: clip.scene?.matQuad };
 }
 
 /** Shadow projection: light from front-left, high. Point → floor (render.py `proj`). */

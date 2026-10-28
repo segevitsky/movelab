@@ -51,6 +51,8 @@ declare class PoseNative extends NativeModule<PoseEvents> {
   modelInfo(): { path: string | null; bytes: number; found: boolean };
   cancel(): void;
   videoInfo(fileUri: string): Promise<{ duration: number; width: number; height: number; fps: number }>;
+  /** Architecture §5a: auto-crop (normalised) + floor-mat quad (source px, TL TR BR BL) + camera-static flag. */
+  sceneAnalysis(fileUri: string): Promise<{ width: number; height: number; cropRect?: NormRect; matQuad?: [number, number][]; cameraStatic: boolean; samples: number; ms: number }>;
   frameImage(fileUri: string, seconds: number, options: { cropRect?: NormRect; maxSide?: number }): Promise<{ uri: string; width: number; height: number }>;
   process(fileUri: string, options: ProcessOptions): Promise<PoseResult>;
   processVision(fileUri: string, options: ProcessOptions): Promise<PoseResult>;

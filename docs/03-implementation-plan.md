@@ -11,8 +11,9 @@ Do not start Phase 1 until Phase 0 says GO.
 
 Goal: prove the risky native chain on a real iPhone. Ugly is fine.
 
-> Owner decision (2026-10-27): task 2 (share extension) and task 6 (logged-in WebView) are deferred.
-> Phase 0 uses a paste-URL field plus "Pick a video from Photos" instead. Status: `docs/phase0-results.md`.
+> Owner decision (2026-10-27): task 2 (share extension) and task 6 (logged-in WebView) were deferred in Phase 0.
+> Both were pulled back in later: task 6 on 2026-10-28 (Phase 0 follow-up), task 2 in Phase 4 via expo-sharing's
+> share-into extension. Status: `docs/phase0-results.md`.
 
 Tasks
 1. Expo app with dev client, builds to the owner's iPhone (TestFlight or local dev build).
@@ -87,6 +88,8 @@ Acceptance
 - [ ] Filters by pattern/slot/equipment.
 
 ## Phase 4 — Capture → review end-to-end
+
+> In progress 2026-10-28 — see `docs/phase4-results.md`.
 
 Tasks
 - Wire share → capture → record → pose → pipeline → review → save. Delete recording after save.

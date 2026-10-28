@@ -103,9 +103,9 @@ export default function Capture() {
       setRecording(false);
       await patchAttempt(code, { recorded: true, recordingUri: rec.uri, recordingSeconds: rec.duration, note: why });
       const crop = lastRect.current;
-      router.push({
-        pathname: '/debug',
-        params: { uri: rec.uri, title: `${code} (${why})`, code, crop: crop ? JSON.stringify(crop) : '' },
+      router.replace({
+        pathname: '/review',
+        params: { uri: rec.uri, title: `${code} (${why})`, code, url: url ?? '', username: msg?.username ?? '', caption: msg?.caption ?? '', crop: crop ? JSON.stringify(crop) : '' },
       });
     } catch (e) {
       setRecording(false);

@@ -25,7 +25,20 @@
       "expo-router",
       "expo-dev-client",
       "expo-asset",
-      "expo-sharing",
+      [
+        "expo-sharing",
+        {
+          "ios": {
+            "enabled": true,
+            "appGroupId": "group.com.segev.movelab",
+            "activationRule": {
+              "supportsWebUrlWithMaxCount": 1,
+              "supportsText": true,
+              "supportsMovieWithMaxCount": 1
+            }
+          }
+        }
+      ],
       [
         "expo-image-picker",
         {

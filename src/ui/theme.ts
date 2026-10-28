@@ -9,8 +9,8 @@ export const colors = {
   inkSoft: '#2b3142',
   muted: '#7d8290',
   line: '#e3ded5',
-  accent: '#c9a12f', // muted cool yellow (goldenrod), the app's single accent
-  accentSoft: '#f4ecd2',
+  accent: '#2f6b8f', // deep steel blue — the app's single accent (owner rejected orange and yellow)
+  accentSoft: '#dde8f0',
   danger: '#b3261e',
   success: '#2e8b57',
 };

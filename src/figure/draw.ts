@@ -17,7 +17,10 @@ export const COLORS = {
   floorLine: '#dad3c7',
   horizon: '#ded8ce',
   shadow: '#d4ccbf',
-  accent: '#c9a12f',
+  shadowOnMat: 'rgba(90, 82, 70, 0.30)',
+  mat: '#d9d1c3',
+  matRim: '#c9c0b1',
+  accent: '#2f6b8f',
 } as const;
 
 type Side = { sh: number; el: number; wr: number; hp: number; kn: number; an: number; idx: 0 | 1 };
@@ -93,9 +96,19 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     canvas.drawLine(A[0], A[1], B[0], B[1], stroke(color, w));
   };
 
-  // --- cast shadow
+  // --- floor mat (Arch §5a): flat perspective slab in source pixels, under the figure
+  const quad = prep.matQuad;
+  if (quad && opts.floor !== false) {
+    const pts = quad.map((p) => { const q = T(p); return { x: q[0], y: q[1] }; });
+    const path = Skia.Path.Polygon(pts, true);
+    canvas.drawPath(path, fill(COLORS.mat));
+    canvas.drawPath(path, stroke(COLORS.matRim, Math.max(1, t * 0.12)));
+  }
+
+  // --- cast shadow (translucent when there is a mat so it reads on both surfaces)
   if (opts.shadow !== false) {
-    const sc = (a: XY, b: XY, w: number) => capsule(projectToFloor(a, ground), projectToFloor(b, ground), COLORS.shadow, w);
+    const shadowColor = quad ? COLORS.shadowOnMat : COLORS.shadow;
+    const sc = (a: XY, b: XY, w: number) => capsule(projectToFloor(a, ground), projectToFloor(b, ground), shadowColor, w);
     const bones: [number, number][] = [
       [LM.leftShoulder, LM.leftElbow], [LM.leftElbow, LM.leftWrist], [LM.rightShoulder, LM.rightElbow], [LM.rightElbow, LM.rightWrist],
       [LM.leftHip, LM.leftKnee], [LM.leftKnee, LM.leftAnkle], [LM.rightHip, LM.rightKnee], [LM.rightKnee, LM.rightAnkle],
@@ -107,7 +120,7 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     sc(ms, mh, t * 1.7);
     const hs = T(projectToFloor(P[HEAD], ground));
     const r0 = Math.hypot(ms[0] - mh[0], ms[1] - mh[1]) * 0.24 * scale;
-    canvas.drawOval(Skia.XYWHRect(hs[0] - r0, hs[1] - r0 * 0.8, 2 * r0, 1.6 * r0), fill(COLORS.shadow));
+    canvas.drawOval(Skia.XYWHRect(hs[0] - r0, hs[1] - r0 * 0.8, 2 * r0, 1.6 * r0), fill(shadowColor));
   }
 
   const taper = (a: XY, b: XY, color: string, w1: number, w2: number) => {

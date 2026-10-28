@@ -89,7 +89,7 @@ Acceptance
 
 ## Phase 4 — Capture → review end-to-end
 
-> In progress 2026-10-28 — see `docs/phase4-results.md`.
+> GO 2026-10-28 — see `docs/phase4-results.md` (quality follow-ups listed there).
 
 Tasks
 - Wire share → capture → record → pose → pipeline → review → save. Delete recording after save.

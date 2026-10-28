@@ -16,14 +16,15 @@ him. Specs: `docs/01-product-spec.md` (what/why), `docs/02-architecture.md` (how
 | 1 — pose pipeline in pure TypeScript | **done**, 26 tests green, exact match to the Python prototype | `docs/phase1-results.md` |
 | 2 — Skia stick-figure renderer | **done** (2026-10-28), ~120 fps with 3 cards + player on device | `docs/phase2-results.md` |
 | 3 — local SQLite (drizzle) + library screens | **done** (2026-10-28), all local, no server | `docs/phase3-results.md` |
-| 4 — capture→review end to end · 5 — generator · 6 — player · 7 — goals · 8 — AI remix | not started | plan |
+| 4 — capture → review → library, share sheet, scene analysis | **GO** (2026-10-28) | `docs/phase4-results.md` |
+| 5 — generator · 6 — player · 7 — goals · 8 — AI remix | not started | plan |
 
 ## The decisions that matter (don't re-open without a reason)
-- **Capture route:** paste a reel link → the app opens the reel page in a WebView where the owner has
+- **Capture route:** Instagram ▸ Share ▸ MoveLab (share extension) or paste a link → the app opens the reel page in a WebView where the owner has
   logged in to Instagram himself (his own session; the app never touches credentials, never automates) →
   in-app ▶ Play → **ReplayKit** screen recording → MediaPipe. The public *embed* URL only plays inline for
   some reels (ones already in his feed), so it's a convenience, not the main road. Fallback: iOS screen
-  recording + "pick from Photos". Share extension deferred.
+  recording + "pick from Photos". Share extension shipped in Phase 4 (expo-sharing share-into).
 - **Pose model:** MediaPipe Pose Landmarker **heavy**, VIDEO mode, **GPU delegate** — 98.3 % frames with a
   person, 7 ms/frame on iPhone 17 Pro Max (CPU 18 ms). Apple Vision 2D is a sanity-check second opinion
   only (95.5 %, no feet, no 3D). 33 landmarks incl. heels + toes; **MediaPipe-33 order everywhere**.

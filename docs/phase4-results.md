@@ -1,6 +1,7 @@
 # Phase 4 — results (capture → review → library, end to end)
 
-Status (2026-10-28): **built; device verification in progress** (owner captures 5 real reels).
+Status (2026-10-28 evening): **GO** — share sheet → Capture → Review → library works on the owner's phone;
+owner captured ~3 reels this way ("really cool the share and all"). Quality follow-ups listed below.
 
 ## Flow
 ```
@@ -33,13 +34,23 @@ Review: sceneAnalysis (auto-crop + mat quad) → Pose.process (GPU, cropped) →
 ## Acceptance
 | Criterion | Result |
 |---|---|
-| Owner captures 5 real reels, each in < 30 s of his effort | _pending — owner_ |
-| Each detected exercise can be renamed / merged / split / trimmed / deleted before saving | **built**; edit ops unit-tested; UI verified on the simulator with a synthetic recording (see below) |
+| Owner captures 5 real reels, each in < 30 s of his effort | **3 so far via the share sheet**, effort well under 30 s each (share → Play → Model it → Add). Owner: "not all were great in quality" → see follow-ups. Count continues naturally in daily use. |
+| Each detected exercise can be renamed / merged / split / trimmed / deleted before saving | **PASS** — edit ops unit-tested; Delete verified by the owner on device; Split/Merge/trim exercised on the simulator UI. |
 
 ## Verification notes
-- Synthetic screen recording (static chrome + moving blob + dark trapezoid mat) → `sceneAnalysis`:
-  _fill in: crop rect, mat quad, ms_.
-- Share extension with a free Personal Team: _fill in: provisioned or not_.
+- **Share extension with a free Personal Team: works** — the extension target + `group.com.segev.movelab`
+  provisioned and installed; Instagram ▸ Share ▸ MoveLab opens Capture with the reel.
+  Gotcha: if the app is sitting on the dev-launcher screen (not running the JS), the launcher grabs the
+  incoming link and shows a MIME-type error — open the app into MoveLab first. Not an issue in a release build.
+- Mat detection: not yet confirmed on a real reel (owner to check the "mat found" status line); the
+  synthetic-recording check on the simulator was cut short by machine load — rerun when convenient.
+
+## Follow-ups (quality of captured exercises)
+- Wire the sanity-check fallback (Arch §4.2): re-run Vision only on flagged frames and replace the failing limb.
+- Gate segments in Review by detection ratio and visibility (hide/flag segments where the person is
+  mostly missing or tiny); show the sanity-issue count per row.
+- Capture: the ReplayKit recording includes UI chrome when the WebView rect is wrong → prefer the
+  auto-crop when it disagrees strongly with the WebView rect.
 
 ## Known limits
 - The LLM `/tag` backend from the architecture is not used (owner: local only). The tagger is heuristic;

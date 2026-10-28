@@ -1,11 +1,169 @@
-import React from 'react';
-import { Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
+import { Ionicons } from '@expo/vector-icons';
+import { db, schema } from '../../src/db';
+import { clipFromExercise } from '../../src/db/repo';
+import { loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
+import type { WorkoutInputs } from '../../src/db/types';
+import { SLOTS, type Slot } from '../../src/db/vocab';
+import { generate, swap, slotKey, type GenContext, type GenWorkout } from '../../src/generator';
+import { FigureCard } from '../../src/figure';
+import { Button, Chip, Tag } from '../../src/ui/Button';
+import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
+
+const TIMES = [20, 30, 45, 60];
 
 export default function Today() {
+  const router = useRouter();
+  const { data: frameworks } = useLiveQuery(db.select().from(schema.framework));
+  const { data: exercises } = useLiveQuery(db.select().from(schema.exercise));
+  const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
+  const [fwId, setFwId] = useState<string | null>(null);
+  const [inputs, setInputs] = useState<WorkoutInputs>({ timeAvailableMin: 30, energy: 'medium', focus: null, surprise: 0.3 });
+  const [ctx, setCtx] = useState<GenContext | null>(null);
+  const [w, setW] = useState<GenWorkout | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [removed, setRemoved] = useState<string[]>([]);
+  useEffect(() => { if (!fwId && frameworks?.length) setFwId(frameworks.find((f) => f.id === 'preset-segev-3x6')?.id ?? frameworks[0].id); }, [frameworks]);
+
+  const run = async (seed = Date.now() % 1e9) => {
+    if (!fwId) return;
+    setBusy(true);
+    try {
+      const c = await loadGenContext(db, fwId, inputs, seed);
+      setCtx(c);
+      setRemoved([]);
+      setW(generate(c));
+    } catch (e) {
+      Alert.alert('Could not generate', String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const doSwap = (blockId: string, slotId: string) => { if (ctx && w) setW(swap({ ...ctx, excluded: removed }, w, blockId, slotId)); };
+  const toggleLock = (blockId: string, slotId: string) => {
+    if (!w) return;
+    const key = slotKey(blockId, slotId);
+    setW({ ...w, items: w.items.map((i) => (slotKey(i.blockId, i.slotId) === key ? { ...i, locked: !i.locked } : i)) });
+  };
+  const removeItem = (blockId: string, slotId: string) => {
+    if (!ctx || !w) return;
+    const key = slotKey(blockId, slotId);
+    const ex = w.items.find((i) => slotKey(i.blockId, i.slotId) === key)?.exerciseId;
+    const excluded = ex ? [...removed, ex] : removed;
+    setRemoved(excluded);
+    const locked: Record<string, string> = {};
+    for (const it of w.items) if (slotKey(it.blockId, it.slotId) !== key) locked[slotKey(it.blockId, it.slotId)] = it.exerciseId;
+    setW(generate({ ...ctx, locked, excluded }));
+  };
+  const save = async () => {
+    if (!w) return;
+    const id = await saveWorkout(db, w);
+    Alert.alert('Saved', 'The player arrives in Phase 6; the workout is stored and counts as history.', [{ text: 'OK' }]);
+    void id;
+  };
+
+  const fw = frameworks?.find((f) => f.id === fwId);
   return (
-    <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontWeight: '700', fontSize: 18 }}>Today</Text>
-      <Text style={{ color: '#666', marginTop: 8 }}>Generated workouts arrive in Phase 5 (frameworks + generator). Presets are already seeded.</Text>
-    </View>
+    <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
+      <View style={[styles.panel, shadow.card]}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.label}>Framework</Text>
+          <Pressable onPress={() => router.push('/frameworks')} hitSlop={8}><Text style={styles.link}>Edit frameworks ›</Text></Pressable>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {(frameworks ?? []).map((f) => <Chip key={f.id} label={f.name} color={colors.accent} on={f.id === fwId} onPress={() => setFwId(f.id)} />)}
+        </ScrollView>
+        <Text style={styles.label}>Time</Text>
+        <View style={styles.chips}>{TIMES.map((t) => <Chip key={t} label={`${t} min`} color={colors.inkSoft} on={inputs.timeAvailableMin === t} onPress={() => setInputs({ ...inputs, timeAvailableMin: t })} />)}</View>
+        <Text style={styles.label}>Energy</Text>
+        <View style={styles.chips}>{(['low', 'medium', 'high'] as const).map((e) => <Chip key={e} label={e} color={colors.inkSoft} on={inputs.energy === e} onPress={() => setInputs({ ...inputs, energy: e })} />)}</View>
+        <Text style={styles.label}>Focus (optional)</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {SLOTS.map((s) => <Chip key={s} label={s} color={slotColor[s] ?? colors.inkSoft} on={inputs.focus === s} onPress={() => setInputs({ ...inputs, focus: inputs.focus === s ? null : (s as Slot) })} />)}
+        </ScrollView>
+        <Text style={styles.label}>Surprise</Text>
+        <View style={styles.chips}>{[[0, 'safe'], [0.3, 'mix'], [0.8, 'surprise me']].map(([v, l]) => <Chip key={String(v)} label={String(l)} color={colors.inkSoft} on={inputs.surprise === v} onPress={() => setInputs({ ...inputs, surprise: Number(v) })} />)}</View>
+        <Button title={busy ? 'Generating…' : w ? 'Generate again' : "Today's workout"} onPress={() => run()} disabled={busy || !fwId} />
+      </View>
+
+      {w && fw && (
+        <View style={{ gap: 12 }}>
+          <View style={[styles.why, { backgroundColor: tint(colors.accent, 0.1) }]}>
+            <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
+            <Text style={styles.whyText}>{w.why}</Text>
+          </View>
+          {fw.blocks.blocks.map((b) => {
+            const its = w.items.filter((i) => i.blockId === b.id && i.round === 1);
+            const rounds = b.kind === 'rounds' ? b.rounds ?? 1 : 1;
+            return (
+              <View key={b.id} style={[styles.block, shadow.card]}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.blockTitle}>{b.name}</Text>
+                  <Text style={styles.small}>{rounds > 1 ? `× ${rounds} rounds · rest ${b.restBetweenRoundsSec ?? 0} s` : b.seconds ? `${Math.round(b.seconds / 60)} min` : ''}</Text>
+                </View>
+                {b.slots.map((s) => {
+                  const it = its.find((i) => i.slotId === s.id);
+                  const ex = it ? byId.get(it.exerciseId) : undefined;
+                  const clip = ex ? clipFromExercise(ex) : null;
+                  return (
+                    <View key={s.id} style={styles.item}>
+                      <View style={styles.thumb}>{clip ? <FigureCard clip={clip} width={64} height={78} /> : <Ionicons name={ex ? 'body-outline' : 'help-outline'} size={22} color={colors.muted} />}</View>
+                      <View style={{ flex: 1, gap: 3 }}>
+                        {ex ? (
+                          <>
+                            <Text style={styles.itemName} numberOfLines={1}>{ex.name}</Text>
+                            <View style={styles.tagRow}>
+                              {ex.pattern && <Tag label={ex.pattern} color={patternColor[ex.pattern]} />}
+                              <Text style={styles.small}>{it!.dosage.type === 'reps' ? `${it!.dosage.value} reps` : `${it!.dosage.value} s`}{it!.dosage.perSide ? ' / side' : ''} · ≈{it!.seconds} s</Text>
+                            </View>
+                          </>
+                        ) : (
+                          <Text style={styles.missing}>no card for {s.tags.join(' / ')} yet{s.optional ? ' (optional)' : ''}</Text>
+                        )}
+                      </View>
+                      {ex && (
+                        <View style={styles.itemActions}>
+                          <Pressable onPress={() => doSwap(b.id, s.id)} hitSlop={6}><Ionicons name="shuffle-outline" size={20} color={colors.accent} /></Pressable>
+                          <Pressable onPress={() => toggleLock(b.id, s.id)} hitSlop={6}><Ionicons name={it!.locked ? 'lock-closed' : 'lock-open-outline'} size={18} color={it!.locked ? colors.ink : colors.muted} /></Pressable>
+                          <Pressable onPress={() => removeItem(b.id, s.id)} hitSlop={6}><Ionicons name="close-circle-outline" size={20} color={colors.danger} /></Pressable>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
+          <View style={styles.rowBetween}>
+            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · seed {w.seed}</Text>
+          </View>
+          <Button title="Save as today's workout" onPress={save} />
+        </View>
+      )}
+      {!w && (exercises?.length ?? 0) === 0 && <Text style={styles.small}>Your library is empty — capture a few reels first.</Text>}
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { padding: 16, gap: 14, paddingBottom: 80, backgroundColor: colors.bg },
+  panel: { backgroundColor: colors.surface, borderRadius: radius.l, padding: 14, gap: 8 },
+  label: { fontWeight: '700', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  link: { color: colors.accent, fontWeight: '600', fontSize: 13 },
+  why: { flexDirection: 'row', gap: 8, alignItems: 'center', padding: 10, borderRadius: radius.m },
+  whyText: { flex: 1, color: colors.ink, fontSize: 13 },
+  block: { backgroundColor: colors.surface, borderRadius: radius.l, padding: 12, gap: 8 },
+  blockTitle: { fontWeight: '800', fontSize: 15, color: colors.ink },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  thumb: { width: 64, height: 78, borderRadius: radius.s, overflow: 'hidden', backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  itemName: { fontWeight: '700', color: colors.ink },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  itemActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  missing: { color: colors.muted, fontStyle: 'italic', fontSize: 13 },
+  small: { fontSize: 12, color: colors.muted },
+});

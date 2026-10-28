@@ -57,7 +57,15 @@
         }
       ],
       "expo-sqlite",
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#f6f3ee",
+          "imageWidth": 260
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

@@ -88,7 +88,7 @@ export default function Player() {
 
   const finish = async (feedback: SessionFeedback) => {
     if (sessionId) await endSession(db, sessionId, feedback);
-    router.dismissAll?.();
+    if (router.canDismiss?.()) router.dismissAll();
     router.replace('/today');
   };
 

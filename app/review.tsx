@@ -154,7 +154,7 @@ export default function Review() {
       }
       if (params.url) await linkSource(db, { url: params.url, coach: params.username ?? null, caption: params.caption ?? null, exerciseIds: ids, ranges: chosen.map((c) => ({ startSec: c.processed.segment.t0, endSec: c.processed.segment.t1 })) });
       deleteVideo();
-      router.dismissAll?.();
+      if (router.canDismiss?.()) router.dismissAll();
       router.replace('/library');
     } catch (e) {
       setPhase('review');
@@ -162,7 +162,7 @@ export default function Review() {
     }
   };
 
-  const discard = () => Alert.alert('Discard this capture?', 'The recording is deleted.', [{ text: 'Keep' }, { text: 'Discard', style: 'destructive', onPress: () => { deleteVideo(); router.dismissAll?.(); router.replace('/library'); } }]);
+  const discard = () => Alert.alert('Discard this capture?', 'The recording is deleted.', [{ text: 'Keep' }, { text: 'Discard', style: 'destructive', onPress: () => { deleteVideo(); if (router.canDismiss?.()) router.dismissAll(); router.replace('/library'); } }]);
 
   if (phase !== 'review' && phase !== 'saving') {
     return (

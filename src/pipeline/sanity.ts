@@ -1,0 +1,57 @@
+import { hypot2, median, percentile } from './math';
+import { torsoLengths } from './clean';
+import { LM, type Limb, type SanityIssue, type Track } from './types';
+
+export type SanityOptions = {
+  /** knees AND ankles (or elbows AND wrists) closer than this × torso → collapse */
+  collapseRatio?: number; // 0.2
+  /** bone longer than this × its 97th-percentile length → implausible */
+  boneRatio?: number; // 1.4
+};
+
+const BONES: { limb: Limb; a: number; b: number }[] = [
+  { limb: 'leftArm', a: LM.leftShoulder, b: LM.leftElbow }, { limb: 'leftArm', a: LM.leftElbow, b: LM.leftWrist },
+  { limb: 'rightArm', a: LM.rightShoulder, b: LM.rightElbow }, { limb: 'rightArm', a: LM.rightElbow, b: LM.rightWrist },
+  { limb: 'leftLeg', a: LM.leftHip, b: LM.leftKnee }, { limb: 'leftLeg', a: LM.leftKnee, b: LM.leftAnkle },
+  { limb: 'rightLeg', a: LM.rightHip, b: LM.rightKnee }, { limb: 'rightLeg', a: LM.rightKnee, b: LM.rightAnkle },
+];
+
+/**
+ * Architecture §4.2: model confidence is not trustworthy, so run our own per-frame checks.
+ * Returns the frames (and limbs) a fallback model should re-run; the caller replaces only the
+ * failing limb and only if the fallback's hips agree.
+ */
+export function sanityCheck(xy: Track, opts: SanityOptions = {}): SanityIssue[] {
+  const collapse = opts.collapseRatio ?? 0.2;
+  const boneRatio = opts.boneRatio ?? 1.4;
+  const issues: SanityIssue[] = [];
+  const torso = median(torsoLengths(xy));
+  if (!(torso > 0)) return issues;
+
+  const p97 = BONES.map((bn) => percentile(xy.map((fr) => hypot2(fr[bn.a], fr[bn.b])), 97));
+
+  xy.forEach((fr, i) => {
+    const kneeD = hypot2(fr[LM.leftKnee], fr[LM.rightKnee]);
+    const ankleD = hypot2(fr[LM.leftAnkle], fr[LM.rightAnkle]);
+    if (kneeD < collapse * torso && ankleD < collapse * torso) {
+      issues.push({ frame: i, kind: 'leg-collapse', limbs: ['leftLeg', 'rightLeg'], detail: `knees ${(kneeD / torso).toFixed(2)} ankles ${(ankleD / torso).toFixed(2)} torso` });
+    }
+    const elbowD = hypot2(fr[LM.leftElbow], fr[LM.rightElbow]);
+    const wristD = hypot2(fr[LM.leftWrist], fr[LM.rightWrist]);
+    if (elbowD < collapse * torso && wristD < collapse * torso) {
+      issues.push({ frame: i, kind: 'arm-collapse', limbs: ['leftArm', 'rightArm'], detail: `elbows ${(elbowD / torso).toFixed(2)} wrists ${(wristD / torso).toFixed(2)} torso` });
+    }
+    const bad = new Set<Limb>();
+    BONES.forEach((bn, k) => {
+      const len = hypot2(fr[bn.a], fr[bn.b]);
+      if (p97[k] > 0 && len > boneRatio * p97[k]) bad.add(bn.limb);
+    });
+    if (bad.size) issues.push({ frame: i, kind: 'bone-length', limbs: [...bad] });
+  });
+  return issues;
+}
+
+/** Frames that need the fallback model, deduplicated. */
+export function framesToRecheck(issues: SanityIssue[]): number[] {
+  return [...new Set(issues.map((i) => i.frame))].sort((a, b) => a - b);
+}

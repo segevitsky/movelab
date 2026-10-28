@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "MoveLab",
+    "slug": "movelab",
+    "version": "0.0.1",
+    "scheme": "movelab",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.segev.movelab",
+      "supportsTablet": false,
+      "deploymentTarget": "16.4",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Not used. Required by iOS when screen recording is available.",
+        "NSPhotoLibraryUsageDescription": "Pick a screen recording of a reel to turn it into an exercise.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.segev.movelab"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      "expo-asset",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pick a screen recording of a reel to turn it into an exercise.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

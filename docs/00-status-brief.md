@@ -64,10 +64,10 @@ Device: iPhone 17 Pro Max, free Apple ID / Personal Team (7-day signature), Xcod
 
 ## Standalone demo build (no Mac, no Metro)
 ```
-cd ios && xcodebuild -workspace MoveLab.xcworkspace -scheme MoveLab -configuration Release \
-  -destination 'generic/platform=iOS' -derivedDataPath /tmp/movelab-release -allowProvisioningUpdates build
-xcrun devicectl device install app --device <udid> /tmp/movelab-release/Build/Products/Release-iphoneos/MoveLab.app
+npx expo run:ios --device --configuration Release --no-bundler   # signs with the Personal Team, installs
 ```
+(plain `xcodebuild -allowProvisioningUpdates` can't reach the Apple account from the CLI after a
+`prebuild`; `ios.appleTeamId` is set in app.json so prebuild keeps the team.)
 Personal-Team signature lasts 7 days (first installed 2026-10-28 → re-sign by 2026-11-04). The release
 build replaces the dev build; reinstall the dev build (`npx expo run:ios --device`) for live development.
 

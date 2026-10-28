@@ -16,7 +16,8 @@
         "NSMicrophoneUsageDescription": "Not used. Required by iOS when screen recording is available.",
         "NSPhotoLibraryUsageDescription": "Pick a screen recording of a reel to turn it into an exercise.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "appleTeamId": "AUT5N398FP"
     },
     "android": {
       "package": "com.segev.movelab"

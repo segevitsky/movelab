@@ -2,8 +2,8 @@ import { desc, eq, gt } from 'drizzle-orm';
 import { buildPairings } from '../generator/pairing';
 import type { GenContext, GenExercise, GenGoal, GenWorkout, HistoryEntry, PairingEdge } from '../generator/types';
 import type { Db } from './index';
-import { exercise, framework, goal, pairing, sourceExercise, workout, type Exercise, type Framework } from './schema';
-import type { FrameworkBlocks, WorkoutInputs } from './types';
+import { exercise, framework, goal, pairing, session, sourceExercise, workout, type Exercise, type Framework } from './schema';
+import type { FrameworkBlocks, SessionFeedback, WorkoutInputs } from './types';
 import { newId } from './repo';
 
 export function toGenExercise(e: Exercise): GenExercise {
@@ -61,4 +61,22 @@ export async function saveWorkout(db: Db, w: GenWorkout) {
 
 export async function recentWorkouts(db: Db, n = 10) {
   return db.select().from(workout).orderBy(desc(workout.createdAt)).limit(n);
+}
+
+export async function getWorkout(db: Db, id: string) {
+  return (await db.select().from(workout).where(eq(workout.id, id)))[0];
+}
+
+export async function startSession(db: Db, workoutId: string) {
+  const id = newId('se');
+  await db.insert(session).values({ id, workoutId, startedAt: Date.now(), endedAt: null, feedback: null, perExercise: null });
+  return id;
+}
+
+export async function endSession(db: Db, id: string, feedback: SessionFeedback, perExercise?: Record<string, { feedback?: SessionFeedback; note?: string }>) {
+  await db.update(session).set({ endedAt: Date.now(), feedback, perExercise: perExercise ?? null }).where(eq(session.id, id));
+}
+
+export async function toggleFavourite(db: Db, id: string, value: boolean) {
+  await db.update(workout).set({ favourite: value }).where(eq(workout.id, id));
 }

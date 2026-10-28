@@ -87,6 +87,7 @@ export default function Layout() {
       <Stack.Screen name="expo-sharing" options={{ headerShown: false }} />
       <Stack.Screen name="frameworks/index" options={{ title: 'Frameworks' }} />
       <Stack.Screen name="frameworks/[id]" options={{ title: 'Edit framework' }} />
+      <Stack.Screen name="player/[workoutId]" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="debug" options={{ title: 'Pose debug' }} />
       <Stack.Screen name="login" options={{ title: 'Instagram login (your session)' }} />
       <Stack.Screen name="figures" options={{ title: 'Figure renderer (Phase 2)' }} />

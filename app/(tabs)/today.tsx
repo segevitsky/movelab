@@ -5,7 +5,8 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
 import { clipFromExercise } from '../../src/db/repo';
-import { loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
+import { loadGenContext, recentWorkouts, saveWorkout } from '../../src/db/workoutRepo';
+import type { Workout } from '../../src/db/schema';
 import type { WorkoutInputs } from '../../src/db/types';
 import { SLOTS, type Slot } from '../../src/db/vocab';
 import { generate, swap, slotKey, type GenContext, type GenWorkout } from '../../src/generator';
@@ -26,6 +27,8 @@ export default function Today() {
   const [w, setW] = useState<GenWorkout | null>(null);
   const [busy, setBusy] = useState(false);
   const [removed, setRemoved] = useState<string[]>([]);
+  const { data: recent } = useLiveQuery(db.select().from(schema.workout));
+  const recentList = useMemo(() => (recent ?? []).slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 5), [recent]);
   useEffect(() => { if (!fwId && frameworks?.length) setFwId(frameworks.find((f) => f.id === 'preset-segev-3x6')?.id ?? frameworks[0].id); }, [frameworks]);
 
   const run = async (seed = Date.now() % 1e9) => {
@@ -58,11 +61,11 @@ export default function Today() {
     for (const it of w.items) if (slotKey(it.blockId, it.slotId) !== key) locked[slotKey(it.blockId, it.slotId)] = it.exerciseId;
     setW(generate({ ...ctx, locked, excluded }));
   };
-  const save = async () => {
+  const save = async (start: boolean) => {
     if (!w) return;
     const id = await saveWorkout(db, w);
-    Alert.alert('Saved', 'The player arrives in Phase 6; the workout is stored and counts as history.', [{ text: 'OK' }]);
-    void id;
+    if (start) router.push({ pathname: '/player/[workoutId]', params: { workoutId: id } });
+    else Alert.alert('Saved', 'It counts as history now. Start it from the list below any time.');
   };
 
   const fw = frameworks?.find((f) => f.id === fwId);
@@ -144,10 +147,28 @@ export default function Today() {
           <View style={styles.rowBetween}>
             <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a row to swap, lock or remove it</Text>
           </View>
-          <Button title="Save as today's workout" onPress={save} />
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}><Button title="Save for later" onPress={() => save(false)} secondary /></View>
+            <View style={{ width: 10 }} />
+            <View style={{ flex: 2 }}><Button title="▶ Start workout" onPress={() => save(true)} /></View>
+          </View>
         </View>
       )}
       {!w && (exercises?.length ?? 0) === 0 && <Text style={styles.small}>Your library is empty — capture a few reels first.</Text>}
+      {recentList.length > 0 && (
+        <View style={[styles.panel, shadow.card]}>
+          <Text style={styles.label}>Recent workouts</Text>
+          {recentList.map((r: Workout) => (
+            <Pressable key={r.id} style={styles.recentRow} onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: r.id } })}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemName}>{new Date(r.createdAt).toLocaleDateString()} · {frameworks?.find((f) => f.id === r.frameworkId)?.name ?? 'workout'}</Text>
+                <Text style={styles.small} numberOfLines={1}>{r.why ?? `${r.items.length} items`}</Text>
+              </View>
+              <Ionicons name="play-circle" size={28} color={colors.accent} />
+            </Pressable>
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -170,4 +191,5 @@ const styles = StyleSheet.create({
   itemActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   missing: { color: colors.muted, fontStyle: 'italic', fontSize: 13 },
   small: { fontSize: 12, color: colors.muted },
+  recentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.line },
 });

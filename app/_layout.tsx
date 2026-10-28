@@ -7,6 +7,7 @@ export default function Layout() {
       <Stack.Screen name="capture" options={{ title: 'Capture' }} />
       <Stack.Screen name="debug" options={{ title: 'Pose debug' }} />
       <Stack.Screen name="login" options={{ title: 'Instagram login (your session)' }} />
+      <Stack.Screen name="figures" options={{ title: 'Figure renderer (Phase 2)' }} />
     </Stack>
   );
 }

@@ -81,6 +81,9 @@ export default function Home() {
       <Text style={styles.h}>2 · Or pick a video from Photos</Text>
       <Button title="Pick a video from Photos" onPress={pickVideo} secondary />
 
+      <Text style={styles.h}>Phase 2 · figure renderer</Text>
+      <Button title="Figure dev screen (3 fixture cards)" onPress={() => router.push('/figures')} secondary />
+
       <Text style={styles.h}>Status</Text>
       <Text style={styles.mono}>
         model: {model ? (model.found ? `found, ${(model.bytes / 1e6).toFixed(1)} MB` : 'NOT FOUND') : '…'}

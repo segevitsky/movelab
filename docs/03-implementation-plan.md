@@ -63,6 +63,8 @@ Acceptance
 
 ## Phase 2 — Figure renderer
 
+> Done 2026-10-28 — see `docs/phase2-results.md`.
+
 Tasks
 - `src/figure` Skia component `<Figure joints fps playing speed mirror hud?>` per Architecture §5.
 - Card variant (small loop) and player variant (full screen).

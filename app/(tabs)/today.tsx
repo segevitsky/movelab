@@ -9,7 +9,7 @@ import { loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
 import type { WorkoutInputs } from '../../src/db/types';
 import { SLOTS, type Slot } from '../../src/db/vocab';
 import { generate, swap, slotKey, type GenContext, type GenWorkout } from '../../src/generator';
-import { FigureCard } from '../../src/figure';
+import { FigureStill } from '../../src/figure';
 import { Button, Chip, Tag } from '../../src/ui/Button';
 import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
 
@@ -108,13 +108,23 @@ export default function Today() {
                   const it = its.find((i) => i.slotId === s.id);
                   const ex = it ? byId.get(it.exerciseId) : undefined;
                   const clip = ex ? clipFromExercise(ex) : null;
+                  const actions = () => {
+                    if (!ex || !it) return;
+                    Alert.alert(ex.name, undefined, [
+                      { text: 'Swap for another', onPress: () => doSwap(b.id, s.id) },
+                      { text: it.locked ? 'Unlock (may change next time)' : 'Lock (keep on regenerate)', onPress: () => toggleLock(b.id, s.id) },
+                      { text: 'Open card', onPress: () => router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }) },
+                      { text: 'Remove from this workout', style: 'destructive', onPress: () => removeItem(b.id, s.id) },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]);
+                  };
                   return (
-                    <View key={s.id} style={styles.item}>
-                      <View style={styles.thumb}>{clip ? <FigureCard clip={clip} width={64} height={78} /> : <Ionicons name={ex ? 'body-outline' : 'help-outline'} size={22} color={colors.muted} />}</View>
+                    <Pressable key={s.id} style={styles.item} onPress={actions} disabled={!ex}>
+                      <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name={ex ? 'body-outline' : 'help-outline'} size={22} color={colors.muted} />}</View>
                       <View style={{ flex: 1, gap: 3 }}>
                         {ex ? (
                           <>
-                            <Text style={styles.itemName} numberOfLines={1}>{ex.name}</Text>
+                            <Text style={styles.itemName} numberOfLines={1}>{it!.locked ? '🔒 ' : ''}{ex.name}</Text>
                             <View style={styles.tagRow}>
                               {ex.pattern && <Tag label={ex.pattern} color={patternColor[ex.pattern]} />}
                               <Text style={styles.small}>{it!.dosage.type === 'reps' ? `${it!.dosage.value} reps` : `${it!.dosage.value} s`}{it!.dosage.perSide ? ' / side' : ''} · ≈{it!.seconds} s</Text>
@@ -124,21 +134,15 @@ export default function Today() {
                           <Text style={styles.missing}>no card for {s.tags.join(' / ')} yet{s.optional ? ' (optional)' : ''}</Text>
                         )}
                       </View>
-                      {ex && (
-                        <View style={styles.itemActions}>
-                          <Pressable onPress={() => doSwap(b.id, s.id)} hitSlop={6}><Ionicons name="shuffle-outline" size={20} color={colors.accent} /></Pressable>
-                          <Pressable onPress={() => toggleLock(b.id, s.id)} hitSlop={6}><Ionicons name={it!.locked ? 'lock-closed' : 'lock-open-outline'} size={18} color={it!.locked ? colors.ink : colors.muted} /></Pressable>
-                          <Pressable onPress={() => removeItem(b.id, s.id)} hitSlop={6}><Ionicons name="close-circle-outline" size={20} color={colors.danger} /></Pressable>
-                        </View>
-                      )}
-                    </View>
+                      {ex && <Ionicons name="ellipsis-horizontal" size={20} color={colors.muted} />}
+                    </Pressable>
                   );
                 })}
               </View>
             );
           })}
           <View style={styles.rowBetween}>
-            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · seed {w.seed}</Text>
+            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a row to swap, lock or remove it</Text>
           </View>
           <Button title="Save as today's workout" onPress={save} />
         </View>

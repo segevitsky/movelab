@@ -8,6 +8,11 @@ export function FigureCard({ clip, width, height = Math.round(width * 1.25), spe
   return <Figure clip={clip} width={width} height={height} loopWindow speed={speed} style={style} />;
 }
 
+/** Static thumbnail (loop start frame) for lists. */
+export function FigureStill({ clip, width, height = Math.round(width * 1.25), style }: { clip: FigureClip; width: number; height?: number; style?: StyleProp<ViewStyle> }) {
+  return <Figure clip={clip} width={width} height={height} still playing={false} style={style} />;
+}
+
 /** Player: full clip, controls from the caller (playing / speed / mirror / HUD). */
 export function FigurePlayer(props: { clip: FigureClip; width: number; height: number; playing?: boolean; speed?: number; mirror?: boolean; hud?: boolean; onFrame?: (f: number) => void; style?: StyleProp<ViewStyle> }) {
   return <Figure {...props} loopWindow={false} />;

@@ -206,9 +206,15 @@ function mid(a: XY, b: XY): XY {
 }
 
 /** Record every frame of a prepared clip as a Skia picture (cheap to replay on the UI thread). */
-export function recordPictures(prep: Prepared, opts: DrawOptions = {}) {
+export function recordPictures(prep: Prepared, opts: DrawOptions = {}, onlyFrame?: number) {
   const rec = Skia.PictureRecorder();
   const out = [];
+  if (onlyFrame !== undefined) {
+    const canvas = rec.beginRecording(Skia.XYWHRect(0, 0, prep.width, prep.height));
+    drawFrame(canvas, prep, onlyFrame, opts);
+    out.push(rec.finishRecordingAsPicture());
+    return out;
+  }
   for (let k = 0; k < prep.frames.length; k++) {
     const canvas = rec.beginRecording(Skia.XYWHRect(0, 0, prep.width, prep.height));
     drawFrame(canvas, prep, k, opts);

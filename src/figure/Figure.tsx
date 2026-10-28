@@ -22,15 +22,17 @@ export type FigureProps = {
   style?: StyleProp<ViewStyle>;
   /** called at most ~10×/s with the current frame index */
   onFrame?: (frame: number) => void;
+  /** draw one frame only (loop start) — cheap thumbnails for long lists */
+  still?: boolean;
 };
 
 /**
  * Stick-figure player. Every frame is pre-recorded as a Skia picture once per (clip, size, mirror);
  * playback advances a shared value on the UI thread, so React never re-renders per frame.
  */
-export function Figure({ clip, width, height, playing = true, speed = 1, mirror = false, loopWindow = true, hud = false, floor = true, shadow = true, style, onFrame }: FigureProps) {
+export function Figure({ clip, width, height, playing = true, speed = 1, mirror = false, loopWindow = true, hud = false, floor = true, shadow = true, style, onFrame, still = false }: FigureProps) {
   const prep = useMemo(() => prepare(clip, width, height), [clip, width, height]);
-  const pictures = useMemo(() => recordPictures(prep, { mirror, floor, shadow }), [prep, mirror, floor, shadow]);
+  const pictures = useMemo(() => (still ? recordPictures(prep, { mirror, floor, shadow }, prep.loop.i0) : recordPictures(prep, { mirror, floor, shadow })), [prep, mirror, floor, shadow, still]);
   const i0 = loopWindow ? prep.loop.i0 : 0;
   const n = loopWindow ? prep.loop.i1 - prep.loop.i0 + 1 : prep.frames.length;
   const fps = prep.fps;
@@ -42,12 +44,12 @@ export function Figure({ clip, width, height, playing = true, speed = 1, mirror 
   useEffect(() => { speedSV.value = speed; }, [speed, speedSV]);
 
   useFrameCallback((info) => {
-    if (!playingSV.value || !info.timeSincePreviousFrame) return;
+    if (still || !playingSV.value || !info.timeSincePreviousFrame) return;
     const dt = Math.min(0.1, info.timeSincePreviousFrame / 1000);
     frame.value = (frame.value + dt * fps * speedSV.value) % n;
   });
 
-  const picture = useDerivedValue(() => pictures[i0 + Math.floor(frame.value)] ?? pictures[i0]);
+  const picture = useDerivedValue(() => (still ? pictures[0] : pictures[i0 + Math.floor(frame.value)] ?? pictures[i0]));
 
   const [hudText, setHudText] = useState<string[]>([]);
   const [, setTick] = useState(0);

@@ -35,7 +35,9 @@ export async function rebuildPairings(db: Db): Promise<PairingEdge[]> {
   const rows = await db.select().from(sourceExercise);
   const edges = buildPairings(rows.map((r) => ({ sourceId: r.sourceId, exerciseId: r.exerciseId, order: r.order })));
   await db.delete(pairing);
-  for (const e of edges) await db.insert(pairing).values({ aId: e.aId, bId: e.bId, weight: e.weight, directedWeight: e.directedWeight });
+  for (let i = 0; i < edges.length; i += 100) {
+    await db.insert(pairing).values(edges.slice(i, i + 100).map((e) => ({ aId: e.aId, bId: e.bId, weight: e.weight, directedWeight: e.directedWeight })));
+  }
   return edges;
 }
 

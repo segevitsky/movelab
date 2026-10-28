@@ -61,6 +61,15 @@ Stack: Expo SDK 58 (dev client, new arch), React Native 0.88, expo-router, @shop
 react-native-reanimated 4, expo-sqlite + drizzle (Phase 3), zustand, vitest. Node 24 (`.nvmrc`).
 Device: iPhone 17 Pro Max, free Apple ID / Personal Team (7-day signature), Xcode 27.1.
 
+## Standalone demo build (no Mac, no Metro)
+```
+cd ios && xcodebuild -workspace MoveLab.xcworkspace -scheme MoveLab -configuration Release \
+  -destination 'generic/platform=iOS' -derivedDataPath /tmp/movelab-release -allowProvisioningUpdates build
+xcrun devicectl device install app --device <udid> /tmp/movelab-release/Build/Products/Release-iphoneos/MoveLab.app
+```
+Personal-Team signature lasts 7 days (first installed 2026-10-28 → re-sign by 2026-11-04). The release
+build replaces the dev build; reinstall the dev build (`npx expo run:ios --device`) for live development.
+
 ## How to run
 ```
 nvm use && npm install

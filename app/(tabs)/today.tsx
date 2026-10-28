@@ -9,7 +9,7 @@ import { loadGenContext, recentWorkouts, saveWorkout } from '../../src/db/workou
 import type { Workout } from '../../src/db/schema';
 import type { WorkoutInputs } from '../../src/db/types';
 import { SLOTS, type Slot } from '../../src/db/vocab';
-import { generate, swap, slotKey, type GenContext, type GenWorkout } from '../../src/generator';
+import { generate, swap, slotKey, itemSeconds, type GenContext, type GenWorkout } from '../../src/generator';
 import { FigureStill } from '../../src/figure';
 import { Button, Chip, Tag } from '../../src/ui/Button';
 import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
@@ -49,6 +49,18 @@ export default function Today() {
     if (!w) return;
     const key = slotKey(blockId, slotId);
     setW({ ...w, items: w.items.map((i) => (slotKey(i.blockId, i.slotId) === key ? { ...i, locked: !i.locked } : i)) });
+  };
+  const adjust = (blockId: string, slotId: string, dir: 1 | -1) => {
+    if (!w || !ctx) return;
+    const key = slotKey(blockId, slotId);
+    const byIdG = new Map(ctx.library.map((e) => [e.id, e]));
+    setW({ ...w, items: w.items.map((i) => {
+      if (slotKey(i.blockId, i.slotId) !== key) return i;
+      const d = i.dosage;
+      const value = d.type === 'time' ? Math.max(10, d.value + dir * 15) : Math.max(1, d.value + dir * 2);
+      const dosage = { ...d, value };
+      return { ...i, dosage, seconds: itemSeconds(byIdG.get(i.exerciseId), dosage) };
+    }) });
   };
   const removeItem = (blockId: string, slotId: string) => {
     if (!ctx || !w) return;
@@ -102,8 +114,14 @@ export default function Today() {
               <View key={b.id} style={[styles.block, shadow.card]}>
                 <View style={styles.rowBetween}>
                   <Text style={styles.blockTitle}>{b.name}</Text>
-                  <Text style={styles.small}>{rounds > 1 ? `× ${rounds} rounds · rest ${b.restBetweenRoundsSec ?? 0} s` : b.seconds ? `${Math.round(b.seconds / 60)} min` : ''}</Text>
+                  <Text style={styles.small}>{rounds > 1 ? `× ${rounds} rounds` : b.seconds ? `${Math.round(b.seconds / 60)} min` : ''}</Text>
                 </View>
+                {rounds > 1 && (
+                  <View style={styles.chips}>
+                    <Text style={[styles.small, { alignSelf: 'center' }]}>break between rounds</Text>
+                    {[60, 90, 120, 180].map((r) => <Chip key={r} label={`${r} s`} color={colors.inkSoft} on={(w.inputs.restBetweenRoundsSec ?? b.restBetweenRoundsSec ?? 0) === r} onPress={() => setW({ ...w, inputs: { ...w.inputs, restBetweenRoundsSec: r } })} />)}
+                  </View>
+                )}
                 {b.slots.map((s) => {
                   const it = its.find((i) => i.slotId === s.id);
                   const ex = it ? byId.get(it.exerciseId) : undefined;
@@ -127,7 +145,10 @@ export default function Today() {
                             <Text style={styles.itemName} numberOfLines={1}>{it!.locked ? '🔒 ' : ''}{ex.name}</Text>
                             <View style={styles.tagRow}>
                               {ex.pattern && <Tag label={ex.pattern} color={patternColor[ex.pattern]} />}
-                              <Text style={styles.small}>{it!.dosage.type === 'reps' ? `${it!.dosage.value} reps` : `${it!.dosage.value} s`}{it!.dosage.perSide ? ' / side' : ''} · ≈{it!.seconds} s</Text>
+                              <Pressable onPress={() => adjust(b.id, s.id, -1)} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>−</Text></Pressable>
+                              <Text style={styles.dose}>{it!.dosage.type === 'reps' ? `${it!.dosage.value} reps` : `${it!.dosage.value} s`}{it!.dosage.perSide ? ' / side' : ''}</Text>
+                              <Pressable onPress={() => adjust(b.id, s.id, 1)} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>+</Text></Pressable>
+                              <Text style={styles.small}>≈{it!.seconds} s</Text>
                             </View>
                           </>
                         ) : (
@@ -188,5 +209,8 @@ const styles = StyleSheet.create({
   itemActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   missing: { color: colors.muted, fontStyle: 'italic', fontSize: 13 },
   small: { fontSize: 12, color: colors.muted },
+  stepBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  stepBtnText: { fontWeight: '800', color: colors.ink, fontSize: 16, lineHeight: 18 },
+  dose: { fontWeight: '700', color: colors.ink, fontSize: 13 },
   recentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.line },
 });

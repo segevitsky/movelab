@@ -31,6 +31,9 @@ export type GenInputs = {
   focus?: Slot | null;
   /** 0 = safest, most expected picks; 1 = adventurous */
   surprise?: number;
+  /** per-workout rest overrides (player timeline) */
+  restBetweenRoundsSec?: number;
+  restBetweenExercisesSec?: number;
 };
 
 export type GenItem = {

@@ -13,6 +13,9 @@ export type Step =
 export type TimelineOptions = {
   readySeconds?: number; // before the first exercise of a block (default 10) and between exercises when no rest (default 5)
   repSecondsOf?: (exerciseId: string) => number | null;
+  /** per-workout overrides (apply to 'rounds' blocks) */
+  restBetweenRoundsSec?: number;
+  restBetweenExercisesSec?: number;
 };
 
 export function workSeconds(dosage: Dosage, repSeconds: number | null | undefined) {
@@ -39,11 +42,11 @@ export function buildTimeline(items: TimelineItem[], blocks: FrameworkBlocks, op
     const newRound = !!prev && prev.blockId === it.blockId && prev.round !== it.round;
     if (firstOfBlock) steps.push({ kind: 'ready', seconds: ready0, blockId: b.id, round: it.round, nextExerciseId: it.exerciseId, label: `${b.name} — get ready` });
     else if (newRound) {
-      const rest = b.restBetweenRoundsSec ?? 0;
+      const rest = opts.restBetweenRoundsSec ?? b.restBetweenRoundsSec ?? 0;
       if (rest > 0) steps.push({ kind: 'rest', seconds: rest, blockId: b.id, round: it.round, label: `Rest — round ${it.round} next`, nextExerciseId: it.exerciseId });
       else steps.push({ kind: 'ready', seconds: 5, blockId: b.id, round: it.round, nextExerciseId: it.exerciseId, label: `Round ${it.round}` });
     } else {
-      const rest = b.restBetweenExercisesSec ?? 0;
+      const rest = (b.kind === 'rounds' ? opts.restBetweenExercisesSec : undefined) ?? b.restBetweenExercisesSec ?? 0;
       if (rest > 0) steps.push({ kind: 'rest', seconds: rest, blockId: b.id, round: it.round, label: 'Rest', nextExerciseId: it.exerciseId });
       else steps.push({ kind: 'ready', seconds: 5, blockId: b.id, round: it.round, nextExerciseId: it.exerciseId, label: 'Next' });
     }

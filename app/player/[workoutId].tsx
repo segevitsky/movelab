@@ -46,7 +46,7 @@ export default function Player() {
       const map = new Map(rows.map((e) => [e.id, e]));
       setExById(map);
       setBlockNames(Object.fromEntries(fw.blocks.blocks.map((b) => [b.id, { name: b.name, rounds: b.kind === 'rounds' ? b.rounds ?? 1 : 1 }])));
-      const steps = buildTimeline(w.items, fw.blocks, { repSecondsOf: (id) => map.get(id)?.repSeconds ?? null });
+      const steps = buildTimeline(w.items, fw.blocks, { repSecondsOf: (id) => map.get(id)?.repSeconds ?? null, restBetweenRoundsSec: w.inputs.restBetweenRoundsSec, restBetweenExercisesSec: w.inputs.restBetweenExercisesSec });
       setState(createPlayer(steps));
       setSessionId(await startSession(db, w.id));
       try {
@@ -126,7 +126,7 @@ export default function Player() {
 
   const figH = Math.round(Math.min(H * 0.52, W * 1.15));
   return (
-    <View style={[styles.root, isRest && { backgroundColor: colors.surfaceAlt }]}>
+    <View style={[styles.root, isRest && { backgroundColor: '#e4e9ef' }]}>
       <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
         <Pressable onPress={() => Alert.alert('Leave the workout?', undefined, [{ text: 'Keep going' }, { text: 'Leave', style: 'destructive', onPress: () => finish('right') }])} hitSlop={10}><Ionicons name="close" size={26} color={colors.ink} /></Pressable>
         <Text style={styles.blockText}>{block?.name}{block && block.rounds > 1 && step.kind !== 'done' ? ` · round ${step.round}/${block.rounds}` : ''}</Text>
@@ -139,7 +139,8 @@ export default function Player() {
       </View>
 
       <View style={styles.middle}>
-        <Text style={styles.stepLabel}>{isRest ? step.label : step.label}</Text>
+        {step.kind === 'rest' && <Text style={styles.restBig}>REST</Text>}
+        <Text style={styles.stepLabel}>{step.label}</Text>
         <Text style={styles.exName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{isRest ? (ex ? `Next: ${ex.name}` : '') : ex?.name ?? ''}</Text>
         {ex?.pattern && !isRest && <Text style={[styles.pattern, { color: patternColor[ex.pattern] }]}>{ex.pattern}</Text>}
         <Text style={[styles.countdown, isRest && { color: colors.muted }, flash && { color: colors.accent }]}>{secs}</Text>
@@ -178,6 +179,7 @@ const styles = StyleSheet.create({
   progressFill: { height: 4, backgroundColor: colors.accent },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 4 },
   stepLabel: { fontSize: 14, color: colors.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
+  restBig: { fontSize: 34, fontWeight: '900', color: colors.accent, letterSpacing: 4 },
   exName: { fontSize: 20, fontWeight: '800', color: colors.ink, textAlign: 'center' },
   pattern: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   countdown: { fontSize: 96, fontWeight: '900', color: colors.ink, fontVariant: ['tabular-nums'], lineHeight: 104 },

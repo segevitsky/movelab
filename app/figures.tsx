@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Figure, clipFromProcessed, useFps, type FigureClip } from '../src/figure';
 import { processCapture, type RawFrame } from '../src/pipeline';
-import { Button } from './index';
+import { Button } from '../src/ui/Button';
 
 /** Phase 2 dev screen: the 3 fixture segments looping as cards + a full-size player. */
 const FIXTURES: { name: string; load: () => RawFrame[]; pick: (segs: ReturnType<typeof processCapture>) => ReturnType<typeof processCapture>[number] }[] = [

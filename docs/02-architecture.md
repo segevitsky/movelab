@@ -137,6 +137,40 @@ when the ankle itself is wrong.
 - Props drawn as shaded cylinders (dark rim, mid body, highlight, elliptic tips), behind/in front by flag.
 Storage per exercise: 15 fps, 33 landmarks int16 (+ optional 3D) → ~2 KB/s.
 
+## 5a. Scene elements (floor mat + auto-crop)
+
+Goal: the card shows the figure on *its* mat, in perspective, instead of a generic floor; and a screen
+recording of a reel is cropped to the reel automatically. Both are computed on device from the recording
+before it is deleted; only the results (a quad, a rect) are stored (`exercise.scene`).
+
+**Auto-crop of the reel area in a screen recording** (replaces the WebView rect when it is unreliable):
+per-pixel temporal standard deviation over the recording (sampled at ~2 fps, downscaled) → threshold →
+largest connected moving box (the video area moves, the UI chrome does not) → padded rect, snapped to even
+pixels. Used by `Pose.process(cropRect)`; shown in Review for confirmation.
+
+**Floor mat detection** (static camera only — skip when the hip-centre background shifts > 5 % of width):
+1. Temporal median of the (cropped) frames → background image without the person.
+2. Dark floor core: the darkest large blob in the lower half (mats are darker than most floors; verify the
+   blob's bottom edge is below the 97th-percentile ankle line used for `ground`).
+3. Fill the region enclosed by Canny edges around that core (flood fill from the core, stopped by edges).
+4. Fit a 4-point quad (min-area quadrilateral / Douglas-Peucker to 4 corners), ordered TL, TR, BR, BL.
+   Reject if the quad is < 15 % of the frame or not convex.
+5. Fallback: the user taps the 4 corners in the Review screen (same quad format). The quad can be edited
+   or removed later in the exercise detail.
+
+**Rendering** (`src/figure`): the quad is drawn as a flat perspective slab under the figure (fill slightly
+darker than the floor, thin rim) and the cast shadow becomes translucent (alpha ≈ 0.35) so it reads on
+both the mat and the floor. Grid lines pass under the mat. Follow-cam and ground anchoring are unchanged:
+the mat is in source pixels like the joints, so it moves with the camera.
+
+Storage: `exercise.scene = { matQuad?: [[x,y]×4] (source px), cropRect?: {x,y,width,height} (normalised
+to the recording), cameraStatic: boolean }`. The mat is optional everywhere; absence = generic floor.
+Native side: `modules/pose` gets `sceneAnalysis(fileUri) → { cropRect, matQuad?, cameraStatic }`
+(Core Image / vImage; OpenCV is not required for median, Canny, flood fill at this scale).
+
+Phase: detection + Review tap-fallback in **Phase 4** (capture flow); mat drawing in the renderer as soon as
+a quad exists. Not in v1: mats that move with the camera, multiple mats, non-rectangular mats.
+
 ## 6. Generator (`src/generator`)
 
 Inputs: framework, library, pairing graph, active goals, history (last 14 days), today's inputs

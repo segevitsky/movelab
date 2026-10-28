@@ -76,6 +76,8 @@ Acceptance
 
 ## Phase 3 — Data + library
 
+> Done 2026-10-28 — see `docs/phase3-results.md`.
+
 Tasks
 - drizzle schema per Architecture §7, migrations, seed (presets, seed goals from `reference/seed-goals.md`).
 - Library screen (grid of looping cards, filters), exercise detail, manual add.
@@ -89,6 +91,7 @@ Acceptance
 Tasks
 - Wire share → capture → record → pose → pipeline → review → save. Delete recording after save.
 - Upload-from-Photos fallback through the same pipeline.
+- Scene elements (Arch §5a): auto-crop of the reel area; floor-mat quad detection with the tap-4-corners fallback in Review; mat drawn under the figure.
 - Backend `/tag` (worker) + client; review screen pre-filled with suggestions.
 - Store `source` + `source_exercise` rows.
 

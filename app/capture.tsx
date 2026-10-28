@@ -9,7 +9,7 @@ import { DESKTOP_UA, EMBED_INJECTED_JS, embedUrl, reelPageUrl, type EmbedMessage
 import { upsertAttempt, patchAttempt } from '../src/capture/log';
 import { ScreenRecorder } from '../modules/screen-recorder';
 import type { NormRect } from '../modules/pose';
-import { Button } from './index';
+import { Button } from '../src/ui/Button';
 
 /**
  * Phase 0 task 3 + 4: embed WebView with injected JS, and ReplayKit recording around it.

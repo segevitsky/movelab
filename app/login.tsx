@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewProps } from 'react-native-webview';
 import { useRouter } from 'expo-router';
 import { DESKTOP_UA } from '../src/capture/embed';
-import { Button } from './index';
+import { Button } from '../src/ui/Button';
 
 const WebViewC = WebView as unknown as React.ComponentType<WebViewProps>;
 

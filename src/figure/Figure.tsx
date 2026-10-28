@@ -47,7 +47,7 @@ export function Figure({ clip, width, height, playing = true, speed = 1, mirror 
     frame.value = (frame.value + dt * fps * speedSV.value) % n;
   });
 
-  const picture = useDerivedValue(() => pictures[i0 + Math.floor(frame.value)] ?? pictures[i0], [pictures, i0, n]);
+  const picture = useDerivedValue(() => pictures[i0 + Math.floor(frame.value)] ?? pictures[i0]);
 
   const [hudText, setHudText] = useState<string[]>([]);
   const [, setTick] = useState(0);
@@ -56,7 +56,6 @@ export function Figure({ clip, width, height, playing = true, speed = 1, mirror 
     (cur, prev) => {
       if (cur !== prev) runOnJS(frameTick)(i0 + Math.floor(frame.value));
     },
-    [i0],
   );
   function frameTick(k: number) {
     onFrame?.(k);

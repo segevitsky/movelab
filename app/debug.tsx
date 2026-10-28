@@ -6,7 +6,7 @@ import { File, Paths } from 'expo-file-system';
 import { Pose, type NormRect, type PoseResult } from '../modules/pose';
 import { PoseOverlay } from '../src/debug/PoseOverlay';
 import { patchAttempt } from '../src/capture/log';
-import { Button } from './index';
+import { Button } from '../src/ui/Button';
 
 /** Phase 0 task 7: raw joints over a frame + JSON export. Also runs MediaPipe vs Vision timing. */
 export default function Debug() {

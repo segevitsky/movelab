@@ -15,6 +15,7 @@ import type { Exercise } from '../../src/db/schema';
 import type { FrameworkSlot } from '../../src/db/types';
 import { Button, Chip, Tag } from '../../src/ui/Button';
 import { SwipeRow } from '../../src/ui/SwipeRow';
+import { Drop, Pop, Rise } from '../../src/ui/motion';
 import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
 
 
@@ -124,15 +125,15 @@ export default function Today() {
 
       {w && fw && (
         <View style={{ gap: 12 }}>
-          <View style={[styles.why, { backgroundColor: tint(colors.accent, 0.1) }]}>
+          <Drop index={0} style={[styles.why, { backgroundColor: tint(colors.accent, 0.1) }]}>
             <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
             <Text style={styles.whyText}>{w.why}</Text>
-          </View>
-          {fw.blocks.blocks.map((b) => {
+          </Drop>
+          {fw.blocks.blocks.map((b, bi) => {
             const its = w.items.filter((i) => i.blockId === b.id && i.round === 1);
             const rounds = b.kind === 'rounds' ? b.rounds ?? 1 : 1;
             return (
-              <View key={b.id} style={[styles.block, shadow.card]}>
+              <Drop key={b.id} index={bi} style={[styles.block, shadow.card]}>
                 <View style={styles.rowBetween}>
                   <Text style={styles.blockTitle}>{b.name}</Text>
                   <Text style={styles.small}>{rounds > 1 ? `× ${rounds} rounds` : b.seconds ? `${Math.round(b.seconds / 60)} min` : ''}</Text>
@@ -159,8 +160,8 @@ export default function Today() {
                     ]);
                   };
                   return (
+                    <Rise key={`${s.id}-${it?.exerciseId ?? 'none'}`} index={0}>
                     <SwipeRow
-                      key={s.id}
                       disabled={!ex}
                       actions={[
                         { label: 'Choose', icon: 'albums-outline', color: colors.accent, onPress: () => { setPickerText(''); setPicker({ blockId: b.id, slotId: s.id, slot: s }); } },
@@ -188,9 +189,10 @@ export default function Today() {
                       {ex && <Ionicons name="ellipsis-horizontal" size={20} color={colors.muted} />}
                     </Pressable>
                     </SwipeRow>
+                    </Rise>
                   );
                 })}
-              </View>
+              </Drop>
             );
           })}
           <View style={styles.rowBetween}>
@@ -262,9 +264,11 @@ export default function Today() {
       )}
     </ScrollView>
     {w && (
-      <Pressable onPress={() => save(true)} style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 }]}>
-        <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
-      </Pressable>
+      <Pop style={styles.fabWrap}>
+        <Pressable onPress={() => save(true)} style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.92 }], opacity: 0.9 }]}>
+          <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
+        </Pressable>
+      </Pop>
     )}
     </View>
   );
@@ -293,7 +297,8 @@ const styles = StyleSheet.create({
   dose: { fontWeight: '700', color: colors.ink, fontSize: 13 },
   pickRow: { backgroundColor: colors.surface, borderRadius: radius.m, padding: 8 },
   search: { margin: 16, marginBottom: 8, borderWidth: 1, borderColor: colors.line, borderRadius: radius.m, padding: 10, backgroundColor: colors.surface, color: colors.ink },
-  fab: { position: 'absolute', right: 18, bottom: 18, width: 68, height: 68, borderRadius: 34, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow.card, shadowOpacity: 0.25 },
+  fabWrap: { position: 'absolute', right: 18, bottom: 18 },
+  fab: { width: 68, height: 68, borderRadius: 34, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow.card, shadowOpacity: 0.25 },
   fabText: { color: '#fff', fontWeight: '800', fontSize: 17 },
   recentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.line },
 });

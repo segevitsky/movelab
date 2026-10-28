@@ -16,6 +16,9 @@ import { FigurePlayer } from '../../src/figure';
 import { back, createPlayer, pause, play, plus, skip, tick, workProgress, type PlayerState } from '../../src/player/machine';
 import { buildTimeline, totalTimelineSeconds, type Step } from '../../src/player/timeline';
 import { Button } from '../../src/ui/Button';
+import Animated, { FadeIn, SlideInRight, ZoomIn } from 'react-native-reanimated';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { patternColor as PC } from '../../src/ui/theme';
 import { SwipeNav } from '../../src/ui/SwipeNav';
 import { colors, patternColor, radius } from '../../src/ui/theme';
 
@@ -112,7 +115,8 @@ export default function Player() {
   if (state.finished) {
     return (
       <View style={[styles.center, { paddingTop: insets.top + 40, gap: 18 }]}>
-        <Ionicons name="checkmark-circle" size={64} color={colors.success} />
+        <ConfettiCannon count={140} origin={{ x: Dimensions.get('window').width / 2, y: -10 }} fadeOut autoStart explosionSpeed={400} fallSpeed={2600} colors={[PC.push, PC.pull, PC.core, PC.skill, PC.mobility, colors.accent]} />
+        <Animated.View entering={ZoomIn.springify().damping(10)}><Ionicons name="checkmark-circle" size={72} color={colors.success} /></Animated.View>
         <Text style={styles.doneTitle}>Workout done</Text>
         <Text style={styles.small}>{Math.round(state.elapsedMs / 60000)} min · {prog.total} exercises</Text>
         <Text style={styles.label}>How was it?</Text>
@@ -140,16 +144,16 @@ export default function Player() {
         {clip ? <FigurePlayer clip={clip} width={W} height={figH} speed={1} style={{ opacity: isRest ? 0.55 : 1 }} /> : <View style={{ width: W, height: figH }} />}
       </View>
 
-      <View style={styles.middle}>
+      <Animated.View key={state.index} entering={SlideInRight.springify().damping(18)} style={styles.middle}>
         {step.kind === 'rest' && <Text style={styles.restBig}>REST</Text>}
         <Text style={styles.stepLabel}>{step.label}</Text>
         <Text style={styles.exName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{isRest ? (ex ? `Next: ${ex.name}` : '') : ex?.name ?? ''}</Text>
         {ex?.pattern && !isRest && <Text style={[styles.pattern, { color: patternColor[ex.pattern] }]}>{ex.pattern}</Text>}
-        <Text style={[styles.countdown, isRest && { color: colors.muted }, flash && { color: colors.accent }]}>{secs}</Text>
+        <Animated.Text key={`${state.index}-${secs}`} entering={secs <= 3 && !isRest ? ZoomIn.springify().damping(9) : FadeIn.duration(80)} style={[styles.countdown, isRest && { color: colors.muted }, flash && { color: colors.accent }]}>{secs}</Animated.Text>
         <View style={styles.stepBar}><View style={[styles.stepFill, { width: `${Math.max(0, Math.min(100, 100 * (1 - state.remainingMs / Math.max(1, step.seconds * 1000))))}%`, backgroundColor: isRest ? colors.muted : colors.accent }]} /></View>
         {!isRest && nextEx && <Text style={styles.small}>then: {nextEx.name}</Text>}
         <Text style={[styles.small, { marginTop: 6 }]}>swipe ← skip · swipe → back</Text>
-      </View>
+      </Animated.View>
       </SwipeNav>
 
       <View style={[styles.controls, { paddingBottom: insets.bottom + 16 }]}>

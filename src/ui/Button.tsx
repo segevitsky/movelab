@@ -4,7 +4,7 @@ import { colors, radius, tint } from './theme';
 
 export function Button({ title, onPress, secondary, disabled, danger }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean; danger?: boolean }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.btn, secondary && styles.btnSecondary, danger && styles.btnDanger, disabled && { opacity: 0.4 }, pressed && { opacity: 0.8 }]}>
+    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.btn, secondary && styles.btnSecondary, danger && styles.btnDanger, disabled && { opacity: 0.4 }, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}>
       <Text style={[styles.btnText, secondary && { color: colors.ink }]}>{title}</Text>
     </Pressable>
   );
@@ -13,7 +13,7 @@ export function Button({ title, onPress, secondary, disabled, danger }: { title:
 /** Toggle chip; `color` tints it (off = soft tint + coloured text, on = solid). */
 export function Chip({ label, on, onPress, color = colors.inkSoft }: { label: string; on: boolean; onPress: () => void; color?: string }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, { backgroundColor: on ? color : tint(color, 0.12), borderColor: on ? color : tint(color, 0.35) }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.chip, { backgroundColor: on ? color : tint(color, 0.12), borderColor: on ? color : tint(color, 0.35) }, pressed && { transform: [{ scale: 0.93 }] }]}>
       <Text style={[styles.chipText, { color: on ? '#fff' : color }]}>{label}</Text>
     </Pressable>
   );

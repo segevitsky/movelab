@@ -19,6 +19,7 @@ import { qualityScore } from '../src/pipeline/sanity';
 import type { ProcessedSegment, RawFrame } from '../src/pipeline';
 import { Button, Chip, Tag } from '../src/ui/Button';
 import { colors, patternColor, radius, shadow, slotColor } from '../src/ui/theme';
+import { Drop } from '../src/ui/motion';
 
 type Item = {
   id: string;
@@ -198,7 +199,7 @@ export default function Review() {
           if (scene?.matQuad) clip.scene = { matQuad: scene.matQuad.map((p) => [p[0], p[1]]) };
           const t0 = frames[it.range.start].t, t1 = frames[it.range.end].t;
           return (
-            <View key={it.id} style={[styles.card, shadow.card, !it.include && { opacity: 0.55 }]}>
+            <Drop key={it.id} index={idx} style={[styles.card, shadow.card, !it.include && { opacity: 0.55 }]}>
               <View style={styles.cardRow}>
                 <View style={{ borderRadius: radius.m, overflow: 'hidden' }}>
                   <FigureCard clip={clip} width={cardW} height={Math.round(cardW * 1.2)} />
@@ -240,7 +241,7 @@ export default function Review() {
                 <Action icon="play-skip-back-outline" label="End −0.5s" onPress={() => trim(idx, 0, -0.5)} />
                 <Action icon="trash-outline" label="Delete" onPress={() => remove(it.id)} danger />
               </View>
-            </View>
+            </Drop>
           );
         })}
         <Button title="Open in pose debug" onPress={() => router.push({ pathname: '/debug', params: { uri: params.uri, title: params.title ?? params.code ?? 'video', crop: cropRef.current ? JSON.stringify(cropRef.current) : '' } })} secondary />

@@ -11,6 +11,7 @@ import { useFilters } from '../../src/state/filters';
 import { FigureCard } from '../../src/figure';
 import { Chip, Tag } from '../../src/ui/Button';
 import { colors, patternColor, radius, shadow, slotColor } from '../../src/ui/theme';
+import { Rise } from '../../src/ui/motion';
 import type { Exercise } from '../../src/db/schema';
 
 const COLS = 2;
@@ -58,7 +59,7 @@ export default function Library() {
         keyExtractor={(e) => e.id}
         contentContainerStyle={styles.grid}
         columnWrapperStyle={{ gap: 12 }}
-        renderItem={({ item }) => <ExerciseTile e={item} width={cardW} onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: item.id } })} />}
+        renderItem={({ item, index }) => <Rise index={index}><ExerciseTile e={item} width={cardW} onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: item.id } })} /></Rise>}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name={data && data.length > 0 ? 'filter-outline' : 'albums-outline'} size={36} color={colors.muted} />

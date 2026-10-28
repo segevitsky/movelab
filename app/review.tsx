@@ -14,6 +14,7 @@ import { frameAt, mergeRanges, processRange, splitRange, trimRange, type Range }
 import { estimateFps, resample } from '../src/pipeline/resample';
 import { segment } from '../src/pipeline/segment';
 import { suggestName, suggestTags, type TagSuggestion } from '../src/pipeline/tagger';
+import { validateMatQuad } from '../src/pipeline/scene';
 import type { ProcessedSegment, RawFrame } from '../src/pipeline';
 import { Button, Chip, Tag } from '../src/ui/Button';
 import { colors, patternColor, radius, shadow, slotColor } from '../src/ui/theme';
@@ -83,6 +84,12 @@ export default function Review() {
     setFps(fpsUsed);
     const segs = segment(rs);
     const built = segs.map((sg, i) => makeItem(rs, { start: sg.start, end: sg.end }, fpsUsed, i));
+    // the detector can mistake a uniform background for a mat: keep the quad only if it sits on the floor under the figure
+    if (s.matQuad && built.length) {
+      const ok = validateMatQuad(s.matQuad, built.reduce((a, b) => (b.processed.xy.length > a.processed.xy.length ? b : a)).processed.xy);
+      if (!ok) setScene({ ...s, matQuad: undefined });
+      setStats((st) => st.replace(' · mat found', ok ? ' · mat found' : ' · mat rejected (not on the floor)'));
+    }
     setItems(built);
     setPhase('review');
   }

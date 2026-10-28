@@ -185,7 +185,11 @@ enum SceneAnalysis {
       }
     }
     let area = pts.count
-    if area < rw * rh * 15 / 100 || area > rw * rh * 85 / 100 { return nil }
+    // a mat is a floor patch: not most of the frame, and confined to the lower part of the crop
+    if area < rw * rh * 8 / 100 || area > rw * rh * 55 / 100 { return nil }
+    let minY = pts.map { $0.1 }.min() ?? y0, maxY = pts.map { $0.1 }.max() ?? y1
+    if minY < y0 + rh * 40 / 100 { return nil }
+    if (maxY - minY) > rh * 55 / 100 { return nil }
     // 4 corners: points of the region extreme along the box diagonals (robust for a perspective quad)
     func extreme(_ score: ((Int, Int)) -> Int) -> CGPoint { let p = pts.max { score($0) < score($1) }!; return CGPoint(x: p.0, y: p.1) }
     let tl = extreme { -($0.0 + $0.1) }

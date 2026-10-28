@@ -80,6 +80,9 @@ export default function ExerciseDetail() {
         created {new Date(e.createdAt).toLocaleDateString()}
       </Text>
 
+      {e.scene?.matQuad && (
+        <Button title="Remove the mat from this card" onPress={() => save({ scene: { ...e.scene!, matQuad: undefined } })} secondary />
+      )}
       <View style={styles.row}>
         <Button title={e.archived ? 'Unarchive' : 'Archive'} onPress={() => save({ archived: !e.archived })} secondary />
         <Button

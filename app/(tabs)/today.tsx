@@ -101,7 +101,8 @@ export default function Today() {
 
   const fw = frameworks?.find((f) => f.id === fwId);
   return (
-    <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
+    <View style={{ flex: 1 }}>
+    <ScrollView contentContainerStyle={[styles.container, w ? { paddingBottom: 130 } : null]} contentInsetAdjustmentBehavior="automatic">
       <View style={[styles.panel, shadow.card]}>
         <View style={styles.rowBetween}>
           <Text style={styles.label}>Framework</Text>
@@ -195,11 +196,7 @@ export default function Today() {
           <View style={styles.rowBetween}>
             <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a row for options, swipe left for quick actions</Text>
           </View>
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}><Button title="Save for later" onPress={() => save(false)} secondary /></View>
-            <View style={{ width: 10 }} />
-            <View style={{ flex: 2 }}><Button title="▶ Start workout" onPress={() => save(true)} /></View>
-          </View>
+          <Pressable onPress={() => save(false)} style={{ alignSelf: 'center', paddingVertical: 6 }}><Text style={styles.link}>Save for later without starting</Text></Pressable>
         </View>
       )}
       {!w && (exercises?.length ?? 0) === 0 && <Text style={styles.small}>Your library is empty — capture a few reels first.</Text>}
@@ -264,6 +261,13 @@ export default function Today() {
         </View>
       )}
     </ScrollView>
+    {w && (
+      <Pressable onPress={() => save(true)} style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 }]}>
+        <Ionicons name="play" size={22} color="#fff" />
+        <Text style={styles.fabText}>Start workout · {Math.round(w.totalSeconds / 60)} min</Text>
+      </Pressable>
+    )}
+    </View>
   );
 }
 
@@ -290,5 +294,7 @@ const styles = StyleSheet.create({
   dose: { fontWeight: '700', color: colors.ink, fontSize: 13 },
   pickRow: { backgroundColor: colors.surface, borderRadius: radius.m, padding: 8 },
   search: { margin: 16, marginBottom: 8, borderWidth: 1, borderColor: colors.line, borderRadius: radius.m, padding: 10, backgroundColor: colors.surface, color: colors.ink },
+  fab: { position: 'absolute', left: 16, right: 16, bottom: 18, height: 58, borderRadius: 29, backgroundColor: colors.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, ...shadow.card, shadowOpacity: 0.2 },
+  fabText: { color: '#fff', fontWeight: '800', fontSize: 17 },
   recentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.line },
 });

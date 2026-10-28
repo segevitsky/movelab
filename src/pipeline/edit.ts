@@ -6,7 +6,7 @@ import { clean, toTrack } from './clean';
 import { feet } from './feet';
 import { features } from './features';
 import { bestLoop, findPeriod } from './reps';
-import { sanityCheck } from './sanity';
+import { hideImplausibleLimbs, sanityCheck } from './sanity';
 import type { RawFrame, Segment } from './types';
 import type { ProcessedSegment } from './index';
 
@@ -18,14 +18,15 @@ export function processRange(frames: RawFrame[], range: Range, fps: number): Pro
   const slice = frames.slice(range.start, range.end + 1);
   const { xy, conf } = toTrack(slice);
   const full = clean(xy, conf, fps);
-  const cl = clean(xy, conf, fps, { maxGapSeconds: 0.5 });
+  const issues = sanityCheck(full);
+  const cl = hideImplausibleLimbs(clean(xy, conf, fps, { maxGapSeconds: 1.0 }), issues, fps);
   const period = full.length > fps * 2 ? findPeriod(full, fps) : null;
   return {
     segment: seg,
     fps,
     xy: cl,
     xyFull: full,
-    issues: sanityCheck(full),
+    issues,
     period,
     loop: period && period.periodic ? bestLoop(full, period.lag) : null,
     toes: feet(slice, cl, fps, 'toe'),

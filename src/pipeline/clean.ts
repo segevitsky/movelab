@@ -14,6 +14,9 @@ export type CleanOptions = {
   /** gaps longer than this (seconds) are NOT bridged — the joint stays unknown and is not drawn.
    *  undefined = bridge everything (the Python reference behaviour). */
   maxGapSeconds?: number;
+  /** a frame counts as "unseen" for the gap rule only below this visibility (MediaPipe visibility
+   *  measures occlusion, not accuracy — occluded-but-estimated joints are kept). */
+  hideBelow?: number; // 0.15
 };
 
 /** Pairs that may be mislabelled left↔right, per group (arms, legs). Port of proc.py with MP-33 indices. */
@@ -90,14 +93,15 @@ export function clean(xyIn: Track, confIn: number[][], fps: number, opts: CleanO
 
   // 4. gap fill (remember long gaps so they can be re-opened after smoothing)
   const maxGap = opts.maxGapSeconds !== undefined ? Math.round(opts.maxGapSeconds * fps) : Infinity;
+  const hideBelow = opts.hideBelow ?? 0.15;
   const hide: boolean[][] = Array.from({ length: n }, () => new Array(N_LM).fill(false));
   for (let j = 0; j < N_LM; j++) {
-    // runs of unknown frames (both coords NaN) longer than maxGap, or touching either end
+    // runs of really-unseen frames (visibility < hideBelow) longer than maxGap, or touching either end
     let i = 0;
     while (i < n) {
-      if (isNum(xy[i][j][0])) { i++; continue; }
+      if (conf[i][j] >= hideBelow) { i++; continue; }
       let k = i;
-      while (k < n && !isNum(xy[k][j][0])) k++;
+      while (k < n && conf[k][j] < hideBelow) k++;
       const len = k - i;
       if (len > maxGap || i === 0 || k === n) for (let m = i; m < k; m++) hide[m][j] = true;
       i = k;
@@ -123,7 +127,7 @@ export function clean(xyIn: Track, confIn: number[][], fps: number, opts: CleanO
     for (let j = 0; j < N_LM; j++) {
       let seen = 0;
       for (let i = 0; i < n; i++) if (!hide[i][j]) seen++;
-      const never = seen < Math.max(3, n * 0.15);
+      const never = seen < Math.max(3, n * 0.05);
       for (let i = 0; i < n; i++) if (hide[i][j] || never) xy[i][j] = [NaN, NaN];
     }
   }

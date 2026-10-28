@@ -66,3 +66,26 @@ export function qualityScore(xy: Track, issues: SanityIssue[]): { score: number;
   const score = Math.max(0, 1 - (bad.size + unknown * 0.5) / n);
   return { score, badFrames: bad.size, unknownFrames: unknown };
 }
+
+const LIMB_DISTAL: Record<Limb, number[]> = {
+  leftArm: [LM.leftElbow, LM.leftWrist, LM.leftPinky, LM.leftIndex, LM.leftThumb],
+  rightArm: [LM.rightElbow, LM.rightWrist, LM.rightPinky, LM.rightIndex, LM.rightThumb],
+  leftLeg: [LM.leftKnee, LM.leftAnkle, LM.leftHeel, LM.leftToe],
+  rightLeg: [LM.rightKnee, LM.rightAnkle, LM.rightHeel, LM.rightToe],
+};
+
+/** Returns a copy of the draw track with the distal joints of implausible limbs set to unknown
+ *  (the limb is simply not drawn on those frames; nothing is invented). */
+export function hideImplausibleLimbs(xy: Track, issues: SanityIssue[], fps: number): Track {
+  const out = xy.map((fr) => fr.map((p) => [p[0], p[1]] as [number, number]));
+  const pad = Math.round(fps * 0.1);
+  for (const is of issues) {
+    if (is.kind !== 'bone-length') continue;
+    for (const limb of is.limbs) {
+      for (let f = Math.max(0, is.frame - pad); f <= Math.min(out.length - 1, is.frame + pad); f++) {
+        for (const j of LIMB_DISTAL[limb]) out[f][j] = [NaN, NaN];
+      }
+    }
+  }
+  return out;
+}

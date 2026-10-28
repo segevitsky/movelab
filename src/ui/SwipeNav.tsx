@@ -1,10 +1,16 @@
-import React from 'react';
-import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import React, { useRef } from 'react';
+import { PanResponder, View, type ViewProps } from 'react-native';
 
-/** Horizontal flings: left → onNext, right → onBack (player). */
-export function SwipeNav({ children, onNext, onBack }: { children: React.ReactNode; onNext: () => void; onBack: () => void }) {
-  const left = Gesture.Fling().direction(Directions.LEFT).onEnd(() => { runOnJS(onNext)(); });
-  const right = Gesture.Fling().direction(Directions.RIGHT).onEnd(() => { runOnJS(onBack)(); });
-  return <GestureDetector gesture={Gesture.Exclusive(left, right)}>{children as React.ReactElement}</GestureDetector>;
+/** Horizontal swipes on a full-screen area: left → onNext, right → onBack. Pure JS. */
+export function SwipeNav({ children, onNext, onBack, style }: { children: React.ReactNode; onNext: () => void; onBack: () => void; style?: ViewProps['style'] }) {
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -60 || g.vx < -0.8) onNext();
+        else if (g.dx > 60 || g.vx > 0.8) onBack();
+      },
+    }),
+  ).current;
+  return <View style={style} {...pan.panHandlers}>{children}</View>;
 }

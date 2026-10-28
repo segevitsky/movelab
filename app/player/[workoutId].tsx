@@ -16,6 +16,7 @@ import { FigurePlayer } from '../../src/figure';
 import { back, createPlayer, pause, play, plus, skip, tick, workProgress, type PlayerState } from '../../src/player/machine';
 import { buildTimeline, totalTimelineSeconds, type Step } from '../../src/player/timeline';
 import { Button } from '../../src/ui/Button';
+import { SwipeNav } from '../../src/ui/SwipeNav';
 import { colors, patternColor, radius } from '../../src/ui/theme';
 
 const TICK_MS = 250;
@@ -134,6 +135,7 @@ export default function Player() {
       </View>
       <View style={styles.progress}><View style={[styles.progressFill, { width: `${elapsedFrac * 100}%` }]} /></View>
 
+      <SwipeNav onNext={() => act(skip)} onBack={() => act(back)} style={{ flex: 1 }}>
       <View style={{ alignItems: 'center' }}>
         {clip ? <FigurePlayer clip={clip} width={W} height={figH} speed={1} style={{ opacity: isRest ? 0.55 : 1 }} /> : <View style={{ width: W, height: figH }} />}
       </View>
@@ -146,7 +148,9 @@ export default function Player() {
         <Text style={[styles.countdown, isRest && { color: colors.muted }, flash && { color: colors.accent }]}>{secs}</Text>
         <View style={styles.stepBar}><View style={[styles.stepFill, { width: `${Math.max(0, Math.min(100, 100 * (1 - state.remainingMs / Math.max(1, step.seconds * 1000))))}%`, backgroundColor: isRest ? colors.muted : colors.accent }]} /></View>
         {!isRest && nextEx && <Text style={styles.small}>then: {nextEx.name}</Text>}
+        <Text style={[styles.small, { marginTop: 6 }]}>swipe ← skip · swipe → back</Text>
       </View>
+      </SwipeNav>
 
       <View style={[styles.controls, { paddingBottom: insets.bottom + 16 }]}>
         <Ctl icon="play-skip-back" onPress={() => act(back)} />

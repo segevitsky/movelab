@@ -11,40 +11,40 @@ export const colors = {
   line: '#e3ded5',
   accent: '#2f6b8f', // deep steel blue — the app's single accent (owner rejected orange and yellow)
   accentSoft: '#dde8f0',
-  danger: '#b3261e',
-  success: '#2e8b57',
+  danger: '#8f3f33', // brick, not alarm red
+  success: '#5d7a62', // moss
 };
 
 export const patternColor: Record<Pattern, string> = {
-  push: '#e0633a',
-  pull: '#2f6fd6',
-  squat: '#3a9d5d',
-  hinge: '#2d8c7f',
-  lunge: '#7fb241',
-  core: '#e0a52b',
-  rotation: '#c85c9e',
-  carry: '#8a6d3b',
-  locomotion: '#5aa6d6',
-  mobility: '#2bb3a3',
-  stretch: '#7a8fd1',
-  skill: '#8e5bd6',
-  cardio: '#d64545',
-  balance: '#b08d2f',
+  push: '#b5674d', // terracotta
+  pull: '#3f6a82', // petrol
+  squat: '#7a8a4c', // olive
+  hinge: '#5d7a62', // moss
+  lunge: '#8e9a72', // sage
+  core: '#b48a2e', // ochre
+  rotation: '#7f5c7c', // plum
+  carry: '#8a6a4b', // umber
+  locomotion: '#5c8c8f', // dusty teal
+  mobility: '#4e8f86', // sea
+  stretch: '#7c7f9d', // lavender grey
+  skill: '#8c4d5e', // wine
+  cardio: '#a4553c', // rust
+  balance: '#a69262', // sand
 };
 
 export const slotColor: Partial<Record<Slot, string>> = {
-  warmup: '#f0b44c',
-  skill: '#8e5bd6',
-  strength: '#444b5c',
-  pull: '#2f6fd6',
-  push: '#e0633a',
-  legs: '#3a9d5d',
-  core: '#e0a52b',
-  cardio: '#d64545',
-  mobility: '#2bb3a3',
-  locomotion: '#5aa6d6',
-  stretch: '#7a8fd1',
-  cooldown: '#7a8fd1',
+  warmup: '#b48a2e',
+  skill: '#8c4d5e',
+  strength: '#4b5160',
+  pull: '#3f6a82',
+  push: '#b5674d',
+  legs: '#7a8a4c',
+  core: '#b48a2e',
+  cardio: '#a4553c',
+  mobility: '#4e8f86',
+  locomotion: '#5c8c8f',
+  stretch: '#7c7f9d',
+  cooldown: '#7c7f9d',
 };
 
 /** Soft tint for a strong colour (for chip backgrounds). */

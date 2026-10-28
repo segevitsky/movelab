@@ -14,6 +14,7 @@ import { FigureStill } from '../../src/figure';
 import type { Exercise } from '../../src/db/schema';
 import type { FrameworkSlot } from '../../src/db/types';
 import { Button, Chip, Tag } from '../../src/ui/Button';
+import { SwipeRow } from '../../src/ui/SwipeRow';
 import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
 
 
@@ -157,7 +158,15 @@ export default function Today() {
                     ]);
                   };
                   return (
-                    <Pressable key={s.id} style={styles.item} onPress={ex ? actions : () => { setPickerText(''); setPicker({ blockId: b.id, slotId: s.id, slot: s }); }}>
+                    <SwipeRow
+                      key={s.id}
+                      disabled={!ex}
+                      actions={[
+                        { label: 'Choose', icon: 'albums-outline', color: colors.accent, onPress: () => { setPickerText(''); setPicker({ blockId: b.id, slotId: s.id, slot: s }); } },
+                        { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => removeItem(b.id, s.id) },
+                      ]}
+                    >
+                    <Pressable style={styles.item} onPress={ex ? actions : () => { setPickerText(''); setPicker({ blockId: b.id, slotId: s.id, slot: s }); }}>
                       <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name={ex ? 'body-outline' : 'help-outline'} size={22} color={colors.muted} />}</View>
                       <View style={{ flex: 1, gap: 3 }}>
                         {ex ? (
@@ -177,13 +186,14 @@ export default function Today() {
                       </View>
                       {ex && <Ionicons name="ellipsis-horizontal" size={20} color={colors.muted} />}
                     </Pressable>
+                    </SwipeRow>
                   );
                 })}
               </View>
             );
           })}
           <View style={styles.rowBetween}>
-            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a row to swap, lock or remove it</Text>
+            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a row for options, swipe left for quick actions</Text>
           </View>
           <View style={styles.rowBetween}>
             <View style={{ flex: 1 }}><Button title="Save for later" onPress={() => save(false)} secondary /></View>

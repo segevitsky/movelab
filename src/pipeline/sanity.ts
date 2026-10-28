@@ -55,3 +55,14 @@ export function sanityCheck(xy: Track, opts: SanityOptions = {}): SanityIssue[] 
 export function framesToRecheck(issues: SanityIssue[]): number[] {
   return [...new Set(issues.map((i) => i.frame))].sort((a, b) => a - b);
 }
+
+/** 0..1 quality for a segment: fraction of frames without sanity issues and with the main joints known. */
+export function qualityScore(xy: Track, issues: SanityIssue[]): { score: number; badFrames: number; unknownFrames: number } {
+  const n = xy.length || 1;
+  const bad = new Set(issues.map((i) => i.frame));
+  let unknown = 0;
+  const main = [LM.leftShoulder, LM.rightShoulder, LM.leftHip, LM.rightHip, LM.leftKnee, LM.rightKnee, LM.leftAnkle, LM.rightAnkle];
+  for (const fr of xy) if (main.some((j) => Number.isNaN(fr[j][0]))) unknown++;
+  const score = Math.max(0, 1 - (bad.size + unknown * 0.5) / n);
+  return { score, badFrames: bad.size, unknownFrames: unknown };
+}

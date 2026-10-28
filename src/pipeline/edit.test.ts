@@ -38,12 +38,12 @@ describe('local tagger', () => {
   it('burpee reel → cardio/push family, reps; staff → standing, time', () => {
     const bur = processCapture({ frames: loadReel('reel3_burpee_mp33') });
     const main = bur.reduce((a, b) => (b.xy.length > a.xy.length ? b : a));
-    const s = suggestTags({ xy: main.xy, features: main.features, periodSeconds: main.period?.periodic ? main.period.period : null, caption: null });
+    const s = suggestTags({ xy: main.xyFull, features: main.features, periodSeconds: main.period?.periodic ? main.period.period : null, caption: null });
     expect(s.dosage.type).toBe('reps');
     expect(['push', 'core', 'cardio', 'mobility']).toContain(s.pattern);
     const staff = processCapture({ frames: loadReel('reel2_staff_mp33') })[0];
-    expect(posture(staff.xy)).toBe('standing');
-    const t = suggestTags({ xy: staff.xy, features: staff.features, periodSeconds: null, caption: 'Shaolin staff flow — warm up' });
+    expect(posture(staff.xyFull)).toBe('standing');
+    const t = suggestTags({ xy: staff.xyFull, features: staff.features, periodSeconds: null, caption: 'Shaolin staff flow — warm up' });
     expect(t.pattern).toBe('skill');
     expect(t.equipment).toContain('staff');
     expect(t.slots).toContain('warmup');
@@ -51,7 +51,7 @@ describe('local tagger', () => {
   });
   it('caption keywords win over posture', () => {
     const seg = processCapture({ frames: loadReel('reel1_mobility_mp33') })[0];
-    const s = suggestTags({ xy: seg.xy, features: seg.features, periodSeconds: null, caption: '3 squat variations with a kettlebell' });
+    const s = suggestTags({ xy: seg.xyFull, features: seg.features, periodSeconds: null, caption: '3 squat variations with a kettlebell' });
     expect(s.pattern).toBe('squat');
     expect(s.slots).toContain('legs');
     expect(s.equipment).toContain('kettlebell');

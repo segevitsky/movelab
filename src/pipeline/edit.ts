@@ -17,18 +17,20 @@ export function processRange(frames: RawFrame[], range: Range, fps: number): Pro
   const seg: Segment = { start: range.start, end: range.end, t0: frames[range.start].t, t1: frames[range.end].t, cutReason: 'external' };
   const slice = frames.slice(range.start, range.end + 1);
   const { xy, conf } = toTrack(slice);
-  const cl = clean(xy, conf, fps);
-  const period = cl.length > fps * 2 ? findPeriod(cl, fps) : null;
+  const full = clean(xy, conf, fps);
+  const cl = clean(xy, conf, fps, { maxGapSeconds: 0.5 });
+  const period = full.length > fps * 2 ? findPeriod(full, fps) : null;
   return {
     segment: seg,
     fps,
     xy: cl,
-    issues: sanityCheck(cl),
+    xyFull: full,
+    issues: sanityCheck(full),
     period,
-    loop: period && period.periodic ? bestLoop(cl, period.lag) : null,
+    loop: period && period.periodic ? bestLoop(full, period.lag) : null,
     toes: feet(slice, cl, fps, 'toe'),
     heels: feet(slice, cl, fps, 'heel'),
-    features: features(cl, fps),
+    features: features(full, fps),
   };
 }
 

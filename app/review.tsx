@@ -15,6 +15,7 @@ import { estimateFps, resample } from '../src/pipeline/resample';
 import { segment } from '../src/pipeline/segment';
 import { suggestName, suggestTags, type TagSuggestion } from '../src/pipeline/tagger';
 import { validateMatQuad } from '../src/pipeline/scene';
+import { qualityScore } from '../src/pipeline/sanity';
 import type { ProcessedSegment, RawFrame } from '../src/pipeline';
 import { Button, Chip, Tag } from '../src/ui/Button';
 import { colors, patternColor, radius, shadow, slotColor } from '../src/ui/theme';
@@ -86,7 +87,7 @@ export default function Review() {
     const built = segs.map((sg, i) => makeItem(rs, { start: sg.start, end: sg.end }, fpsUsed, i));
     // the detector can mistake a uniform background for a mat: keep the quad only if it sits on the floor under the figure
     if (s.matQuad && built.length) {
-      const ok = validateMatQuad(s.matQuad, built.reduce((a, b) => (b.processed.xy.length > a.processed.xy.length ? b : a)).processed.xy);
+      const ok = validateMatQuad(s.matQuad, built.reduce((a, b) => (b.processed.xy.length > a.processed.xy.length ? b : a)).processed.xyFull);
       if (!ok) setScene({ ...s, matQuad: undefined });
       setStats((st) => st.replace(' · mat found', ok ? ' · mat found' : ' · mat rejected (not on the floor)'));
     }
@@ -96,7 +97,7 @@ export default function Review() {
 
   function makeItem(fr: RawFrame[], range: Range, fpsUsed: number, index: number, prev?: Partial<Item>): Item {
     const processed = processRange(fr, range, fpsUsed);
-    const suggestion = suggestTags({ xy: processed.xy, features: processed.features, periodSeconds: processed.period?.periodic ? processed.period.period : null, caption: params.caption ?? null, username: params.username ?? null });
+    const suggestion = suggestTags({ xy: processed.xyFull, features: processed.features, periodSeconds: processed.period?.periodic ? processed.period.period : null, caption: params.caption ?? null, username: params.username ?? null });
     return {
       id: `${range.start}-${range.end}-${Math.random().toString(36).slice(2, 6)}`,
       range,
@@ -210,6 +211,12 @@ export default function Review() {
                     {it.slots.filter((s) => s !== it.pattern).map((s) => <Tag key={s} label={s} color={slotColor[s] ?? colors.muted} />)}
                     {it.equipment.map((e) => <Tag key={e} label={e} />)}
                   </View>
+                  {(() => { const q = qualityScore(it.processed.xy, it.processed.issues); const pct = Math.round(q.score * 100); return (
+                    <Text style={[styles.reason, pct < 70 && { color: colors.danger, fontStyle: 'normal', fontWeight: '700' }]}>
+                      {pct >= 90 ? 'tracking: good' : pct >= 70 ? `tracking: ok (${pct} %)` : `tracking: poor (${pct} %) — consider trimming or deleting`}
+                      {q.unknownFrames ? ` · ${q.unknownFrames} frames with hidden limbs` : ''}
+                    </Text>
+                  ); })()}
                   <Text style={styles.reason} numberOfLines={2}>{it.suggestion.reasons.slice(0, 2).join(' · ')}</Text>
                   <View style={styles.row}>
                     <Pressable onPress={() => update(it.id, { editTags: !it.editTags })} style={styles.linkBtn}><Text style={styles.link}>{it.editTags ? 'Hide tags' : 'Edit tags'}</Text></Pressable>

@@ -20,7 +20,10 @@ import type { FootTrack, LoopResult, PeriodResult, RawPose, SanityIssue, Segment
 export type ProcessedSegment = {
   segment: Segment;
   fps: number;
+  /** cleaned joints for drawing: gaps > 0.5 s stay NaN (never drawn) */
   xy: Track;
+  /** cleaned joints with every gap bridged — for reps / features / tagging */
+  xyFull: Track;
   issues: SanityIssue[];
   period: PeriodResult | null;
   loop: LoopResult | null;
@@ -35,18 +38,20 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions } 
   return segment(raw.frames, opts.segment).map((seg) => {
     const frames = sliceSegment(raw.frames, seg);
     const { xy, conf } = toTrack(frames);
-    const cl = clean(xy, conf, fps);
-    const period = findPeriod(cl, fps);
+    const full = clean(xy, conf, fps);
+    const cl = clean(xy, conf, fps, { maxGapSeconds: 0.5 });
+    const period = findPeriod(full, fps);
     return {
       segment: seg,
       fps,
       xy: cl,
-      issues: sanityCheck(cl),
+      xyFull: full,
+      issues: sanityCheck(full),
       period,
-      loop: period && period.periodic ? bestLoop(cl, period.lag) : null,
+      loop: period && period.periodic ? bestLoop(full, period.lag) : null,
       toes: feet(frames, cl, fps, 'toe'),
       heels: feet(frames, cl, fps, 'heel'),
-      features: features(cl, fps),
+      features: features(full, fps),
     };
   });
 }

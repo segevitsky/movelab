@@ -87,12 +87,13 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
     }
     return arr;
   });
-  const ext = pts.map((a) => Math.max(...a.map((p) => p[0])) - Math.min(...a.map((p) => p[0])));
-  const hgt = pts.map((a) => ground - (Math.min(...a.map((p) => p[1])) - torso * 0.3));
+  const fin = (a: XY[]) => a.filter((p) => !Number.isNaN(p[0]) && !Number.isNaN(p[1]));
+  const ext = pts.map((a) => { const f = fin(a); return f.length ? Math.max(...f.map((p) => p[0])) - Math.min(...f.map((p) => p[0])) : torso; });
+  const hgt = pts.map((a) => { const f = fin(a); return f.length ? ground - (Math.min(...f.map((p) => p[1])) - torso * 0.3) : torso * 3; });
   const scale = Math.min((0.9 * width) / percentile(ext.map((e) => e + torso * 0.6), 98), (0.82 * height) / percentile(hgt, 99));
   const cxRaw = xy.map((f, i) => {
-    const xs = [...f.slice(0, 33).map((p) => p[0]), hx[i]];
-    return (Math.max(...xs) + Math.min(...xs)) / 2;
+    const xs = [...f.slice(0, 33).map((p) => p[0]), hx[i]].filter((v) => !Number.isNaN(v));
+    return xs.length ? (Math.max(...xs) + Math.min(...xs)) / 2 : 0;
   });
   const cx = smoothSeries(cxRaw, fps, 2.0);
 

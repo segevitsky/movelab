@@ -6,7 +6,7 @@ import { smoothSeries, type FigureClip } from './prepare';
 export function clipFromProcessed(seg: ProcessedSegment): FigureClip {
   const hud = seg.features.activeJoints.map((j) => ({
     name: `${j.name} ${j.side}`,
-    angles: smoothSeries(jointAngle(seg.xy, j.tri[0], j.tri[1], j.tri[2]), seg.fps, 0.8),
+    angles: smoothSeries(jointAngle(seg.xyFull, j.tri[0], j.tri[1], j.tri[2]), seg.fps, 0.8),
   }));
   return {
     fps: seg.fps,

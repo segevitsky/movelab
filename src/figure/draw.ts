@@ -90,11 +90,14 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     canvas.drawLine(0, hy, W, hy, stroke(COLORS.horizon, t * 0.15));
   }
 
+  const ok = (p: XY | null | undefined): p is XY => !!p && !Number.isNaN(p[0]) && !Number.isNaN(p[1]);
   const capsule = (a: XY, b: XY, color: string, w: number) => {
+    if (!ok(a) || !ok(b)) return;
     const A = T(a);
     const B = T(b);
     canvas.drawLine(A[0], A[1], B[0], B[1], stroke(color, w));
   };
+  const dot = (p: XY, r: number, color: string) => { if (!ok(p)) return; const q = T(p); canvas.drawCircle(q[0], q[1], r, fill(color)); };
 
   // --- floor mat (Arch §5a): flat perspective slab in source pixels, under the figure
   const quad = prep.matQuad;
@@ -118,12 +121,15 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     const ms = mid(P[LM.leftShoulder], P[LM.rightShoulder]);
     const mh = mid(P[LM.leftHip], P[LM.rightHip]);
     sc(ms, mh, t * 1.7);
-    const hs = T(projectToFloor(P[HEAD], ground));
-    const r0 = Math.hypot(ms[0] - mh[0], ms[1] - mh[1]) * 0.24 * scale;
-    canvas.drawOval(Skia.XYWHRect(hs[0] - r0, hs[1] - r0 * 0.8, 2 * r0, 1.6 * r0), fill(shadowColor));
+    if (ok(P[HEAD]) && ok(ms) && ok(mh)) {
+      const hs = T(projectToFloor(P[HEAD], ground));
+      const r0 = Math.hypot(ms[0] - mh[0], ms[1] - mh[1]) * 0.24 * scale;
+      canvas.drawOval(Skia.XYWHRect(hs[0] - r0, hs[1] - r0 * 0.8, 2 * r0, 1.6 * r0), fill(shadowColor));
+    }
   }
 
   const taper = (a: XY, b: XY, color: string, w1: number, w2: number) => {
+    if (!ok(a) || !ok(b)) return;
     const A = T(a);
     const B = T(b);
     const vx_ = B[0] - A[0];
@@ -151,15 +157,13 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     const g = grow;
     taper(P[s.sh], P[s.el], color, t * 1.0 + g, t * 0.95 + g);
     taper(P[s.el], P[s.wr], color, t * 0.95 + g, t * 0.85 + g);
-    const w = T(P[s.wr]);
-    canvas.drawCircle(w[0], w[1], t * 0.6 + g / 2, fill(color));
+    dot(P[s.wr], t * 0.6 + g / 2, color);
     taper(P[s.hp], P[s.kn], color, t * 1.1 + g, t * 1.0 + g);
     taper(P[s.kn], P[s.an], color, t * 1.0 + g, t * 0.9 + g);
-    const a = T(P[s.an]);
-    canvas.drawCircle(a[0], a[1], (t * 0.85 + g) * 0.62, fill(color));
+    dot(P[s.an], (t * 0.85 + g) * 0.62, color);
     const toe = fr.toe[s.idx];
     const heel = fr.heel[s.idx];
-    if (toe) {
+    if (toe && ok(P[s.an])) {
       if (heel) {
         const A = T(P[s.an]);
         const Hh = T(heel);
@@ -191,8 +195,7 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
   const dh = Math.hypot(hc[0] - ms[0], hc[1] - ms[1]) + 1e-6;
   const neckEnd: XY = [hc[0] - ((hc[0] - ms[0]) / dh) * hr * 0.8, hc[1] - ((hc[1] - ms[1]) / dh) * hr * 0.8];
   capsule([ms[0] + u[0] * prep.th * 0.2, ms[1] + u[1] * prep.th * 0.2], neckEnd, COLORS.torso, t * 0.9);
-  const C = T(hc);
-  canvas.drawCircle(C[0], C[1], hr * scale, fill(COLORS.torso));
+  if (ok(hc)) { const C = T(hc); canvas.drawCircle(C[0], C[1], hr * scale, fill(COLORS.torso)); }
 
   // near side (right, dark) with a background outline
   limbSet(RIGHT, COLORS.bg, t * 0.55);

@@ -14,7 +14,6 @@ import { FigureStill } from '../../src/figure';
 import { Button, Chip, Tag } from '../../src/ui/Button';
 import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
 
-const TIMES = [20, 30, 45, 60];
 
 export default function Today() {
   const router = useRouter();
@@ -22,7 +21,7 @@ export default function Today() {
   const { data: exercises } = useLiveQuery(db.select().from(schema.exercise));
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
   const [fwId, setFwId] = useState<string | null>(null);
-  const [inputs, setInputs] = useState<WorkoutInputs>({ timeAvailableMin: 30, energy: 'medium', focus: null, surprise: 0.3 });
+  const [inputs, setInputs] = useState<WorkoutInputs>({ energy: 'medium', focus: null, surprise: 0.3 });
   const [ctx, setCtx] = useState<GenContext | null>(null);
   const [w, setW] = useState<GenWorkout | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,8 +78,6 @@ export default function Today() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {(frameworks ?? []).map((f) => <Chip key={f.id} label={f.name} color={colors.accent} on={f.id === fwId} onPress={() => setFwId(f.id)} />)}
         </ScrollView>
-        <Text style={styles.label}>Time</Text>
-        <View style={styles.chips}>{TIMES.map((t) => <Chip key={t} label={`${t} min`} color={colors.inkSoft} on={inputs.timeAvailableMin === t} onPress={() => setInputs({ ...inputs, timeAvailableMin: t })} />)}</View>
         <Text style={styles.label}>Energy</Text>
         <View style={styles.chips}>{(['low', 'medium', 'high'] as const).map((e) => <Chip key={e} label={e} color={colors.inkSoft} on={inputs.energy === e} onPress={() => setInputs({ ...inputs, energy: e })} />)}</View>
         <Text style={styles.label}>Focus (optional)</Text>

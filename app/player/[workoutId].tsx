@@ -91,13 +91,14 @@ export default function Player() {
     router.replace('/today');
   };
 
-  if (!state) return <View style={styles.center}><Text style={styles.small}>Loading…</Text></View>;
-  const step: Step = state.steps[state.index];
+  const step: Step | undefined = state?.steps[state.index];
+  const exId = !step ? null : step.kind === 'work' ? step.exerciseId : step.kind === 'done' ? null : step.nextExerciseId;
+  const ex = exId ? exById.get(exId) : undefined;
+  // hooks must run on every render — keep this above the early return
+  const clip = useMemo(() => (ex ? clipFromExercise(ex) : null), [ex?.id]);
+  if (!state || !step) return <View style={styles.center}><Text style={styles.small}>Loading…</Text></View>;
   const W = Dimensions.get('window').width;
   const H = Dimensions.get('window').height;
-  const exId = step.kind === 'work' ? step.exerciseId : step.kind === 'done' ? null : step.nextExerciseId;
-  const ex = exId ? exById.get(exId) : undefined;
-  const clip = useMemo(() => (ex ? clipFromExercise(ex) : null), [ex?.id]);
   const nextEx = step.kind === 'work' && step.nextExerciseId ? exById.get(step.nextExerciseId) : null;
   const secs = Math.ceil(state.remainingMs / 1000);
   const prog = workProgress(state);

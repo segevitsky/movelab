@@ -104,6 +104,8 @@ Acceptance
 
 ## Phase 5 — Frameworks + generator
 
+> Built 2026-10-28 — see `docs/phase5-results.md` (property tests green; owner tried it on device).
+
 Tasks
 - Framework schema + editor (blocks → slots → filters → dosage → rest). Preset "Segev 3×6", EMOM, Tabata, flow.
 - `src/generator` per Architecture §6 with seed, swap, time-fitting. Pairing graph rebuild from `source_exercise`.
@@ -115,6 +117,8 @@ Acceptance
 - [ ] Same seed → same workout.
 
 ## Phase 6 — Player
+
+> Built 2026-10-28 — see `docs/phase6-results.md` (device run pending).
 
 Tasks
 - Timeline builder (work/rest/transition steps) + state machine (play/pause/skip/back/+15 s).

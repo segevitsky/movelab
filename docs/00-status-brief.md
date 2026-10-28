@@ -17,7 +17,9 @@ him. Specs: `docs/01-product-spec.md` (what/why), `docs/02-architecture.md` (how
 | 2 — Skia stick-figure renderer | **done** (2026-10-28), ~120 fps with 3 cards + player on device | `docs/phase2-results.md` |
 | 3 — local SQLite (drizzle) + library screens | **done** (2026-10-28), all local, no server | `docs/phase3-results.md` |
 | 4 — capture → review → library, share sheet, scene analysis | **GO** (2026-10-28) | `docs/phase4-results.md` |
-| 5 — generator · 6 — player · 7 — goals · 8 — AI remix | not started | plan |
+| 5 — frameworks + generator (Today tab, framework editor) | **built** (2026-10-28), property-tested | `docs/phase5-results.md` |
+| 6 — player (timers, figure, haptics, feedback → session) | **built** (2026-10-28), owner run pending | `docs/phase6-results.md` |
+| 7 — goals · 8 — AI remix | not started | plan |
 
 ## The decisions that matter (don't re-open without a reason)
 - **Capture route:** Instagram ▸ Share ▸ MoveLab (share extension) or paste a link → the app opens the reel page in a WebView where the owner has
@@ -49,7 +51,9 @@ modules/pose    Swift: video → MediaPipe 33 landmarks (+ Vision); model bundle
 modules/screen-recorder  Swift: ReplayKit start/stop → mp4
 src/pipeline    pure TS pipeline + vitest tests (goldens in __fixtures__/expected, made by
                 reference/pose-pipeline/export_expected.py with numpy+scipy)
-src/figure      Skia renderer: prepare (pure) → draw → Figure/FigureCard/FigurePlayer; codec (15 fps int16)
+src/figure      Skia renderer: prepare (pure) → draw → Figure/FigureCard/FigureStill/FigurePlayer; codec
+src/generator   pure, seeded workout generator (Arch §6) + pairing graph, property tests
+src/player      pure timeline builder + state machine; app/player/[workoutId] is the screen
 reference/      Python prototype = behavioural spec; sample skeletons of 3 reels + 1 phone capture
 docs/           specs, plan, phase results
 ```

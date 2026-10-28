@@ -19,7 +19,8 @@ him. Specs: `docs/01-product-spec.md` (what/why), `docs/02-architecture.md` (how
 | 4 — capture → review → library, share sheet, scene analysis | **GO** (2026-10-28) | `docs/phase4-results.md` |
 | 5 — frameworks + generator (Today tab, framework editor) | **built** (2026-10-28), property-tested | `docs/phase5-results.md` |
 | 6 — player (timers, figure, haptics, feedback → session) | **built** (2026-10-28), owner run pending | `docs/phase6-results.md` |
-| 7 — goals · 8 — AI remix | not started | plan |
+| 7 — goals as drill ladders + feedback adaptation | **built** (2026-10-28) | `docs/phase7-results.md` |
+| 8 — AI remix | not started (needs the optional text-only backend) | plan |
 
 ## The decisions that matter (don't re-open without a reason)
 - **Capture route:** Instagram ▸ Share ▸ MoveLab (share extension) or paste a link → the app opens the reel page in a WebView where the owner has

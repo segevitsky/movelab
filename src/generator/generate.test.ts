@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PRESET_FRAMEWORKS } from '../db/seed';
 import type { Equipment, Slot } from '../db/vocab';
 import { buildPairings } from './pairing';
+import { dosageFactors } from './feedback';
 import { generate, swap, totalSeconds } from './generate';
 import { mulberry32 } from './rng';
 import { slotKey, type GenContext, type GenExercise, type HistoryEntry } from './types';
@@ -112,5 +113,31 @@ describe('pairing graph', () => {
     expect(ab.weight).toBe(2);
     expect(ab.directedWeight).toBe(2);
     expect(edges.find((e) => e.aId === 'a' && e.bId === 'c')!.weight).toBe(1);
+  });
+});
+
+describe('phase 7: goals and feedback', () => {
+  it('passing a stage changes the skill-slot pick; up to 3 active goals rotate', () => {
+    const r = mulberry32(11);
+    const lib = makeLibrary(40, r);
+    const base = ctxFor(1, lib);
+    const stage1 = { ...base, goals: [{ id: 'g', name: 'L-sit', exerciseId: lib[0].id, active: true }] };
+    const stage2 = { ...base, goals: [{ id: 'g', name: 'L-sit', exerciseId: lib[1].id, active: true }] };
+    expect(generate(stage1).items.find((i) => i.slotId === 's1')!.exerciseId).toBe(lib[0].id);
+    expect(generate(stage2).items.find((i) => i.slotId === 's1')!.exerciseId).toBe(lib[1].id);
+    // rotation: the goal used most recently yields to the other
+    const two = { ...base, goals: [{ id: 'a', name: 'A', exerciseId: lib[2].id, active: true }, { id: 'b', name: 'B', exerciseId: lib[3].id, active: true }], history: [{ createdAt: Date.now() - 1000, exerciseIds: [lib[2].id] }] };
+    expect(generate(two).items.find((i) => i.slotId === 's1')!.exerciseId).toBe(lib[3].id);
+  });
+  it('hard feedback reduces that drill\'s dosage by 10 %, easy raises it', () => {
+    const f = dosageFactors([{ feedback: 'hard', endedAt: Date.now(), exerciseIds: ['x', 'y'] }, { feedback: 'easy', endedAt: Date.now(), exerciseIds: ['y', 'z'] }]);
+    expect(f.x).toBeCloseTo(0.9);
+    expect(f.y).toBeCloseTo(0.99);
+    expect(f.z).toBeCloseTo(1.1);
+    const r = mulberry32(5);
+    const lib = makeLibrary(30, r).map((e) => ({ ...e, dosageDefault: { type: 'time' as const, value: 60 } }));
+    const ctx = { ...ctxFor(2, lib), dosageFactor: { [lib[0].id]: 0.8 }, goals: [{ id: 'g', name: 'G', exerciseId: lib[0].id, active: true }] };
+    const it = generate(ctx).items.find((i) => i.exerciseId === lib[0].id)!;
+    expect(it.dosage.value).toBe(50); // 60 × 0.8 = 48 → rounded to 5 s
   });
 });

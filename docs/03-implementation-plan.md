@@ -130,6 +130,8 @@ Acceptance
 
 ## Phase 7 — Goals + adaptation
 
+> Built 2026-10-28 — see `docs/phase7-results.md`.
+
 Tasks
 - Goals screen: active goals (max 3 recommended), stages, mark passed.
 - Generator uses goal stage in skill slot; feedback adjusts dosage (hard → −10 %, easy → +10 %).

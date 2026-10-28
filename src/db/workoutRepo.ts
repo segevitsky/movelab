@@ -1,5 +1,6 @@
 import { desc, eq, gt } from 'drizzle-orm';
 import { buildPairings } from '../generator/pairing';
+import { dosageFactors } from '../generator/feedback';
 import type { GenContext, GenExercise, GenGoal, GenWorkout, HistoryEntry, PairingEdge } from '../generator/types';
 import type { Db } from './index';
 import { exercise, framework, goal, pairing, session, sourceExercise, workout, type Exercise, type Framework } from './schema';
@@ -49,8 +50,12 @@ export async function loadGenContext(db: Db, frameworkId: string, inputs: Workou
   const edges = await rebuildPairings(db);
   const goals: GenGoal[] = (await db.select().from(goal)).map((g) => ({ id: g.id, name: g.name, active: g.active, exerciseId: g.stages[g.currentStage]?.exerciseId ?? null }));
   const since = Date.now() - 14 * 86400000;
-  const history: HistoryEntry[] = (await db.select().from(workout).where(gt(workout.createdAt, since)).orderBy(desc(workout.createdAt))).map((w) => ({ createdAt: w.createdAt, exerciseIds: [...new Set(w.items.map((i) => i.exerciseId))] }));
-  return { frameworkId, blocks: fw.blocks, library: lib, pairings: edges, goals, history, inputs, seed };
+  const recentW = await db.select().from(workout).where(gt(workout.createdAt, since)).orderBy(desc(workout.createdAt));
+  const history: HistoryEntry[] = recentW.map((w) => ({ createdAt: w.createdAt, exerciseIds: [...new Set(w.items.map((i) => i.exerciseId))] }));
+  const sessions = await db.select().from(session);
+  const wById = new Map((await db.select().from(workout)).map((w) => [w.id, w]));
+  const factor = dosageFactors(sessions.map((s) => ({ feedback: s.feedback, endedAt: s.endedAt, exerciseIds: wById.get(s.workoutId)?.items.map((i) => i.exerciseId) ?? [] })));
+  return { frameworkId, blocks: fw.blocks, library: lib, pairings: edges, goals, history, inputs, seed, dosageFactor: factor };
 }
 
 export async function saveWorkout(db: Db, w: GenWorkout) {

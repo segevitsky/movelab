@@ -58,8 +58,20 @@ function sample<T>(items: T[], scores: number[], temperature: number, rnd: () =>
   return items[items.length - 1];
 }
 
-function dosageFor(slot: FrameworkSlot, ex: GenExercise): Dosage {
-  return slot.dosage ?? ex.dosageDefault ?? { type: 'time', value: 45 };
+function dosageFor(slot: FrameworkSlot, ex: GenExercise, factor = 1): Dosage {
+  const base = slot.dosage ?? ex.dosageDefault ?? { type: 'time', value: 45 };
+  if (Math.abs(factor - 1) < 0.01) return base;
+  const value = base.type === 'time' ? Math.max(10, Math.round((base.value * factor) / 5) * 5) : Math.max(1, Math.round(base.value * factor));
+  return { ...base, value };
+}
+
+/** Active goals with a linked current-stage drill, least recently used first (so up to 3 goals rotate). */
+function goalQueue(ctx: GenContext, byId: Map<string, GenExercise>) {
+  const lastUsed = new Map<string, number>();
+  for (const h of ctx.history) for (const id of h.exerciseIds) lastUsed.set(id, Math.max(lastUsed.get(id) ?? 0, h.createdAt));
+  return ctx.goals
+    .filter((g) => g.active && g.exerciseId && byId.has(g.exerciseId))
+    .sort((a, b) => (lastUsed.get(a.exerciseId!) ?? 0) - (lastUsed.get(b.exerciseId!) ?? 0));
 }
 
 /** Generate a workout. Locked picks (ctx.locked) are kept; the rest is sampled in order. */
@@ -68,7 +80,8 @@ export function generate(ctx: GenContext): GenWorkout {
   const T = 0.2 + (Math.min(1, Math.max(0, ctx.inputs.surprise ?? 0.3))) * 1.3;
   const recent = recentSets(ctx);
   const byId = new Map(ctx.library.map((e) => [e.id, e]));
-  const activeGoal = ctx.goals.find((g) => g.active && g.exerciseId && byId.has(g.exerciseId));
+  const goalsQ = goalQueue(ctx, byId);
+  let goalIdx = 0;
   const items: GenItem[] = [];
   const unfilled: GenWorkout['unfilled'] = [];
   const picksSoFar: GenExercise[] = [];
@@ -82,7 +95,7 @@ export function generate(ctx: GenContext): GenWorkout {
       let pick: GenExercise | null = null;
       const lockedId = ctx.locked?.[key];
       if (lockedId && byId.has(lockedId)) pick = byId.get(lockedId)!;
-      else if (slot.isSkill && activeGoal && !usedIds.has(activeGoal.exerciseId!)) pick = byId.get(activeGoal.exerciseId!)!;
+      else if (slot.isSkill && goalsQ[goalIdx] && !usedIds.has(goalsQ[goalIdx].exerciseId!)) { pick = byId.get(goalsQ[goalIdx].exerciseId!)!; goalIdx++; }
       else {
         let cands = candidatesFor(slot, ctx).filter((e) => !usedIds.has(e.id));
         // never repeat something from the last 3 workouts when there is an alternative
@@ -106,7 +119,7 @@ export function generate(ctx: GenContext): GenWorkout {
       block.slots.forEach((slot, i) => {
         const ex = chosen[i];
         if (!ex) return;
-        const dosage = dosageFor(slot, ex);
+        const dosage = dosageFor(slot, ex, ctx.dosageFactor?.[ex.id] ?? 1);
         items.push({ blockId: block.id, slotId: slot.id, round: r, exerciseId: ex.id, dosage, seconds: itemSeconds(ex, dosage), locked: !!ctx.locked?.[slotKey(block.id, slot.id)] });
       });
     }
@@ -182,8 +195,8 @@ export function explain(w: GenWorkout, ctx: GenContext): string {
   const parts: string[] = [];
   const slotsUsed = new Set<Slot>();
   for (const b of ctx.blocks.blocks) for (const s of b.slots) if (w.items.some((i) => i.blockId === b.id && i.slotId === s.id)) s.tags.slice(0, 1).forEach((t) => slotsUsed.add(t));
-  const goal = ctx.goals.find((g) => g.active && g.exerciseId && w.items.some((i) => i.exerciseId === g.exerciseId));
-  if (goal) parts.push(`skill slot = ${goal.name}`);
+  const goalsIn = ctx.goals.filter((g) => g.active && g.exerciseId && w.items.some((i) => i.exerciseId === g.exerciseId));
+  if (goalsIn.length) parts.push(`goal${goalsIn.length > 1 ? 's' : ''}: ${goalsIn.map((g) => g.name).join(', ')}`);
   if (ctx.inputs.focus) parts.push(`focus on ${ctx.inputs.focus}`);
   const recent = ctx.history.slice().sort((a, b) => b.createdAt - a.createdAt)[0];
   if (recent) {

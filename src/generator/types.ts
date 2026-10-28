@@ -72,6 +72,8 @@ export type GenContext = {
   excluded?: string[];
   /** existing picks to keep (swap / lock): slotKey → exerciseId */
   locked?: Record<string, string>;
+  /** per-exercise dosage multiplier from session feedback (easy → >1, hard → <1); default 1 */
+  dosageFactor?: Record<string, number>;
 };
 
 export const slotKey = (blockId: string, slotId: string) => `${blockId}/${slotId}`;

@@ -31,6 +31,7 @@ export default function Player() {
   const [state, setState] = useState<PlayerState | null>(null);
   const [blockNames, setBlockNames] = useState<Record<string, { name: string; rounds: number }>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
   const sounds = useRef<{ tick?: AudioPlayer; go?: AudioPlayer; done?: AudioPlayer }>({});
   const stateRef = useRef<PlayerState | null>(null);
   stateRef.current = state;
@@ -76,7 +77,7 @@ export default function Player() {
   const handleEvents = (events: ReturnType<typeof tick>['events']) => {
     for (const e of events) {
       if (e.type === 'countdown') { beep('tick'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }
-      if (e.type === 'go') { beep('go'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }
+      if (e.type === 'go') { beep('go'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setFlash(true); setTimeout(() => setFlash(false), 450); }
       if (e.type === 'step') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       if (e.type === 'finished') { beep('done'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }
     }
@@ -116,7 +117,7 @@ export default function Player() {
         <Text style={styles.label}>How was it?</Text>
         <View style={styles.feedbackRow}>
           {([['easy', 'Easy'], ['right', 'Just right'], ['hard', 'Hard']] as [SessionFeedback, string][]).map(([k, l]) => (
-            <Pressable key={k} onPress={() => finish(k)} style={styles.feedbackBtn}><Text style={styles.feedbackText}>{l}</Text></Pressable>
+            <Pressable key={k} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); finish(k); }} style={({ pressed }) => [styles.feedbackBtn, pressed && { backgroundColor: colors.accent, transform: [{ scale: 0.96 }] }]}><Text style={styles.feedbackText}>{l}</Text></Pressable>
           ))}
         </View>
       </View>
@@ -139,9 +140,10 @@ export default function Player() {
 
       <View style={styles.middle}>
         <Text style={styles.stepLabel}>{isRest ? step.label : step.label}</Text>
-        <Text style={styles.exName} numberOfLines={2}>{isRest ? (ex ? `Next: ${ex.name}` : '') : ex?.name ?? ''}</Text>
+        <Text style={styles.exName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{isRest ? (ex ? `Next: ${ex.name}` : '') : ex?.name ?? ''}</Text>
         {ex?.pattern && !isRest && <Text style={[styles.pattern, { color: patternColor[ex.pattern] }]}>{ex.pattern}</Text>}
-        <Text style={[styles.countdown, isRest && { color: colors.muted }]}>{secs}</Text>
+        <Text style={[styles.countdown, isRest && { color: colors.muted }, flash && { color: colors.accent }]}>{secs}</Text>
+        <View style={styles.stepBar}><View style={[styles.stepFill, { width: `${Math.max(0, Math.min(100, 100 * (1 - state.remainingMs / Math.max(1, step.seconds * 1000))))}%`, backgroundColor: isRest ? colors.muted : colors.accent }]} /></View>
         {!isRest && nextEx && <Text style={styles.small}>then: {nextEx.name}</Text>}
       </View>
 
@@ -149,7 +151,7 @@ export default function Player() {
         <Ctl icon="play-skip-back" onPress={() => act(back)} />
         <Ctl icon={state.playing ? 'pause' : 'play'} big onPress={() => act((s) => (s.playing ? pause(s) : play(s)))} />
         <Ctl icon="play-skip-forward" onPress={() => act(skip)} />
-        <Pressable onPress={() => act((s) => plus(s, 15))} style={styles.plus}><Text style={styles.plusText}>+15 s</Text></Pressable>
+        <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); act((s) => plus(s, 15)); }} style={({ pressed }) => [styles.plus, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]} hitSlop={10}><Text style={styles.plusText}>+15 s</Text></Pressable>
       </View>
     </View>
   );
@@ -157,7 +159,11 @@ export default function Player() {
 
 function Ctl({ icon, onPress, big }: { icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void; big?: boolean }) {
   return (
-    <Pressable onPress={onPress} style={[styles.ctl, big && styles.ctlBig]} hitSlop={10}>
+    <Pressable
+      onPress={() => { Haptics.selectionAsync().catch(() => {}); onPress(); }}
+      style={({ pressed }) => [styles.ctl, big && styles.ctlBig, pressed && { transform: [{ scale: 0.92 }], opacity: 0.85 }]}
+      hitSlop={12}
+    >
       <Ionicons name={icon} size={big ? 40 : 28} color={big ? '#fff' : colors.ink} />
     </Pressable>
   );
@@ -172,9 +178,11 @@ const styles = StyleSheet.create({
   progressFill: { height: 4, backgroundColor: colors.accent },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 4 },
   stepLabel: { fontSize: 14, color: colors.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
-  exName: { fontSize: 26, fontWeight: '800', color: colors.ink, textAlign: 'center' },
+  exName: { fontSize: 20, fontWeight: '800', color: colors.ink, textAlign: 'center' },
   pattern: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   countdown: { fontSize: 96, fontWeight: '900', color: colors.ink, fontVariant: ['tabular-nums'], lineHeight: 104 },
+  stepBar: { width: '70%', height: 6, borderRadius: 3, backgroundColor: colors.line, overflow: 'hidden', marginTop: 4 },
+  stepFill: { height: 6, borderRadius: 3 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22, paddingHorizontal: 16 },
   ctl: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   ctlBig: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.accent },

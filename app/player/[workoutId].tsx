@@ -161,13 +161,17 @@ export default function Player() {
       <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
         <Pressable onPress={() => Alert.alert('Leave the workout?', undefined, [{ text: 'Keep going' }, { text: 'Leave', style: 'destructive', onPress: () => finish('right') }])} hitSlop={14} style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}><Ionicons name="close" size={24} color={colors.ink} /></Pressable>
         <View style={styles.sectionPill}>
-          <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); act(backBlock); }} hitSlop={10} style={styles.sectionArrow}>
-            <Ionicons name="play-back-outline" size={16} color={colors.muted} />
-          </Pressable>
+          {backBlock(state).state.index !== state.index && (
+            <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); act(backBlock); }} hitSlop={10} style={styles.sectionArrow}>
+              <Ionicons name="play-back-outline" size={16} color={colors.muted} />
+            </Pressable>
+          )}
           <Text style={styles.blockText}>{block?.name}{block && block.rounds > 1 && step.kind !== 'done' ? ` · round ${step.round}/${block.rounds}` : ''}</Text>
-          <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); act(skipBlock); }} hitSlop={10} style={styles.sectionArrow}>
-            <Ionicons name="play-forward-outline" size={16} color={colors.muted} />
-          </Pressable>
+          {step.kind !== 'done' && (
+            <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); act(skipBlock); }} hitSlop={10} style={styles.sectionArrow}>
+              <Ionicons name="play-forward-outline" size={16} color={colors.muted} />
+            </Pressable>
+          )}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Text style={styles.small}>{prog.done}/{prog.total}</Text>
@@ -228,7 +232,7 @@ const styles = StyleSheet.create({
   swapBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   closeBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   blockText: { fontWeight: '700', color: colors.ink, fontSize: 15 },
-  sectionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 16, backgroundColor: colors.surfaceAlt },
+  sectionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 2, minHeight: 32, borderRadius: 16, backgroundColor: colors.surfaceAlt },
   sectionArrow: { padding: 6 },
   progress: { height: 4, backgroundColor: colors.line, marginHorizontal: 16, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: 4, backgroundColor: colors.accent },

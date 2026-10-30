@@ -69,6 +69,15 @@ export function workProgress(s: PlayerState): { done: number; total: number } {
 }
 
 /** Jump to the first step of the next section (block); finishes if there is none. */
+/** Jump to the start of the current section; if already at its first step (or a "ready" step), to the start of the previous section. */
+export function backBlock(s: PlayerState): { state: PlayerState; events: PlayerEvent[] } {
+  const events: PlayerEvent[] = [];
+  const blockAt = (i: number) => { const st = s.steps[i]; return st.kind === 'done' ? null : st.blockId; };
+  const startOf = (i: number) => { let j = i; while (j > 0 && blockAt(j - 1) === blockAt(i)) j--; return j; };
+  const cur = startOf(s.index);
+  const target = cur < s.index && blockAt(s.index) !== null ? cur : startOf(Math.max(0, cur - 1));
+  return { state: enter(s, target, events), events };
+}
 export function skipBlock(s: PlayerState): { state: PlayerState; events: PlayerEvent[] } {
   const events: PlayerEvent[] = [];
   const cur = s.steps[s.index];

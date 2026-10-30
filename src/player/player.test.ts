@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PRESET_FRAMEWORKS } from '../db/seed';
 import { buildTimeline, totalTimelineSeconds, type TimelineItem } from './timeline';
-import { back, createPlayer, pause, play, plus, skip, skipBlock, tick, workProgress } from './machine';
+import { back, backBlock, createPlayer, pause, play, plus, skip, skipBlock, tick, workProgress } from './machine';
 
 const segev = PRESET_FRAMEWORKS.find((f) => f.id === 'preset-segev-3x6')!;
 const items: TimelineItem[] = [];
@@ -82,6 +82,13 @@ describe('sections', () => {
     expect(steps[s.index].kind !== 'done' && (steps[s.index] as any).blockId).toBe('warmup');
     s = skipBlock(s).state;
     expect((s.steps[s.index] as any).blockId).toBe('rounds');
+    s = skip(s).state; s = skip(s).state; // a few steps into the rounds block
+    const roundsStart = s.steps.findIndex((st) => st.kind !== 'done' && st.blockId === 'rounds');
+    s = backBlock(s).state;
+    expect(s.index).toBe(roundsStart); // first: back to the start of this section
+    s = backBlock(s).state;
+    expect(s.index).toBe(0); // then: start of the previous section (warm-up)
+    expect(backBlock(s).state.index).toBe(0); // and never below 0
     const skipped = buildTimeline(items, segev.blocks, { blockOverrides: { warmup: { skipped: true }, rounds: { rounds: 2 } } });
     expect(skipped.some((st) => st.kind !== 'done' && st.blockId === 'warmup')).toBe(false);
     expect(skipped.filter((st) => st.kind === 'work' && st.blockId === 'rounds').length).toBe(2 * items.filter((i) => i.blockId === 'rounds' && i.round === 1).length);

@@ -158,7 +158,7 @@ Acceptance
 
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
-Sync/accounts · Android · 3D view of figure · comparing my own recording to the reference (form check) ·
+Sync/accounts · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·
 public profiles / sharing · coach partnerships ·
 an RTMW (whole-body) CoreML second model · Apple Vision 3D body pose · temporal 3D models (WHAM / GVHMR —
 note: SMPL licence is non-commercial).

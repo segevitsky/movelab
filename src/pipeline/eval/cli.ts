@@ -27,9 +27,10 @@ function table(name: string, rows: SegmentEval[]) {
 const args = process.argv.slice(2);
 const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : null;
 const label = args.includes('--label') ? args[args.indexOf('--label') + 1] : 'current';
+const naive = args.includes('--naive');
 const all: Record<string, SegmentEval[]> = {};
 for (const f of FIXTURES) {
-  const rows = evalFixture(f.load());
+  const rows = evalFixture(f.load(), {}, { naive });
   all[f.name] = rows;
   table(f.name, rows);
 }

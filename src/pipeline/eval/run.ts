@@ -4,9 +4,10 @@ import { LM } from '../types';
 import { percentile } from '../math';
 import { metricBoneJump, metricDepthFlips, metricFlagged, metricFloat, metricSkate, nearSideRaw, torsoOf, type Contacts, type FloorLine, type Metrics, type World } from './metrics';
 import { naiveContacts } from './naiveContacts';
+import { contacts as realContacts } from '../contacts';
 
 export type EvalHooks = {
-  /** contact detector (default: the naive baseline proxy) */
+  /** contact detector (default: step-2 `contacts()`; `naive: true` → the step-1 proxy) */
   contacts?: (seg: ProcessedSegment, world: World, torso: number) => Contacts;
   /** floor estimate (default: horizontal line at the 97th-percentile lowest ankle, as the renderer uses) */
   floor?: (seg: ProcessedSegment, contacts: Contacts, torso: number) => FloorLine;
@@ -25,12 +26,12 @@ export function baselineFloor(seg: ProcessedSegment): FloorLine {
 
 export type SegmentEval = { label: string; t0: number; t1: number; metrics: Metrics };
 
-export function evalFixture(frames: RawFrame[], hooks: EvalHooks = {}): SegmentEval[] {
+export function evalFixture(frames: RawFrame[], hooks: EvalHooks = {}, opts: { naive?: boolean } = {}): SegmentEval[] {
   const segs = processCapture({ frames });
   return segs.map((seg, i) => {
     const world = worldOf(frames, seg);
     const torso = torsoOf(seg.xyFull);
-    const contacts = hooks.contacts ? hooks.contacts(seg, world, torso) : naiveContacts(seg.xyFull, seg.fps, torso);
+    const contacts = hooks.contacts ? hooks.contacts(seg, world, torso) : opts.naive ? naiveContacts(seg.xyFull, seg.fps, torso) : realContacts(seg.xyFull, seg.fps, torso);
     const floor = hooks.floor ? hooks.floor(seg, contacts, torso) : baselineFloor(seg);
     const depth = hooks.depth ? hooks.depth(seg, world) : { legs: nearSideRaw(world, 'legs'), arms: nearSideRaw(world, 'arms') };
     const fl = metricFloat(seg.xyFull, contacts, floor, torso);

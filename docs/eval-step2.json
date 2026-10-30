@@ -1,0 +1,98 @@
+{
+ "label": "step2-contacts",
+ "at": "2026-10-30T06:31:40.396Z",
+ "fixtures": {
+  "reel1_mobility": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 3.1333,
+    "metrics": {
+     "float": 0.46179268305548976,
+     "skate": 0.005366918956251167,
+     "boneJump": 0.26595744680851063,
+     "flagged": 0.5263157894736842,
+     "depthFlips": 0.31610557926346877,
+     "frames": 95,
+     "contactFrames": 183
+    }
+   },
+   {
+    "label": "seg 2",
+    "t0": 3.2,
+    "t1": 12.9333,
+    "metrics": {
+     "float": 0.15804289687072254,
+     "skate": 0.00604745257606857,
+     "boneJump": 0.4708904109589041,
+     "flagged": 0,
+     "depthFlips": 0,
+     "frames": 293,
+     "contactFrames": 744
+    }
+   },
+   {
+    "label": "seg 3",
+    "t0": 13,
+    "t1": 27.8,
+    "metrics": {
+     "float": 0.1374655719825592,
+     "skate": 0.00886434175834562,
+     "boneJump": 1.947674418604651,
+     "flagged": 0.449438202247191,
+     "depthFlips": 2.405151146569871,
+     "frames": 445,
+     "contactFrames": 1392
+    }
+   }
+  ],
+  "reel2_staff": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 27.4667,
+    "metrics": {
+     "float": 0.27160448419738126,
+     "skate": 0.007610351120949274,
+     "boneJump": 3.6800486618004866,
+     "flagged": 0.06060606060606061,
+     "depthFlips": 0.9475494912387961,
+     "frames": 825,
+     "contactFrames": 2832
+    }
+   }
+  ],
+  "reel3_burpee": [
+   {
+    "label": "seg 1",
+    "t0": 0.6667,
+    "t1": 11.8667,
+    "metrics": {
+     "float": 0.138883020178204,
+     "skate": 0.009176549363362738,
+     "boneJump": 2.5669642857142856,
+     "flagged": 0.7418397626112759,
+     "depthFlips": 1.3366482209211958,
+     "frames": 337,
+     "contactFrames": 577
+    }
+   }
+  ],
+  "reel4_phone_plank": [
+   {
+    "label": "seg 1",
+    "t0": 0.1917,
+    "t1": 10.7017,
+    "metrics": {
+     "float": 0.7390876803567703,
+     "skate": 0.01089601218381579,
+     "boneJump": 0.8578431372549019,
+     "flagged": 0,
+     "depthFlips": 0,
+     "frames": 409,
+     "contactFrames": 1146
+    }
+   }
+  ]
+ }
+}

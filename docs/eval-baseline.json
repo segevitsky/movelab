@@ -1,0 +1,98 @@
+{
+ "label": "baseline",
+ "at": "2026-10-30T06:27:25.720Z",
+ "fixtures": {
+  "reel1_mobility": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 3.1333,
+    "metrics": {
+     "float": 0.1378296524349127,
+     "skate": 0.003844581998869722,
+     "boneJump": 0.26595744680851063,
+     "flagged": 0.5263157894736842,
+     "depthFlips": 0.31610557926346877,
+     "frames": 95,
+     "contactFrames": 160
+    }
+   },
+   {
+    "label": "seg 2",
+    "t0": 3.2,
+    "t1": 12.9333,
+    "metrics": {
+     "float": 0.1427284402775943,
+     "skate": 0.005737164759163201,
+     "boneJump": 0.4708904109589041,
+     "flagged": 0,
+     "depthFlips": 0,
+     "frames": 293,
+     "contactFrames": 546
+    }
+   },
+   {
+    "label": "seg 3",
+    "t0": 13,
+    "t1": 27.8,
+    "metrics": {
+     "float": 0.11535090002548805,
+     "skate": 0.00863308818764937,
+     "boneJump": 1.947674418604651,
+     "flagged": 0.449438202247191,
+     "depthFlips": 2.405151146569871,
+     "frames": 445,
+     "contactFrames": 927
+    }
+   }
+  ],
+  "reel2_staff": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 27.4667,
+    "metrics": {
+     "float": 0.09438777576436408,
+     "skate": 0.007281871645707557,
+     "boneJump": 3.6800486618004866,
+     "flagged": 0.06060606060606061,
+     "depthFlips": 0.9475494912387961,
+     "frames": 825,
+     "contactFrames": 1824
+    }
+   }
+  ],
+  "reel3_burpee": [
+   {
+    "label": "seg 1",
+    "t0": 0.6667,
+    "t1": 11.8667,
+    "metrics": {
+     "float": 0.11642803865897308,
+     "skate": 0.009808491943126043,
+     "boneJump": 2.5669642857142856,
+     "flagged": 0.7418397626112759,
+     "depthFlips": 1.3366482209211958,
+     "frames": 337,
+     "contactFrames": 448
+    }
+   }
+  ],
+  "reel4_phone_plank": [
+   {
+    "label": "seg 1",
+    "t0": 0.1917,
+    "t1": 10.7017,
+    "metrics": {
+     "float": 0.2765659787054756,
+     "skate": 0.008124273385179478,
+     "boneJump": 0.8578431372549019,
+     "flagged": 0,
+     "depthFlips": 0,
+     "frames": 409,
+     "contactFrames": 572
+    }
+   }
+  ]
+ }
+}

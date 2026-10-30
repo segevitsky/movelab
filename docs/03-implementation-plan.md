@@ -75,6 +75,12 @@ Acceptance
 - [ ] Visually matches `reference/renders/*_mp.gif` (fixed colours, heel–toe feet, perspective floor, cast shadow).
 - [ ] 60 fps on device with 3 cards looping.
 
+## Phase 2.5 — Physical plausibility (inserted 2026-10-30, before Phase 3 in dependency order)
+
+See `docs/05-phase-2.5-plausibility.md` for the spec and `docs/phase2.5-results.md` for metrics.
+Steps: eval harness + baseline → contacts → floor + root pinning → 3D bone-length check → depth order →
+debug toggles. Commit at each stop point with the metric deltas.
+
 ## Phase 3 — Data + library
 
 > Done 2026-10-28 — see `docs/phase3-results.md`.
@@ -153,4 +159,6 @@ Acceptance
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
 Sync/accounts · Android · 3D view of figure · comparing my own recording to the reference (form check) ·
-public profiles / sharing · coach partnerships.
+public profiles / sharing · coach partnerships ·
+an RTMW (whole-body) CoreML second model · Apple Vision 3D body pose · temporal 3D models (WHAM / GVHMR —
+note: SMPL licence is non-commercial).

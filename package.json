@@ -37,6 +37,7 @@
     "@types/react": "~19.3.0",
     "babel-plugin-inline-import": "^3.0.0",
     "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
@@ -46,7 +47,8 @@
     "ios": "expo run:ios --device",
     "prebuild": "expo prebuild --platform ios --clean",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval": "tsx src/pipeline/eval/cli.ts"
   },
   "private": true
 }

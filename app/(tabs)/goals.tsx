@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
-import { clipFromExercise } from '../../src/db/repo';
+import { useClipCache } from '../../src/ui/useClipCache';
 import { addStage, createGoal, deleteGoal, linkStageExercise, markStagePassed, removeStage, setCurrentStage, setGoalActive, updateStage } from '../../src/db/goalRepo';
 import type { Goal } from '../../src/db/schema';
 import { SLOTS, type Slot } from '../../src/db/vocab';
@@ -23,6 +23,7 @@ export default function Goals() {
   const { data: goals } = useLiveQuery(db.select().from(schema.goal));
   const { data: exercises } = useLiveQuery(db.select().from(schema.exercise));
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
+  const clips = useClipCache(exercises);
   const [picker, setPicker] = useState<{ goal: Goal; stage: number } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -37,7 +38,7 @@ export default function Goals() {
         {sorted.map((g) => {
           const cur = g.stages[g.currentStage];
           const ex = cur?.exerciseId ? byId.get(cur.exerciseId) : undefined;
-          const clip = ex ? clipFromExercise(ex) : null;
+          const clip = clips.get(ex);
           const color = (g.slot && slotColor[g.slot]) || colors.accent;
           const open = expanded === g.id;
           const done = g.currentStage >= g.stages.length - 1 && !g.active && !!g.notes?.includes('completed');

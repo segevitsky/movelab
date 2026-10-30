@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
-import { clipFromExercise } from '../../src/db/repo';
+import { useClipCache } from '../../src/ui/useClipCache';
 import { deleteWorkout, updateWorkoutItems } from '../../src/db/workoutRepo';
 import type { Exercise } from '../../src/db/schema';
 import type { FrameworkSlot, WorkoutItem } from '../../src/db/types';
@@ -27,6 +27,7 @@ export default function WorkoutScreen() {
   const { data: exercises } = useLiveQuery(db.select().from(schema.exercise));
   const fw = fws?.find((f) => f.id === w?.frameworkId);
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
+  const clips = useClipCache(exercises);
   const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot } | null>(null);
   if (!w || !fw) return <View style={{ padding: 24 }}><Text style={styles.small}>Loading…</Text></View>;
 
@@ -75,7 +76,7 @@ export default function WorkoutScreen() {
               {b.slots.map((s) => {
                 const it = w.items.find((i) => i.blockId === b.id && i.slotId === s.id && i.round === 1);
                 const ex = it ? byId.get(it.exerciseId) : undefined;
-                const clip = ex ? clipFromExercise(ex) : null;
+                const clip = clips.get(ex);
                 const open = () => setPicker({ blockId: b.id, slotId: s.id, slot: s });
                 return (
                   <SwipeRow key={s.id} disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accent, onPress: open }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, s.id) }]}>

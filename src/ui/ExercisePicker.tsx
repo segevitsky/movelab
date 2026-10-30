@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Exercise } from '../db/schema';
-import { clipFromExercise } from '../db/repo';
+import { useClipCache } from './useClipCache';
 import type { Slot } from '../db/vocab';
 import { FigureStill } from '../figure';
 import { Tag } from './Button';
@@ -11,6 +11,7 @@ import { colors, patternColor, radius, slotColor } from './theme';
 /** Pick an exercise from the library; cards matching `preferTags` are listed first. */
 export function ExercisePicker({ visible, title, exercises, preferTags = [], onPick, onClose }: { visible: boolean; title: string; exercises: Exercise[]; preferTags?: Slot[]; onPick: (e: Exercise) => void; onClose: () => void }) {
   const [text, setText] = useState('');
+  const clips = useClipCache(exercises);
   const rows = useMemo(() => {
     const all = exercises.filter((e) => !e.archived && (!text || e.name.toLowerCase().includes(text.toLowerCase())));
     const fits = all.filter((e) => preferTags.some((t) => e.slots.includes(t)));
@@ -30,7 +31,7 @@ export function ExercisePicker({ visible, title, exercises, preferTags = [], onP
           keyExtractor={(r) => r.e.id}
           contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 60 }}
           renderItem={({ item: r }) => {
-            const clip = clipFromExercise(r.e);
+            const clip = clips.get(r.e);
             return (
               <Pressable onPress={() => onPick(r.e)} style={[styles.row, !r.fits && { opacity: 0.7 }]}>
                 <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name="body-outline" size={22} color={colors.muted} />}</View>

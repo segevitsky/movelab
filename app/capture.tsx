@@ -30,6 +30,7 @@ export default function Capture() {
   const lastRect = useRef<NormRect | null>(null);
   const loggedVideo = useRef(false);
   const autoStopped = useRef(false);
+  const recStartedAt = useRef<number | null>(null);
   const webWrap = useRef<React.ComponentRef<typeof View>>(null);
 
   const src = mode === 'embed' ? embedUrl(code, kind ?? 'reel') : reelPageUrl(code, kind ?? 'reel');
@@ -73,8 +74,12 @@ export default function Capture() {
       patchAttempt(code, { username: m.username, captionChars: m.caption?.length ?? 0, bodyText: m.bodyText });
     }
     if ((m.event === 'ended' || m.event === 'looped') && ScreenRecorder.isRecording() && !autoStopped.current) {
-      autoStopped.current = true;
-      stop(m.event === 'looped' ? 'one loop done' : 'video ended');
+      // never auto-stop a recording shorter than 5 s (player re-buffers can look like a loop)
+      const recordedFor = recStartedAt.current ? (Date.now() - recStartedAt.current) / 1000 : 0;
+      if (recordedFor >= 5) {
+        autoStopped.current = true;
+        stop(m.event === 'looped' ? 'one loop done' : 'video ended');
+      }
     }
   };
 
@@ -87,6 +92,7 @@ export default function Capture() {
       await ScreenRecorder.start();
       setRecording(true);
       autoStopped.current = false;
+      recStartedAt.current = Date.now();
       // Try to start playback for the user (embeds usually still need a tap).
       webRef.current?.injectJavaScript(PLAY_JS);
     } catch (e) {

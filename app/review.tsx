@@ -108,7 +108,7 @@ export default function Review() {
       pattern: prev?.pattern ?? suggestion.pattern ?? null,
       slots: prev?.slots ?? suggestion.slots,
       equipment: prev?.equipment ?? suggestion.equipment,
-      include: prev?.include ?? true,
+      include: prev?.include ?? qualityScore(processed.xy, processed.issues).score >= 0.3,
       editTags: false,
       splitT: (fr[range.start].t + fr[range.end].t) / 2,
     };
@@ -214,7 +214,7 @@ export default function Review() {
                   </View>
                   {(() => { const q = qualityScore(it.processed.xy, it.processed.issues); const pct = Math.round(q.score * 100); return (
                     <Text style={[styles.reason, pct < 70 && { color: colors.danger, fontStyle: 'normal', fontWeight: '700' }]}>
-                      {pct >= 90 ? 'tracking: good' : pct >= 70 ? `tracking: ok (${pct} %)` : `tracking: poor (${pct} %) — consider trimming or deleting`}
+                      {pct >= 90 ? 'tracking: good' : pct >= 70 ? `tracking: ok (${pct} %)` : pct >= 30 ? `tracking: poor (${pct} %) — consider trimming or deleting` : `tracking: unusable (${pct} %) — not added unless you tick it`}
                       {q.unknownFrames ? ` · ${q.unknownFrames} frames with hidden limbs` : ''}
                     </Text>
                   ); })()}

@@ -67,9 +67,10 @@ export const EMBED_INJECTED_JS = `
       v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
       ['play', 'ended', 'pause', 'loadeddata'].forEach(function (e) { v.addEventListener(e, function () { snapshot(e); }); });
       v.addEventListener('timeupdate', function () {
-        // reels loop; detect the wrap-around (currentTime jumps back) = one full pass done
-        var t = v.currentTime;
-        if (maxT > 1 && t + 1 < lastT) { snapshot('looped'); maxT = 0; }
+        // reels loop; a wrap-around = currentTime jumps back from near the END (not a re-buffer seek)
+        var t = v.currentTime, d = v.duration || 0;
+        var nearEnd = d > 0 ? lastT > d - 1.5 : lastT > 3;
+        if (maxT > 3 && nearEnd && t + 1 < lastT) { snapshot('looped'); maxT = 0; }
         lastT = t; if (t > maxT) maxT = t;
       });
     }

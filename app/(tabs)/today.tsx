@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
-import { clipFromExercise } from '../../src/db/repo';
+import { useClipCache } from '../../src/ui/useClipCache';
 import { deleteWorkout, loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
 import type { Workout } from '../../src/db/schema';
 import type { WorkoutInputs } from '../../src/db/types';
@@ -24,6 +24,7 @@ export default function Today() {
   const { data: frameworks } = useLiveQuery(db.select().from(schema.framework));
   const { data: exercises } = useLiveQuery(db.select().from(schema.exercise));
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
+  const clips = useClipCache(exercises);
   const [fwId, setFwId] = useState<string | null>(null);
   const [inputs, setInputs] = useState<WorkoutInputs>({ energy: 'medium', focus: null, surprise: 0.3 });
   const [ctx, setCtx] = useState<GenContext | null>(null);
@@ -147,7 +148,7 @@ export default function Today() {
                 {b.slots.map((s) => {
                   const it = its.find((i) => i.slotId === s.id);
                   const ex = it ? byId.get(it.exerciseId) : undefined;
-                  const clip = ex ? clipFromExercise(ex) : null;
+                  const clip = clips.get(ex);
                   const actions = () => {
                     if (!ex || !it) return;
                     Alert.alert(ex.name, undefined, [
@@ -220,7 +221,7 @@ export default function Today() {
               keyExtractor={(r) => r.e.id}
               contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 60 }}
               renderItem={({ item: r }) => {
-                const clip = clipFromExercise(r.e);
+                const clip = clips.get(r.e);
                 return (
                   <Pressable onPress={() => chooseFromLibrary(picker.blockId, picker.slotId, r.e.id)} style={[styles.item, styles.pickRow, !r.fits && { opacity: 0.75 }]}>
                     <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name="body-outline" size={22} color={colors.muted} />}</View>

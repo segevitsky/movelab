@@ -28,9 +28,10 @@ const args = process.argv.slice(2);
 const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : null;
 const label = args.includes('--label') ? args[args.indexOf('--label') + 1] : 'current';
 const naive = args.includes('--naive');
+const stage = args.includes('--stage') ? (args[args.indexOf('--stage') + 1] as 'baseline' | 'step2' | 'step3') : undefined;
 const all: Record<string, SegmentEval[]> = {};
 for (const f of FIXTURES) {
-  const rows = evalFixture(f.load(), {}, { naive });
+  const rows = evalFixture(f.load(), {}, { naive, stage });
   all[f.name] = rows;
   table(f.name, rows);
 }

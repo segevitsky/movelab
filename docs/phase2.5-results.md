@@ -55,3 +55,41 @@ Effect on the metrics (same floor as the baseline, i.e. the horizontal 97th-perc
 standing — all true contacts that the horizontal ankle-line floor places far from the "ground". This is a
 measurement correction, not a regression; step 3 (fitted floor + root pinning) is judged against these
 step-2 numbers. skate is essentially unchanged (≈ 0.005–0.011 torso/frame = tracking jitter).
+
+## Step 3 — floor fit + root pinning (`src/pipeline/floor.ts`, `oneEuro.ts`)
+
+- Floor per segment: Theil–Sen line through the contact points in image space (slope clamped to ±35°),
+  the mat's near edge when a quad exists, horizontal fallback otherwise. **Plus a depth term**: a floor is
+  a plane, and two planted hands at the same x but different depth sit 0.16 torso apart in image y on
+  reel 3 — a line cannot express that. `y = a·x + b + c·z` with z = the contact point's MediaPipe world
+  depth; c is the median within-frame ratio (per-frame means removed), clamped to −80…0 px/m.
+- Root pinning: one vertical offset per frame = mean over that frame's contact points of
+  (floor y − point y); held across frames without contacts; clamped to ±0.6 torso; One-Euro smoothed
+  (min-cutoff 0.8 Hz, β 0.01). Applied to every joint — no single joint is ever moved. Smoothing lag
+  measured at < 0.005 torso of float; the residual is within-frame spread between simultaneous contacts.
+- Contacts refined while doing this (step 2 detector): feet margin 0.12 torso; hands have their own
+  0.2 torso margin and must lie within 0.45 torso of the floor fitted from the *feet* (a hand resting on a
+  knee, or holding the staff at hip height, is slow and "lowest hand" but not a contact — this was
+  inflating reel 2 by 2.7×).
+- Integrated: `processRange` / `processCapture` pin `xy` and `xyFull`, store `contacts`, `floor`,
+  `pinOffset`; the clip carries the floor (`scene.floor`, persisted in `exercise.scene`) and the renderer
+  anchors the ground line to it instead of the 97th-percentile ankle.
+
+float vs the step-1 baseline (naive contacts, horizontal floor → real contacts, fitted floor, pinned figure):
+
+| fixture / segment | float | Δ | skate |
+|---|---|---|---|
+| reel1_mobility seg 1 | 0.138 → **0.018** | **+87 %** | 0.004 → 0.005 |
+| reel1_mobility seg 2 | 0.143 → **0.048** | **+66 %** | 0.006 → 0.009 |
+| reel1_mobility seg 3 | 0.115 → **0.072** | **+37 %** | 0.009 → 0.009 |
+| reel2_staff seg 1 | 0.094 → **0.050** | **+47 %** | 0.007 → 0.009 |
+| reel3_burpee seg 1 | 0.116 → **0.037** | **+69 %** | 0.010 → 0.010 |
+| reel4_phone_plank seg 1 | 0.277 → **0.101** | **+63 %** | 0.008 → 0.017 |
+
+**Acceptance (≥ 70 % drop on reels 1 and 3):** reel 1 seg 1 −87 %, seg 2 −66 %, seg 3 −37 %
+(frame-weighted whole reel −59 %); reel 3 −68 %; reel 2 −47 % (no regression — an improvement); phone
+plank −63 %. Reel 3 and reel 1 seg 1–2 are at or within a few points of the target; **reel 1 seg 3 (lunge
+flow) is not**: its hands are genuinely on the floor (≥ 1 torso from any knee, at toe level) yet sit
+~0.07 torso above where the plane puts them while the feet sit below — a landmark/plane-model limit in an
+oblique view, not a detection error. Not tuned further to avoid over-fitting the fixtures. skate is
+unchanged (tracking jitter); the optional foot lock was not done.

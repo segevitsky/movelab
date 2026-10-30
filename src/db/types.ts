@@ -54,4 +54,6 @@ export type Scene = {
   matQuad?: [[number, number], [number, number], [number, number], [number, number]];
   cropRect?: { x: number; y: number; width: number; height: number };
   cameraStatic: boolean;
+  /** Phase 2.5 fitted floor in figure pixel space: y = a·x + b */
+  floor?: { a: number; b: number };
 };

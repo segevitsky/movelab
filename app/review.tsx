@@ -196,7 +196,7 @@ export default function Review() {
         {items.length === 0 && <Text style={styles.small}>No person found for long enough. Try "Open in pose debug" to look at the frames.</Text>}
         {items.map((it, idx) => {
           const clip = clipFromProcessed(it.processed);
-          if (scene?.matQuad) clip.scene = { matQuad: scene.matQuad.map((p) => [p[0], p[1]]) };
+          if (scene?.matQuad) clip.scene = { ...clip.scene, matQuad: scene.matQuad.map((p) => [p[0], p[1]]) };
           const t0 = frames[it.range.start].t, t1 = frames[it.range.end].t;
           return (
             <Drop key={it.id} index={idx} style={[styles.card, shadow.card, !it.include && { opacity: 0.55 }]}>

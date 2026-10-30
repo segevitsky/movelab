@@ -28,7 +28,7 @@ export function clipFromExercise(e: Pick<Exercise, 'figure' | 'scene'>): FigureC
   if (!e.figure) return null;
   try {
     const clip = decodeClip(fromBase64(e.figure));
-    if (e.scene?.matQuad) clip.scene = { matQuad: e.scene.matQuad.map((p) => [p[0], p[1]]) };
+    if (e.scene?.matQuad || e.scene?.floor) clip.scene = { matQuad: e.scene.matQuad?.map((p) => [p[0], p[1]] as [number, number]), floor: e.scene.floor };
     return clip;
   } catch {
     return null;
@@ -39,7 +39,9 @@ export function clipFromExercise(e: Pick<Exercise, 'figure' | 'scene'>): FigureC
 export function exerciseFromProcessed(seg: ProcessedSegment, fields: Partial<NewExercise> & { name: string }): NewExercise {
   const clip = downsampleClip(clipFromProcessed(seg), 15);
   const now = Date.now();
+  const scene = { ...(fields.scene ?? { cameraStatic: false }), floor: { a: seg.floor.a, b: seg.floor.b } };
   return {
+    scene,
     id: newId(),
     aliases: [],
     slots: [],

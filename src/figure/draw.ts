@@ -55,6 +55,15 @@ export type DrawOptions = {
   floor?: boolean;
   shadow?: boolean;
   background?: boolean;
+  /** debug overlays (Phase 2.5 dev screen) */
+  showContacts?: boolean;
+  showFloorLine?: boolean;
+  showFlagged?: boolean;
+};
+const CONTACT_JOINTS: Record<string, number> = { heelL: LM.leftHeel, heelR: LM.rightHeel, toeL: LM.leftToe, toeR: LM.rightToe, handL: LM.leftWrist, handR: LM.rightWrist };
+const LIMB_JOINTS: Record<string, number[]> = {
+  leftArm: [LM.leftShoulder, LM.leftElbow, LM.leftWrist], rightArm: [LM.rightShoulder, LM.rightElbow, LM.rightWrist],
+  leftLeg: [LM.leftHip, LM.leftKnee, LM.leftAnkle], rightLeg: [LM.rightHip, LM.rightKnee, LM.rightAnkle],
 };
 
 export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: DrawOptions = {}) {
@@ -201,6 +210,33 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
   limbSet(RIGHT, COLORS.bg, t * 0.55);
   limbSet(RIGHT, COLORS.near);
 
+  // --- debug overlays
+  if (opts.showFloorLine && prep.floor) {
+    const xa = x0, xb = x0 + W / scale;
+    const A = T([xa, prep.floor.a * xa + prep.floor.b]);
+    const B = T([xb, prep.floor.a * xb + prep.floor.b]);
+    canvas.drawLine(A[0], A[1], B[0], B[1], stroke('#2f6b8f', Math.max(1.5, t * 0.2)));
+  }
+  if (opts.showFlagged && prep.debug?.flagged) {
+    for (const f of prep.debug.flagged) {
+      if (f.frame !== k) continue;
+      for (const limb of f.limbs) {
+        const js = LIMB_JOINTS[limb];
+        if (!js) continue;
+        for (let i = 0; i + 1 < js.length; i++) { const a = P[js[i]], b = P[js[i + 1]]; if (ok(a) && ok(b)) { const A = T(a), B = T(b); canvas.drawLine(A[0], A[1], B[0], B[1], stroke('rgba(200,60,40,0.85)', t * 0.5)); } }
+      }
+    }
+  }
+  if (opts.showContacts && prep.debug?.contacts) {
+    for (const [name, series] of Object.entries(prep.debug.contacts)) {
+      if (!series[k]) continue;
+      const p = P[CONTACT_JOINTS[name]];
+      if (!ok(p)) continue;
+      const q = T(p);
+      canvas.drawCircle(q[0], q[1], Math.max(4, t * 0.9), fill('#3fbf6a'));
+      canvas.drawCircle(q[0], q[1], Math.max(4, t * 0.9), stroke('#ffffff', 1.5));
+    }
+  }
   canvas.restore();
 }
 

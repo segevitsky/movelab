@@ -16,9 +16,9 @@ export type ContactPoint = 'heelL' | 'heelR' | 'toeL' | 'toeR' | 'handL' | 'hand
 export type Contacts = Record<ContactPoint, boolean[]>;
 export const CONTACT_JOINT: Record<ContactPoint, number> = { heelL: LM.leftHeel, heelR: LM.rightHeel, toeL: LM.leftToe, toeR: LM.rightToe, handL: LM.leftWrist, handR: LM.rightWrist };
 
-/** Floor as a line in image space: y = a·x + b (a = 0 → horizontal). */
-export type FloorLine = { a: number; b: number };
-export const floorYAt = (f: FloorLine, x: number) => f.a * x + f.b;
+/** Floor in image space: y = a·x + b + c·z (c = depth term, px per metre of world z; 0 → a line). */
+export type FloorLine = { a: number; b: number; c?: number };
+export const floorYAt = (f: FloorLine, x: number, z = 0) => f.a * x + f.b + (f.c ?? 0) * z;
 
 export type World = ([number, number, number][] | undefined)[]; // [frame][33] metres, undefined when unknown
 
@@ -34,7 +34,7 @@ export const dist3 = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] 
 
 export type Metrics = { float: number; skate: number; boneJump: number; flagged: number; depthFlips: number; frames: number; contactFrames: number };
 
-export function metricFloat(xy: Track, contacts: Contacts, floor: FloorLine, torso: number): { value: number; n: number } {
+export function metricFloat(xy: Track, contacts: Contacts, floor: FloorLine, torso: number, world?: World): { value: number; n: number } {
   let s = 0, n = 0;
   (Object.keys(CONTACT_JOINT) as ContactPoint[]).forEach((cp) => {
     const j = CONTACT_JOINT[cp];
@@ -42,7 +42,8 @@ export function metricFloat(xy: Track, contacts: Contacts, floor: FloorLine, tor
       if (!on) return;
       const p = xy[i][j];
       if (Number.isNaN(p[0])) return;
-      s += Math.abs(p[1] - floorYAt(floor, p[0])) / torso;
+      const z = world?.[i] ? world[i]![j][2] : 0;
+      s += Math.abs(p[1] - floorYAt(floor, p[0], z)) / torso;
       n++;
     });
   });

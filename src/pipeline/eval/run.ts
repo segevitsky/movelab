@@ -9,7 +9,7 @@ import { contacts as realContacts } from '../contacts';
 export type EvalHooks = {
   /** contact detector (default: step-2 `contacts()`; `naive: true` → the step-1 proxy) */
   contacts?: (seg: ProcessedSegment, world: World, torso: number) => Contacts;
-  /** floor estimate (default: horizontal line at the 97th-percentile lowest ankle, as the renderer uses) */
+  /** floor estimate (default: step-3 fitted floor; `stage: 'step2'` → horizontal baseline line) */
   floor?: (seg: ProcessedSegment, contacts: Contacts, torso: number) => FloorLine;
   /** depth series (default: raw world z of knees / elbows, no smoothing) */
   depth?: (seg: ProcessedSegment, world: World) => { legs: (boolean | null)[]; arms: (boolean | null)[] };
@@ -26,16 +26,24 @@ export function baselineFloor(seg: ProcessedSegment): FloorLine {
 
 export type SegmentEval = { label: string; t0: number; t1: number; metrics: Metrics };
 
-export function evalFixture(frames: RawFrame[], hooks: EvalHooks = {}, opts: { naive?: boolean } = {}): SegmentEval[] {
+export type EvalStage = 'baseline' | 'step2' | 'step3';
+export function evalFixture(frames: RawFrame[], hooks: EvalHooks = {}, opts: { naive?: boolean; stage?: EvalStage } = {}): SegmentEval[] {
   const segs = processCapture({ frames });
   return segs.map((seg, i) => {
     const world = worldOf(frames, seg);
     const torso = torsoOf(seg.xyFull);
-    const contacts = hooks.contacts ? hooks.contacts(seg, world, torso) : opts.naive ? naiveContacts(seg.xyFull, seg.fps, torso) : realContacts(seg.xyFull, seg.fps, torso);
-    const floor = hooks.floor ? hooks.floor(seg, contacts, torso) : baselineFloor(seg);
+    const stage: EvalStage = opts.stage ?? (opts.naive ? 'baseline' : 'step3');
+    // the pipeline now pins the figure itself; earlier stages are evaluated on the un-pinned track
+    const unpinned = seg.xyFull.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] - seg.pinOffset[i]] as [number, number]))));
+    const contacts = hooks.contacts ? hooks.contacts(seg, world, torso) : stage === 'baseline' ? naiveContacts(unpinned, seg.fps, torso) : seg.contacts;
+    let track = stage === 'step3' ? seg.xyFull : unpinned;
+    let floor: FloorLine;
+    if (hooks.floor) floor = hooks.floor(seg, contacts, torso);
+    else if (stage === 'step3') floor = seg.floor;
+    else floor = baselineFloor({ ...seg, xyFull: unpinned });
     const depth = hooks.depth ? hooks.depth(seg, world) : { legs: nearSideRaw(world, 'legs'), arms: nearSideRaw(world, 'arms') };
-    const fl = metricFloat(seg.xyFull, contacts, floor, torso);
-    const sk = metricSkate(seg.xyFull, contacts, torso);
+    const fl = metricFloat(track, contacts, floor, torso, stage === 'step3' ? world : undefined);
+    const sk = metricSkate(track, contacts, torso);
     const bj = metricBoneJump(world);
     const fg = metricFlagged(seg.issues, seg.xyFull.length);
     const df = metricDepthFlips(depth.legs, depth.arms, seg.fps);

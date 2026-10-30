@@ -15,8 +15,10 @@ export type FigureClip = {
   loop?: { i0: number; i1: number };
   /** optional HUD: two joints with per-frame angles in degrees */
   hud?: { name: string; angles: number[] }[];
-  /** Architecture §5a: floor mat quad in the same pixel space as xy (TL, TR, BR, BL) */
-  scene?: { matQuad?: XY[] };
+  /** Architecture §5a: floor mat quad in the same pixel space as xy (TL, TR, BR, BL); Phase 2.5: fitted floor */
+  scene?: { matQuad?: XY[]; floor?: { a: number; b: number } };
+  /** debug overlays (dev screen only): per-frame contact flags per point, flagged limb-frames */
+  debug?: { contacts?: Record<string, boolean[]>; flagged?: { frame: number; limbs: string[] }[] };
 };
 
 export type PreparedFrame = {
@@ -39,6 +41,8 @@ export type Prepared = {
   frames: PreparedFrame[];
   loop: { i0: number; i1: number };
   matQuad?: XY[];
+  floor?: { a: number; b: number };
+  debug?: FigureClip['debug'];
 };
 
 export const HEAD = 33;
@@ -75,8 +79,10 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
   const hx = smoothSeries(hcRaw.map((p) => p[0]), fps, 0.5);
   const hy = smoothSeries(hcRaw.map((p) => p[1]), fps, 0.5);
 
-  // ground: 97th percentile of the lower ankle, plus a little
-  const ground = percentile(xy.map((f) => Math.max(f[LM.leftAnkle][1], f[LM.rightAnkle][1])), 97) + th * 1.1;
+  // ground: the fitted floor (Phase 2.5) evaluated at the figure's mean x; else the 97th percentile of the lower ankle
+  const fl = clip.scene?.floor;
+  const meanX = median(xy.map((f) => (f[LM.leftHip][0] + f[LM.rightHip][0]) / 2));
+  const ground = fl ? fl.a * meanX + fl.b + th * 0.3 : percentile(xy.map((f) => Math.max(f[LM.leftAnkle][1], f[LM.rightAnkle][1])), 97) + th * 1.1;
 
   // extents per frame (joints + head + feet) for the camera
   const pts: XY[][] = xy.map((f, i) => {
@@ -104,7 +110,7 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
     cam: { x0: cx[i] - width / (2 * scale), y0: ground - (0.87 * height) / scale, scale },
   }));
 
-  return { width, height, fps, torso, th, ground, frames, loop: clip.loop ?? { i0: 0, i1: n - 1 }, matQuad: clip.scene?.matQuad };
+  return { width, height, fps, torso, th, ground, frames, loop: clip.loop ?? { i0: 0, i1: n - 1 }, matQuad: clip.scene?.matQuad, floor: clip.scene?.floor, debug: clip.debug };
 }
 
 /** Shadow projection: light from front-left, high. Point → floor (render.py `proj`). */

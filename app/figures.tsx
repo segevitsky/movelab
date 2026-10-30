@@ -6,7 +6,7 @@ import { Button } from '../src/ui/Button';
 
 /** Phase 2 dev screen: the 3 fixture segments looping as cards + a full-size player. */
 const FIXTURES: { name: string; load: () => RawFrame[]; pick: (segs: ReturnType<typeof processCapture>) => ReturnType<typeof processCapture>[number] }[] = [
-  { name: 'standing flow (reel 1 · seg 1)', load: () => require('../reference/sample-data/reel1_mobility_mp33.json'), pick: (s) => s[0] },
+  { name: 'seated flow (reel 1 · seg 2)', load: () => require('../reference/sample-data/reel1_mobility_mp33.json'), pick: (s) => s[1] },
   { name: 'burpee-lunge loop (reel 3)', load: () => require('../reference/sample-data/reel3_burpee_mp33.json'), pick: (s) => s.reduce((a, b) => (b.xy.length > a.xy.length ? b : a)) },
   { name: 'staff flow (reel 2)', load: () => require('../reference/sample-data/reel2_staff_mp33.json'), pick: (s) => s[0] },
 ];
@@ -18,14 +18,22 @@ export default function Figures() {
   const [speed, setSpeed] = useState(1);
   const [mirror, setMirror] = useState(false);
   const [hud, setHud] = useState(true);
+  const [raw, setRaw] = useState(false);
+  const [showContacts, setShowContacts] = useState(true);
+  const [showFloorLine, setShowFloorLine] = useState(true);
+  const [showFlagged, setShowFlagged] = useState(true);
+  const [seek, setSeek] = useState<number | undefined>(undefined);
   const [frame, setFrame] = useState(0);
 
-  const clips = useMemo<{ name: string; clip: FigureClip; frames: number; period?: number }[]>(() => {
+  const clips = useMemo<{ name: string; clip: FigureClip; rawClip: FigureClip; frames: number; period?: number; fps: number; t0: number }[]>(() => {
     const t0 = Date.now();
     const out = FIXTURES.map((f) => {
       const segs = processCapture({ frames: f.load() });
       const seg = f.pick(segs);
-      return { name: f.name, clip: clipFromProcessed(seg), frames: seg.xy.length, period: seg.period?.periodic ? seg.period.period : undefined };
+      const clip = clipFromProcessed(seg);
+      // raw = corrected minus the root-pinning offset, no floor
+      const rawClip: FigureClip = { ...clip, xy: clip.xy.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] - seg.pinOffset[i]] as [number, number])))), scene: undefined };
+      return { name: f.name, clip, rawClip, frames: seg.xy.length, period: seg.period?.periodic ? seg.period.period : undefined, fps: seg.fps, t0: seg.segment.t0 };
     });
     console.log(`figures: pipeline on 3 fixtures took ${Date.now() - t0} ms`);
     return out;
@@ -49,7 +57,17 @@ export default function Figures() {
           </Pressable>
         ))}
       </View>
-      <Figure clip={cur.clip} width={playerW} height={playerH} playing={playing} speed={speed} mirror={mirror} hud={hud} loopWindow={false} onFrame={setFrame} style={styles.player} />
+      <Figure clip={raw ? cur.rawClip : cur.clip} width={playerW} height={playerH} playing={playing} speed={speed} mirror={mirror} hud={hud} loopWindow={false} onFrame={setFrame} style={styles.player} showContacts={showContacts} showFloorLine={showFloorLine} showFlagged={showFlagged} seekFrame={seek} />
+      <View style={styles.row}>
+        <Button title="preset: reel 3 @ push-up" onPress={() => { setSel(1); setPlaying(false); setSeek(Math.round((2.3 - clips[1].t0) * clips[1].fps)); }} secondary />
+        <Button title="preset: reel 1 @ seated" onPress={() => { setSel(0); setPlaying(false); setSeek(Math.round((7.5 - clips[0].t0) * clips[0].fps)); }} secondary />
+      </View>
+      <View style={styles.toggles}>
+        <View style={styles.toggle}><Switch value={raw} onValueChange={setRaw} /><Text style={styles.small}>raw (no pinning)</Text></View>
+        <View style={styles.toggle}><Switch value={showContacts} onValueChange={setShowContacts} /><Text style={styles.small}>contacts</Text></View>
+        <View style={styles.toggle}><Switch value={showFloorLine} onValueChange={setShowFloorLine} /><Text style={styles.small}>floor line</Text></View>
+        <View style={styles.toggle}><Switch value={showFlagged} onValueChange={setShowFlagged} /><Text style={styles.small}>flagged limbs</Text></View>
+      </View>
       <Text style={styles.mono}>
         {cur.name} · {cur.frames} frames · frame {frame}{cur.period ? ` · period ${cur.period.toFixed(2)} s` : ' · not periodic'}
       </Text>

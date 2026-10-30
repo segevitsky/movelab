@@ -24,15 +24,21 @@ export type FigureProps = {
   onFrame?: (frame: number) => void;
   /** draw one frame only (loop start) — cheap thumbnails for long lists */
   still?: boolean;
+  /** debug overlays */
+  showContacts?: boolean;
+  showFloorLine?: boolean;
+  showFlagged?: boolean;
+  /** show this frame (0-based) when paused — dev presets */
+  seekFrame?: number;
 };
 
 /**
  * Stick-figure player. Every frame is pre-recorded as a Skia picture once per (clip, size, mirror);
  * playback advances a shared value on the UI thread, so React never re-renders per frame.
  */
-export function Figure({ clip, width, height, playing = true, speed = 1, mirror = false, loopWindow = true, hud = false, floor = true, shadow = true, style, onFrame, still = false }: FigureProps) {
+export function Figure({ clip, width, height, playing = true, speed = 1, mirror = false, loopWindow = true, hud = false, floor = true, shadow = true, style, onFrame, still = false, showContacts = false, showFloorLine = false, showFlagged = false, seekFrame }: FigureProps) {
   const prep = useMemo(() => prepare(clip, width, height), [clip, width, height]);
-  const pictures = useMemo(() => (still ? recordPictures(prep, { mirror, floor, shadow }, prep.loop.i0) : recordPictures(prep, { mirror, floor, shadow })), [prep, mirror, floor, shadow, still]);
+  const pictures = useMemo(() => (still ? recordPictures(prep, { mirror, floor, shadow, showContacts, showFloorLine, showFlagged }, prep.loop.i0) : recordPictures(prep, { mirror, floor, shadow, showContacts, showFloorLine, showFlagged })), [prep, mirror, floor, shadow, still, showContacts, showFloorLine, showFlagged]);
   const i0 = loopWindow ? prep.loop.i0 : 0;
   const n = loopWindow ? prep.loop.i1 - prep.loop.i0 + 1 : prep.frames.length;
   const fps = prep.fps;
@@ -42,6 +48,7 @@ export function Figure({ clip, width, height, playing = true, speed = 1, mirror 
   const speedSV = useSharedValue(speed);
   useEffect(() => { playingSV.value = playing; }, [playing, playingSV]);
   useEffect(() => { speedSV.value = speed; }, [speed, speedSV]);
+  useEffect(() => { if (seekFrame !== undefined) frame.value = Math.max(0, Math.min(n - 1, seekFrame - i0)); }, [seekFrame]);
 
   useFrameCallback((info) => {
     if (still || !playingSV.value || !info.timeSincePreviousFrame) return;

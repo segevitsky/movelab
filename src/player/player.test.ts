@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PRESET_FRAMEWORKS } from '../db/seed';
 import { buildTimeline, totalTimelineSeconds, type TimelineItem } from './timeline';
-import { back, createPlayer, pause, play, plus, skip, tick, workProgress } from './machine';
+import { back, createPlayer, pause, play, plus, skip, skipBlock, tick, workProgress } from './machine';
 
 const segev = PRESET_FRAMEWORKS.find((f) => f.id === 'preset-segev-3x6')!;
 const items: TimelineItem[] = [];
@@ -72,5 +72,23 @@ describe('player machine', () => {
     expect(s.index).toBe(idx);
     expect(s.remainingMs).toBe(s.steps[idx].seconds * 1000);
     expect(workProgress(s).total).toBe(items.length);
+  });
+});
+
+describe('sections', () => {
+  it('skipBlock jumps to the next section; overrides skip a block and change rounds; extra slots are included', () => {
+    const steps = buildTimeline(items, segev.blocks);
+    let s = play(createPlayer(steps));
+    expect(steps[s.index].kind !== 'done' && (steps[s.index] as any).blockId).toBe('warmup');
+    s = skipBlock(s).state;
+    expect((s.steps[s.index] as any).blockId).toBe('rounds');
+    const skipped = buildTimeline(items, segev.blocks, { blockOverrides: { warmup: { skipped: true }, rounds: { rounds: 2 } } });
+    expect(skipped.some((st) => st.kind !== 'done' && st.blockId === 'warmup')).toBe(false);
+    expect(skipped.filter((st) => st.kind === 'work' && st.blockId === 'rounds').length).toBe(2 * items.filter((i) => i.blockId === 'rounds' && i.round === 1).length);
+    const extra = buildTimeline([...items, { blockId: 'warmup', slotId: 'extra-1', round: 1, exerciseId: 'x', dosage: { type: 'time', value: 30 } }], segev.blocks);
+    expect(extra.filter((st) => st.kind === 'work' && st.blockId === 'warmup').map((st: any) => st.exerciseId)).toContain('x');
+    // 4 rounds from a 3-round framework: round 4 reuses round-1 picks
+    const more = buildTimeline(items, segev.blocks, { blockOverrides: { rounds: { rounds: 4 } } });
+    expect(more.filter((st) => st.kind === 'work' && st.blockId === 'rounds' && st.round === 4).length).toBe(items.filter((i) => i.blockId === 'rounds' && i.round === 1).length);
   });
 });

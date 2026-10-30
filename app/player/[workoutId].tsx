@@ -15,7 +15,7 @@ import { schema } from '../../src/db';
 import type { Exercise } from '../../src/db/schema';
 import type { SessionFeedback } from '../../src/db/types';
 import { FigurePlayer } from '../../src/figure';
-import { back, createPlayer, pause, play, plus, skip, tick, workProgress, type PlayerState } from '../../src/player/machine';
+import { back, createPlayer, pause, play, plus, skip, skipBlock, tick, workProgress, type PlayerState } from '../../src/player/machine';
 import { buildTimeline, totalTimelineSeconds, type Step } from '../../src/player/timeline';
 import { Button } from '../../src/ui/Button';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
@@ -57,7 +57,8 @@ export default function Player() {
       setAllEx(rows);
       wRef.current = { id: w.id, items: w.items, blocks: fw.blocks };
       setBlockNames(Object.fromEntries(fw.blocks.blocks.map((b) => [b.id, { name: b.name, rounds: b.kind === 'rounds' ? b.rounds ?? 1 : 1 }])));
-      const steps = buildTimeline(w.items, fw.blocks, { repSecondsOf: (id) => map.get(id)?.repSeconds ?? null, restBetweenRoundsSec: w.inputs.restBetweenRoundsSec, restBetweenExercisesSec: w.inputs.restBetweenExercisesSec });
+      const steps = buildTimeline(w.items, fw.blocks, { repSecondsOf: (id) => map.get(id)?.repSeconds ?? null, restBetweenRoundsSec: w.inputs.restBetweenRoundsSec, restBetweenExercisesSec: w.inputs.restBetweenExercisesSec, blockOverrides: w.inputs.blockOverrides });
+      wRef.current = { id: w.id, items: w.items, blocks: fw.blocks, inputs: w.inputs } as any;
       setState(createPlayer(steps));
       setSessionId(await startSession(db, w.id));
       try {
@@ -107,7 +108,8 @@ export default function Player() {
     const items = wr.items.map((i: any) => (i.blockId === cur.blockId && i.slotId === cur.slotId && i.round >= cur.round ? { ...i, exerciseId: ex.id, locked: true } : i));
     wr.items = items;
     await updateWorkoutItems(db, wr.id, items);
-    const steps = buildTimeline(items, wr.blocks, { repSecondsOf: (id) => exById.get(id)?.repSeconds ?? null });
+    const inp = (wr as any).inputs ?? {};
+    const steps = buildTimeline(items, wr.blocks, { repSecondsOf: (id) => exById.get(id)?.repSeconds ?? null, restBetweenRoundsSec: inp.restBetweenRoundsSec, restBetweenExercisesSec: inp.restBetweenExercisesSec, blockOverrides: inp.blockOverrides });
     // continue from the same work step (block/slot/round), keeping its remaining time
     const idx = steps.findIndex((st) => st.kind === 'work' && st.blockId === cur.blockId && st.slotId === cur.slotId && st.round === cur.round);
     setState({ ...s, steps, index: Math.max(0, idx), remainingMs: Math.min(s.remainingMs, (steps[Math.max(0, idx)]?.seconds ?? 0) * 1000 || s.remainingMs) });
@@ -158,7 +160,10 @@ export default function Player() {
     <View style={[styles.root, isRest && { backgroundColor: '#e4e9ef' }]}>
       <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
         <Pressable onPress={() => Alert.alert('Leave the workout?', undefined, [{ text: 'Keep going' }, { text: 'Leave', style: 'destructive', onPress: () => finish('right') }])} hitSlop={14} style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}><Ionicons name="close" size={24} color={colors.ink} /></Pressable>
-        <Text style={styles.blockText}>{block?.name}{block && block.rounds > 1 && step.kind !== 'done' ? ` · round ${step.round}/${block.rounds}` : ''}</Text>
+        <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); act(skipBlock); }} hitSlop={8} style={styles.sectionPill}>
+          <Text style={styles.blockText}>{block?.name}{block && block.rounds > 1 && step.kind !== 'done' ? ` · round ${step.round}/${block.rounds}` : ''}</Text>
+          <Ionicons name="play-forward-outline" size={14} color={colors.muted} />
+        </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Text style={styles.small}>{prog.done}/{prog.total}</Text>
           {step.kind === 'work' && (
@@ -181,7 +186,7 @@ export default function Player() {
         <Text style={[styles.countdown, isRest && { color: colors.muted }, flash && { color: colors.accent }]}>{secs}</Text>
         <View style={styles.stepBar}><View style={[styles.stepFill, { width: `${Math.max(0, Math.min(100, 100 * (1 - state.remainingMs / Math.max(1, step.seconds * 1000))))}%`, backgroundColor: isRest ? colors.muted : colors.accent }]} /></View>
         {!isRest && nextEx && <Text style={styles.small}>then: {nextEx.name}</Text>}
-        <Text style={[styles.small, { marginTop: 6 }]}>swipe ← skip · swipe → back</Text>
+        <Text style={[styles.small, { marginTop: 6 }]}>swipe ← skip · swipe → back · tap the section name to skip the whole section</Text>
       </Animated.View>
       </SwipeNav>
 
@@ -191,17 +196,18 @@ export default function Player() {
       <View style={[styles.controls, { paddingBottom: insets.bottom + 16 }]}>
         <Ctl icon="play-skip-back" onPress={() => act(back)} />
         <Ctl icon={state.playing ? 'pause' : 'play'} big onPress={() => act((s) => (s.playing ? pause(s) : play(s)))} />
-        <Ctl icon="play-skip-forward" onPress={() => act(skip)} />
+        <Ctl icon="play-skip-forward" onPress={() => act(skip)} onLongPress={() => act(skipBlock)} />
         <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); act((s) => plus(s, 15)); }} style={({ pressed }) => [styles.plus, pressed && { transform: [{ scale: 0.94 }], opacity: 0.8 }]} hitSlop={10}><Text style={styles.plusText}>+15 s</Text></Pressable>
       </View>
     </View>
   );
 }
 
-function Ctl({ icon, onPress, big }: { icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void; big?: boolean }) {
+function Ctl({ icon, onPress, big, onLongPress }: { icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void; big?: boolean; onLongPress?: () => void }) {
   return (
     <Pressable
       onPress={() => { Haptics.selectionAsync().catch(() => {}); onPress(); }}
+      onLongPress={onLongPress ? () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onLongPress(); } : undefined}
       style={({ pressed }) => [styles.ctl, big && styles.ctlBig, pressed && { transform: [{ scale: 0.92 }], opacity: 0.85 }]}
       hitSlop={12}
     >
@@ -217,6 +223,7 @@ const styles = StyleSheet.create({
   swapBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   closeBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   blockText: { fontWeight: '700', color: colors.ink, fontSize: 15 },
+  sectionPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: colors.surfaceAlt },
   progress: { height: 4, backgroundColor: colors.line, marginHorizontal: 16, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: 4, backgroundColor: colors.accent },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 4 },

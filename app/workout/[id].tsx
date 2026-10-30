@@ -28,7 +28,7 @@ export default function WorkoutScreen() {
   const fw = fws?.find((f) => f.id === w?.frameworkId);
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
   const clips = useClipCache(exercises);
-  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot } | null>(null);
+  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; extra?: boolean } | null>(null);
   if (!w || !fw) return <View style={{ padding: 24 }}><Text style={styles.small}>Loading…</Text></View>;
 
   const save = (items: WorkoutItem[], inputs = w.inputs) => updateWorkoutItems(db, w.id, items, inputs).catch((e) => Alert.alert('Save failed', String(e)));
@@ -46,6 +46,16 @@ export default function WorkoutScreen() {
     setPicker(null);
   };
   const remove = (blockId: string, slotId: string) => save(w.items.filter((i) => key(i.blockId, i.slotId) !== key(blockId, slotId)));
+  const ov = (blockId: string) => w.inputs.blockOverrides?.[blockId] ?? {};
+  const setOv = (blockId: string, patch: { skipped?: boolean; rounds?: number }) => save(w.items, { ...w.inputs, blockOverrides: { ...(w.inputs.blockOverrides ?? {}), [blockId]: { ...ov(blockId), ...patch } } });
+  const addExtra = (blockId: string, ex: Exercise) => {
+    const block = fw.blocks.blocks.find((b) => b.id === blockId)!;
+    const rounds = block.kind === 'rounds' ? ov(blockId).rounds ?? block.rounds ?? 1 : 1;
+    const slotId = `extra-${Date.now().toString(36)}`;
+    const dosage = ex.dosageDefault ?? { type: 'time' as const, value: 45 };
+    save([...w.items, ...Array.from({ length: rounds }, (_, r) => ({ blockId, slotId, round: r + 1, exerciseId: ex.id, dosage, locked: true }))]);
+    setPicker(null);
+  };
   const adjust = (blockId: string, slotId: string, dir: 1 | -1) =>
     save(w.items.map((i) => {
       if (key(i.blockId, i.slotId) !== key(blockId, slotId)) return i;
@@ -60,12 +70,24 @@ export default function WorkoutScreen() {
         <Text style={styles.h1}>{fw.name}</Text>
         <Text style={styles.small}>{new Date(w.createdAt).toLocaleString()} · ≈ {Math.round(total / 60)} min of work{w.why ? `\n${w.why}` : ''}</Text>
         {fw.blocks.blocks.map((b) => {
-          const rounds = b.kind === 'rounds' ? b.rounds ?? 1 : 1;
+          const o = ov(b.id);
+          const rounds = b.kind === 'rounds' ? o.rounds ?? b.rounds ?? 1 : 1;
+          const extraSlots = [...new Set(w.items.filter((i) => i.blockId === b.id && !b.slots.some((s) => s.id === i.slotId)).map((i) => i.slotId))];
+          const allSlotIds: { id: string; slot: FrameworkSlot }[] = [...b.slots.map((s) => ({ id: s.id, slot: s })), ...extraSlots.map((id) => ({ id, slot: { id, tags: [...new Set(b.slots.flatMap((s) => s.tags))] } as FrameworkSlot }))];
           return (
-            <View key={b.id} style={[styles.block, shadow.card]}>
+            <View key={b.id} style={[styles.block, shadow.card, o.skipped && { opacity: 0.5 }]}>
               <View style={styles.rowBetween}>
-                <Text style={styles.blockTitle}>{b.name}</Text>
-                <Text style={styles.small}>{rounds > 1 ? `× ${rounds} rounds` : ''}</Text>
+                <Text style={styles.blockTitle}>{b.name}{o.skipped ? ' · skipped' : ''}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {b.kind === 'rounds' && !o.skipped && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Pressable onPress={() => setOv(b.id, { rounds: Math.max(1, rounds - 1) })} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>−</Text></Pressable>
+                      <Text style={styles.dose}>× {rounds}</Text>
+                      <Pressable onPress={() => setOv(b.id, { rounds: Math.min(8, rounds + 1) })} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>+</Text></Pressable>
+                    </View>
+                  )}
+                  <Pressable onPress={() => setOv(b.id, { skipped: !o.skipped })} hitSlop={8} style={[styles.skipBtn, o.skipped && { backgroundColor: colors.accent }]}><Text style={[styles.skipText, o.skipped && { color: '#fff' }]}>{o.skipped ? 'include' : 'skip'}</Text></Pressable>
+                </View>
               </View>
               {rounds > 1 && (
                 <View style={styles.chips}>
@@ -73,13 +95,13 @@ export default function WorkoutScreen() {
                   {[60, 90, 120, 180].map((r) => <Chip key={r} label={`${r} s`} color={colors.inkSoft} on={(w.inputs.restBetweenRoundsSec ?? b.restBetweenRoundsSec ?? 0) === r} onPress={() => save(w.items, { ...w.inputs, restBetweenRoundsSec: r })} />)}
                 </View>
               )}
-              {b.slots.map((s) => {
-                const it = w.items.find((i) => i.blockId === b.id && i.slotId === s.id && i.round === 1);
+              {!o.skipped && allSlotIds.map(({ id: sid, slot: s }) => {
+                const it = w.items.find((i) => i.blockId === b.id && i.slotId === sid && i.round === 1);
                 const ex = it ? byId.get(it.exerciseId) : undefined;
                 const clip = clips.get(ex);
-                const open = () => setPicker({ blockId: b.id, slotId: s.id, slot: s });
+                const open = () => setPicker({ blockId: b.id, slotId: sid, slot: s });
                 return (
-                  <SwipeRow key={s.id} disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accent, onPress: open }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, s.id) }]}>
+                  <SwipeRow key={sid} disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accent, onPress: open }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, sid) }]}>
                     <Pressable style={styles.item} onPress={ex ? () => router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }) : open} onLongPress={open}>
                       <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name={ex ? 'body-outline' : 'add-circle-outline'} size={24} color={colors.muted} />}</View>
                       <View style={{ flex: 1, gap: 3 }}>
@@ -88,9 +110,9 @@ export default function WorkoutScreen() {
                             <Text style={styles.itemName} numberOfLines={1}>{ex.name}</Text>
                             <View style={styles.tagRow}>
                               {ex.pattern && <Tag label={ex.pattern} color={patternColor[ex.pattern]} />}
-                              <Pressable onPress={() => adjust(b.id, s.id, -1)} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>−</Text></Pressable>
+                              <Pressable onPress={() => adjust(b.id, sid, -1)} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>−</Text></Pressable>
                               <Text style={styles.dose}>{it!.dosage.type === 'reps' ? `${it!.dosage.value} reps` : `${it!.dosage.value} s`}</Text>
-                              <Pressable onPress={() => adjust(b.id, s.id, 1)} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>+</Text></Pressable>
+                              <Pressable onPress={() => adjust(b.id, sid, 1)} hitSlop={8} style={styles.stepBtn}><Text style={styles.stepBtnText}>+</Text></Pressable>
                             </View>
                           </>
                         ) : (
@@ -102,6 +124,11 @@ export default function WorkoutScreen() {
                   </SwipeRow>
                 );
               })}
+              {!o.skipped && (
+                <Pressable onPress={() => setPicker({ blockId: b.id, slotId: 'extra', slot: { id: 'extra', tags: [...new Set(b.slots.flatMap((s) => s.tags))] } as FrameworkSlot, extra: true })} style={styles.addRow}>
+                  <Ionicons name="add-circle-outline" size={18} color={colors.accent} /><Text style={styles.link}>Add a drill to this section</Text>
+                </Pressable>
+              )}
             </View>
           );
         })}
@@ -110,7 +137,7 @@ export default function WorkoutScreen() {
       <Pressable onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: w.id } })} style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.92 }] }]}>
         <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
       </Pressable>
-      {picker && <ExercisePicker visible title={`Choose for ${picker.slot.tags.join(' / ')}`} exercises={exercises ?? []} preferTags={picker.slot.tags} onPick={(e) => replace(picker.blockId, picker.slotId, e)} onClose={() => setPicker(null)} />}
+      {picker && <ExercisePicker visible title={picker.extra ? 'Add a drill' : `Choose for ${picker.slot.tags.join(' / ')}`} exercises={exercises ?? []} preferTags={picker.slot.tags} onPick={(e) => (picker.extra ? addExtra(picker.blockId, e) : replace(picker.blockId, picker.slotId, e))} onClose={() => setPicker(null)} />}
     </View>
   );
 }
@@ -131,5 +158,9 @@ const styles = StyleSheet.create({
   dose: { fontWeight: '700', color: colors.ink, fontSize: 13 },
   missing: { color: colors.muted, fontStyle: 'italic', fontSize: 13 },
   small: { fontSize: 12, color: colors.muted },
+  skipBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: colors.surfaceAlt },
+  skipText: { fontSize: 12, fontWeight: '700', color: colors.ink },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
+  link: { color: colors.accent, fontWeight: '600', fontSize: 13 },
   fab: { position: 'absolute', right: 18, bottom: 18, width: 68, height: 68, borderRadius: 34, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow.card, shadowOpacity: 0.25 },
 });

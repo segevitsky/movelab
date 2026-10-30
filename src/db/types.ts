@@ -45,7 +45,7 @@ export type WorkoutItem = {
   locked?: boolean;
 };
 
-export type WorkoutInputs = { timeAvailableMin?: number; energy?: 'low' | 'medium' | 'high'; equipment?: Equipment[]; focus?: Slot | null; surprise?: number; /** overrides the framework's rest between rounds for this workout */ restBetweenRoundsSec?: number; restBetweenExercisesSec?: number };
+export type WorkoutInputs = { timeAvailableMin?: number; energy?: 'low' | 'medium' | 'high'; equipment?: Equipment[]; focus?: Slot | null; surprise?: number; /** overrides the framework's rest between rounds for this workout */ restBetweenRoundsSec?: number; restBetweenExercisesSec?: number; /** per-section tweaks for this workout */ blockOverrides?: Record<string, { skipped?: boolean; rounds?: number }> };
 
 export type SessionFeedback = 'easy' | 'right' | 'hard';
 

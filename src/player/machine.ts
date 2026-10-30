@@ -67,3 +67,13 @@ export function workProgress(s: PlayerState): { done: number; total: number } {
   const done = work.filter((x) => x.i < s.index).length + (s.steps[s.index]?.kind === 'work' ? 0 : 0);
   return { done, total: work.length };
 }
+
+/** Jump to the first step of the next section (block); finishes if there is none. */
+export function skipBlock(s: PlayerState): { state: PlayerState; events: PlayerEvent[] } {
+  const events: PlayerEvent[] = [];
+  const cur = s.steps[s.index];
+  const curBlock = cur.kind === 'done' ? null : cur.blockId;
+  let target = s.steps.length - 1;
+  for (let i = s.index + 1; i < s.steps.length; i++) { const st = s.steps[i]; if (st.kind === 'done' || st.blockId !== curBlock) { target = i; break; } }
+  return { state: enter(s, target, events), events };
+}

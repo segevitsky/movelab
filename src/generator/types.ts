@@ -34,6 +34,7 @@ export type GenInputs = {
   /** per-workout rest overrides (player timeline) */
   restBetweenRoundsSec?: number;
   restBetweenExercisesSec?: number;
+  blockOverrides?: Record<string, { skipped?: boolean; rounds?: number }>;
 };
 
 export type GenItem = {

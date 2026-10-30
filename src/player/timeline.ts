@@ -16,6 +16,8 @@ export type TimelineOptions = {
   /** per-workout overrides (apply to 'rounds' blocks) */
   restBetweenRoundsSec?: number;
   restBetweenExercisesSec?: number;
+  /** skip a whole section / change its round count for this workout */
+  blockOverrides?: Record<string, { skipped?: boolean; rounds?: number }>;
 };
 
 export function workSeconds(dosage: Dosage, repSeconds: number | null | undefined) {
@@ -30,8 +32,17 @@ export function buildTimeline(items: TimelineItem[], blocks: FrameworkBlocks, op
   // order: blocks in framework order; within a rounds block: round 1 all slots, round 2 …
   const ordered: TimelineItem[] = [];
   for (const b of blocks.blocks) {
-    const rounds = b.kind === 'rounds' ? Math.max(1, b.rounds ?? 1) : 1;
-    for (let r = 1; r <= rounds; r++) for (const s of b.slots) { const it = items.find((i) => i.blockId === b.id && i.slotId === s.id && i.round === r); if (it) ordered.push(it); }
+    const ov = opts.blockOverrides?.[b.id];
+    if (ov?.skipped) continue;
+    const rounds = b.kind === 'rounds' ? Math.max(1, ov?.rounds ?? b.rounds ?? 1) : 1;
+    const known = new Set(b.slots.map((s) => s.id));
+    for (let r = 1; r <= rounds; r++) {
+      for (const s of b.slots) { const it = items.find((i) => i.blockId === b.id && i.slotId === s.id && i.round === r); if (it) ordered.push(it); }
+      // extra drills added to this section (slot ids the framework doesn't know), in insertion order
+      for (const it of items) if (it.blockId === b.id && it.round === r && !known.has(it.slotId)) ordered.push(it);
+      // round r beyond the framework's count: reuse round-1 items
+      if (r > 1 && !items.some((i) => i.blockId === b.id && i.round === r)) for (const it of items) if (it.blockId === b.id && it.round === 1) ordered.push({ ...it, round: r });
+    }
   }
   for (let k = 0; k < ordered.length; k++) {
     const it = ordered[k];

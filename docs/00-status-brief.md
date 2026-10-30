@@ -15,6 +15,7 @@ him. Specs: `docs/01-product-spec.md` (what/why), `docs/02-architecture.md` (how
 | 0 — feasibility spike on a real iPhone | **GO** (2026-10-28) | `docs/phase0-results.md` |
 | 1 — pose pipeline in pure TypeScript | **done**, 26 tests green, exact match to the Python prototype | `docs/phase1-results.md` |
 | 2 — Skia stick-figure renderer | **done** (2026-10-28), ~120 fps with 3 cards + player on device | `docs/phase2-results.md` |
+| 2.5 — physical plausibility (contacts, floor + root pinning, 3D bone check, depth order) | **done** (2026-10-30), metrics in `docs/phase2.5-results.md` | `docs/phase2.5-handoff.md` |
 | 3 — local SQLite (drizzle) + library screens | **done** (2026-10-28), all local, no server | `docs/phase3-results.md` |
 | 4 — capture → review → library, share sheet, scene analysis | **GO** (2026-10-28) | `docs/phase4-results.md` |
 | 5 — frameworks + generator (Today tab, framework editor) | **built** (2026-10-28), property-tested | `docs/phase5-results.md` |

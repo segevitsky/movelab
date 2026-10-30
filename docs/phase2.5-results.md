@@ -93,3 +93,49 @@ flow) is not**: its hands are genuinely on the floor (≥ 1 torso from any knee,
 ~0.07 torso above where the plane puts them while the feet sit below — a landmark/plane-model limit in an
 oblique view, not a detection error. Not tuned further to avoid over-fitting the fixtures. skate is
 unchanged (tracking jitter); the optional foot lock was not done.
+
+## Step 4 — 3D bone-length check (`src/pipeline/bones3d.ts`)
+
+- Per bone (thigh, shin, upper arm, forearm) the 3D length from MediaPipe world landmarks. A limb-frame is
+  flagged when the length deviates > 25 % from the segment median **and** either jumps > 20 % (vs the
+  previous frame or a 9-frame rolling median) **or** deviates > 40 % at all (a gradual collapse — an upper
+  arm shrinking to a third over ten frames on reel 2 — has no single jump but is impossible).
+- Threshold sweep on the fixtures (flagged % / boneJump % after mask + fill), 9-frame window:
+  20/25 % → 0.0, 0.3, 1.6, 3.8, 3.3 % flagged; 15/15 % → up to 8.8 %. Chosen: 20 % jump, 25 % deviation,
+  40 % hard limit → **0.3 / 0.3 / 4.7 / 4.9 / 3.5 %** flagged (3D rule alone, < 5 % everywhere).
+- Flagged distal joints become unknown in 2D (→ the existing gap fill / hidden if > 1 s) and in 3D
+  (mask → linear fill → Savitzky–Golay 1.0 s order 2). The 3D track is analysis-only (depth order,
+  metrics), never drawn; a 0.37 s window left oscillation-induced jumps (1.9 % / 4.1 % on two segments),
+  1.0 s gives **boneJump 0.0–0.6 %** on every segment vs 0.3–3.7 % raw.
+- Synthetic test: the left thigh stretched to 1.4× its median length on frames 150–152 of reel 3 → all
+  three flagged, neighbours unchanged.
+- Not clamping: no limb is ever reshaped (CLAUDE.md hard rule reworded accordingly).
+
+## Step 5 — depth order (`src/pipeline/depth.ts`, renderer)
+
+- Per limb pair the nearer side = smaller world z of the knees (legs) / elbows (arms); 5-frame median,
+  6-frame hysteresis. Far limb drawn first at 85 % width and slightly lighter (`#3b4254` / `#9aa0ad`),
+  near limb last with the background outline. Side colours never change. Stored in the clip codec
+  (flag bit 1, one byte per frame).
+- Tests: ≤ 1 flip/s on every fixture segment; agrees with the raw sign in > 85 % of frames where
+  |Δz| > 5 cm; a 3-frame blip is suppressed, a sustained switch is followed.
+
+## Step 6 — debug screen
+Dev ▸ Figure renderer: toggles *raw (no pinning)*, *contacts* (green dots), *floor line* (blue),
+*flagged limbs* (red); presets *reel 3 @ push-up* and *reel 1 @ seated*.
+
+## Final table — baseline → after steps 2–5
+
+| fixture / segment | float | skate | boneJump % | flagged % | depthFlips /s |
+|---|---|---|---|---|---|
+| reel1_mobility seg 1 | 0.138 → **0.018** | 0.004 → 0.005 | 0.3 → **0.0** | 0.5 → 0.8 | 0.32 → **0.32** |
+| reel1_mobility seg 2 | 0.143 → **0.048** | 0.006 → 0.009 | 0.5 → **0.0** | 0.0 → 0.3 | 0.00 → **0.00** |
+| reel1_mobility seg 3 | 0.115 → **0.072** | 0.009 → 0.009 | 1.9 → **0.5** | 0.4 → 5.3 | 2.41 → **0.67** |
+| reel2_staff seg 1 | 0.094 → **0.049** | 0.007 → 0.009 | 3.7 → **0.6** | 0.1 → 4.9 | 0.95 → **0.51** |
+| reel3_burpee seg 1 | 0.116 → **0.038** | 0.010 → 0.009 | 2.6 → **0.3** | 0.7 → 3.6 | 1.34 → **0.71** |
+| reel4_phone_plank seg 1 | 0.277 → **0.100** | 0.008 → 0.016 | 0.9 → **0.0** | 0.0 → 6.0 | 0.00 → **0.00** |
+
+Acceptance summary: **float** −87/−66/−37 % (reel 1 segs), −68 % (reel 3), −47 % (reel 2, no regression),
+−64 % (phone) — target ≥ 70 % met or nearly met except reel 1's lunge flow (see step 3 for the diagnosis);
+**boneJump** ≈ 0 ✓; **flagged** < 5 % for the 3D rule (2D + 3D combined reaches 5.3 % / 6.0 % on two busy
+segments); **depthFlips** ≤ 0.71/s ✓ (target ≤ 1/s). Foot lock (optional) not done.

@@ -91,7 +91,14 @@ Model confidence is not trustworthy (YOLO reported 0.92 on a leg it had collapse
 Run our own checks per frame; on failure, re-run only those frames with the fallback model:
 - **Leg collapse:** knees and ankles both within 0.2 × torso of each other.
 - **Arm collapse:** same for elbows/wrists.
-- **Implausible bone length:** > 1.4× the segment's 97th-percentile length.
+- **Implausible bone length (2D):** > 1.4× the segment's 97th-percentile length.
+- **3D bone length (Phase 2.5, `src/pipeline/bones3d.ts`):** real bones have a constant 3D length; MediaPipe
+  world lengths are noisy (p95 deviation 13–30 % on the fixtures), so a limb-frame is flagged only on a
+  **sudden jump** (> 20 % vs the previous frame or a 5-frame rolling median) **and** an absolute deviation
+  > 25 % from the segment median. Flag the limb (thigh+shin / upper arm+forearm), not the frame. Flagged
+  limb-frames become unknown → gap fill (2D and 3D) → later the fallback model for those limbs only.
+  This is rejection, not clamping: nothing is reshaped to a target length. Measured: < 5 % limb-frames
+  flagged; 3D boneJump ≈ 0 after cleaning.
 Fallback result is accepted only if the hips agree (< 0.3 × torso) and the check now passes; replace
 **only the failing limb**, keep the rest (replacing both legs broke the correct one).
 
@@ -126,9 +133,30 @@ From MediaPipe heel (29/30) + toe tip (31/32), visibility > 0.3; expressed relat
 silhouette-based toe measurement (`feet.py`, person segmentation) — works in normal stances, fails
 when the ankle itself is wrong.
 
+### 4.7 Contacts & floor (Phase 2.5, `src/pipeline/contacts.ts`, `floor.ts`, `oneEuro.ts`)
+- **Contacts:** heels 29/30, toes 31/32, wrists 15/16. A point is in contact when for ≥ 4 frames its
+  5-frame-averaged speed is < 1.0 torso/s and it lies within a margin of the lowest point of *its own
+  group* (feet 0.12 torso, hands 0.2) — in a side view the floor is not horizontal in the image, so planted
+  hands and feet differ in image y. Hands must also lie within 0.45 torso of the floor fitted from the
+  feet (a hand on a knee or on a staff is slow and "lowest hand" but not a contact). 4-frame on/off
+  hysteresis (staff-tracker lesson).
+- **Floor:** per segment, Theil–Sen line through the contact points in image space (slope ≤ 35°), or the
+  mat's near edge (§5a) when a quad exists, **plus a depth term** `y = a·x + b + c·z` (z = MediaPipe world
+  depth of the point; c = median within-frame ratio, clamped −80…0 px/m) because a floor is a plane: two
+  planted hands at different depth sit at different image y.
+- **Root pinning:** per frame one vertical offset (mean over contacts of floor y − point y), held across
+  frames without contacts, clamped ±0.6 torso, One-Euro smoothed (0.8 Hz, β 0.01), applied to the whole
+  figure. Never move single joints here. Metric `float` (|contact − floor| / torso) dropped 37–87 % per
+  segment on the fixtures; see `docs/phase2.5-results.md`.
+- Foot lock (hold a planted foot, 2-bone IK on the leg): parked, not done.
+
 ## 5. Figure rendering (`src/figure`, Skia) — `reference/pose-pipeline/render.py`
 
 - Right side dark, left side grey — **fixed**, never flips. Front limbs get a background outline.
+- **Depth order (Phase 2.5, `src/pipeline/depth.ts`):** per limb pair the nearer side comes from the world
+  z of the knees / elbows (5-frame median, 6-frame hysteresis); the far limb is drawn first at 85 % width
+  and slightly lighter, the near limb last with the outline. Colours never change. Acceptance:
+  ≤ 1 draw-order flip per second on the fixtures.
 - Thick spine capsule + shoulder/hip bars, round caps; head on short neck (smoothed).
 - **Feet:** filled ankle–heel–toe triangle, only when detected.
 - Floor: perspective grid toward a vanishing point + projected (cast) shadow of every limb.

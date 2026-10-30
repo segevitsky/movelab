@@ -26,26 +26,27 @@ export function baselineFloor(seg: ProcessedSegment): FloorLine {
 
 export type SegmentEval = { label: string; t0: number; t1: number; metrics: Metrics };
 
-export type EvalStage = 'baseline' | 'step2' | 'step3';
+export type EvalStage = 'baseline' | 'step2' | 'step3' | 'step4' | 'step5';
 export function evalFixture(frames: RawFrame[], hooks: EvalHooks = {}, opts: { naive?: boolean; stage?: EvalStage } = {}): SegmentEval[] {
   const segs = processCapture({ frames });
   return segs.map((seg, i) => {
     const world = worldOf(frames, seg);
     const torso = torsoOf(seg.xyFull);
-    const stage: EvalStage = opts.stage ?? (opts.naive ? 'baseline' : 'step3');
+    const stage: EvalStage = opts.stage ?? (opts.naive ? 'baseline' : 'step5');
+    const atLeast = (st: EvalStage) => ['baseline', 'step2', 'step3', 'step4', 'step5'].indexOf(stage) >= ['baseline', 'step2', 'step3', 'step4', 'step5'].indexOf(st);
     // the pipeline now pins the figure itself; earlier stages are evaluated on the un-pinned track
     const unpinned = seg.xyFull.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] - seg.pinOffset[i]] as [number, number]))));
     const contacts = hooks.contacts ? hooks.contacts(seg, world, torso) : stage === 'baseline' ? naiveContacts(unpinned, seg.fps, torso) : seg.contacts;
-    let track = stage === 'step3' ? seg.xyFull : unpinned;
+    let track = atLeast('step3') ? seg.xyFull : unpinned;
     let floor: FloorLine;
     if (hooks.floor) floor = hooks.floor(seg, contacts, torso);
-    else if (stage === 'step3') floor = seg.floor;
+    else if (atLeast('step3')) floor = seg.floor;
     else floor = baselineFloor({ ...seg, xyFull: unpinned });
-    const depth = hooks.depth ? hooks.depth(seg, world) : { legs: nearSideRaw(world, 'legs'), arms: nearSideRaw(world, 'arms') };
-    const fl = metricFloat(track, contacts, floor, torso, stage === 'step3' ? world : undefined);
+    const depth = hooks.depth ? hooks.depth(seg, world) : atLeast('step5') ? { legs: seg.depth.legsRightNear, arms: seg.depth.armsRightNear } : { legs: nearSideRaw(world, 'legs'), arms: nearSideRaw(world, 'arms') };
+    const fl = metricFloat(track, contacts, floor, torso, atLeast('step3') ? world : undefined);
     const sk = metricSkate(track, contacts, torso);
-    const bj = metricBoneJump(world);
-    const fg = metricFlagged(seg.issues, seg.xyFull.length);
+    const bj = metricBoneJump(atLeast('step4') ? seg.worldClean : world);
+    const fg = metricFlagged(atLeast('step4') ? seg.issues : seg.issues.filter((i) => i.detail !== '3d'), seg.xyFull.length);
     const df = metricDepthFlips(depth.legs, depth.arms, seg.fps);
     const contactFrames = Object.values(contacts).reduce((s, arr) => s + arr.filter(Boolean).length, 0);
     return { label: `seg ${i + 1}`, t0: seg.segment.t0, t1: seg.segment.t1, metrics: { float: fl.value, skate: sk.value, boneJump: bj.value, flagged: fg.value, depthFlips: df.value, frames: seg.xyFull.length, contactFrames } };

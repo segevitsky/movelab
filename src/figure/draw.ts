@@ -10,8 +10,10 @@ import { HEAD, projectToFloor, type Prepared, type PreparedFrame } from './prepa
 
 export const COLORS = {
   bg: '#f6f3ee',
-  near: '#1c202c', // right side (even indices)
-  far: '#808696', // left side (odd indices)
+  near: '#1c202c', // right side (even indices) — fixed colour
+  far: '#808696', // left side (odd indices) — fixed colour
+  nearBehind: '#3b4254', // right side when it is the far limb (slightly lighter)
+  farBehind: '#9aa0ad', // left side when it is the far limb
   torso: '#2b3142',
   floor: '#e9e4db',
   floorLine: '#dad3c7',
@@ -162,14 +164,19 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     canvas.drawCircle(B[0], B[1], w2 / 2, f);
   };
 
-  const limbSet = (s: Side, color: string, grow = 0) => {
+  // which = 'arm' | 'leg' | 'both'; scale = width factor (far limb 0.85)
+  const limbSet = (s: Side, color: string, grow = 0, which: 'arm' | 'leg' | 'both' = 'both', scale = 1) => {
     const g = grow;
-    taper(P[s.sh], P[s.el], color, t * 1.0 + g, t * 0.95 + g);
-    taper(P[s.el], P[s.wr], color, t * 0.95 + g, t * 0.85 + g);
-    dot(P[s.wr], t * 0.6 + g / 2, color);
-    taper(P[s.hp], P[s.kn], color, t * 1.1 + g, t * 1.0 + g);
-    taper(P[s.kn], P[s.an], color, t * 1.0 + g, t * 0.9 + g);
-    dot(P[s.an], (t * 0.85 + g) * 0.62, color);
+    const tt = t * scale;
+    if (which !== 'leg') {
+      taper(P[s.sh], P[s.el], color, tt * 1.0 + g, tt * 0.95 + g);
+      taper(P[s.el], P[s.wr], color, tt * 0.95 + g, tt * 0.85 + g);
+      dot(P[s.wr], tt * 0.6 + g / 2, color);
+    }
+    if (which === 'arm') return;
+    taper(P[s.hp], P[s.kn], color, tt * 1.1 + g, tt * 1.0 + g);
+    taper(P[s.kn], P[s.an], color, tt * 1.0 + g, tt * 0.9 + g);
+    dot(P[s.an], (tt * 0.85 + g) * 0.62, color);
     const toe = fr.toe[s.idx];
     const heel = fr.heel[s.idx];
     if (toe && ok(P[s.an])) {
@@ -186,8 +193,13 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     }
   };
 
-  // far side (left, grey) first
-  limbSet(LEFT, COLORS.far);
+  // far limbs first (Phase 2.5 depth order from 3D: per pair, the side that is farther from the camera),
+  // at 85 % width and slightly lighter. Colours stay fixed per side.
+  const legsNear = fr.legsRightNear ? RIGHT : LEFT, legsFar = fr.legsRightNear ? LEFT : RIGHT;
+  const armsNear = fr.armsRightNear ? RIGHT : LEFT, armsFar = fr.armsRightNear ? LEFT : RIGHT;
+  const colorOf = (s: Side, behind: boolean) => (s === RIGHT ? (behind ? COLORS.nearBehind : COLORS.near) : behind ? COLORS.farBehind : COLORS.far);
+  limbSet(legsFar, colorOf(legsFar, true), 0, 'leg', 0.85);
+  limbSet(armsFar, colorOf(armsFar, true), 0, 'arm', 0.85);
 
   // torso: spine capsule, shoulder + hip bars, neck, head
   const ms = mid(P[LM.leftShoulder], P[LM.rightShoulder]);
@@ -206,9 +218,11 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
   capsule([ms[0] + u[0] * prep.th * 0.2, ms[1] + u[1] * prep.th * 0.2], neckEnd, COLORS.torso, t * 0.9);
   if (ok(hc)) { const C = T(hc); canvas.drawCircle(C[0], C[1], hr * scale, fill(COLORS.torso)); }
 
-  // near side (right, dark) with a background outline
-  limbSet(RIGHT, COLORS.bg, t * 0.55);
-  limbSet(RIGHT, COLORS.near);
+  // near limbs last, with a background outline
+  limbSet(legsNear, COLORS.bg, t * 0.55, 'leg');
+  limbSet(armsNear, COLORS.bg, t * 0.55, 'arm');
+  limbSet(legsNear, colorOf(legsNear, false), 0, 'leg');
+  limbSet(armsNear, colorOf(armsNear, false), 0, 'arm');
 
   // --- debug overlays
   if (opts.showFloorLine && prep.floor) {

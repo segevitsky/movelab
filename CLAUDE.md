@@ -23,8 +23,11 @@ Read `docs/01-product-spec.md`, `docs/02-architecture.md`, `docs/03-implementati
   a logged-in WebView is the user's own session, nothing more. No automation of Instagram.
 - Recorded videos are deleted after processing. Store skeletons + metadata + source URL only.
 - The backend receives text/metadata only — never video or images.
-- The figure draws only what was detected: feet only from detected heel/toe; no bone-length
-  "correction"; no near/far colouring from confidence (all tried, all looked worse).
+- The figure draws only what was detected: feet only from detected heel/toe; no near/far colouring from
+  confidence (tried, looked worse). **Never reshape a limb to a target bone length** (clamping tried,
+  looked rubbery). Rejecting physically impossible limb-frames (3D bone length jumping > 20 % and
+  deviating > 25 %, Phase 2.5) and leaving them unknown is fine — that is rejection, not correction.
+  Depth order comes from MediaPipe's 3D world z (with hysteresis), never from confidence.
 - Never trust a model's own confidence alone — run the sanity checks in Architecture §4.2.
 - LLM output that references exercises must be validated against library IDs.
 

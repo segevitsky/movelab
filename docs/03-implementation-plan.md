@@ -79,7 +79,7 @@ Acceptance
 
 See `docs/05-phase-2.5-plausibility.md` for the spec and `docs/phase2.5-results.md` for metrics.
 Steps: eval harness + baseline → contacts → floor + root pinning → 3D bone-length check → depth order →
-debug toggles. Commit at each stop point with the metric deltas.
+debug toggles. **Done 2026-10-30** (foot lock parked). Handoff: `docs/phase2.5-handoff.md`.
 
 ## Phase 3 — Data + library
 

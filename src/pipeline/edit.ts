@@ -9,6 +9,8 @@ import { bestLoop, findPeriod } from './reps';
 import { hideImplausibleLimbs, sanityCheck } from './sanity';
 import { contacts as detectContacts } from './contacts';
 import { fitFloor, pinToFloor, type World } from './floor';
+import { cleanWorld, LIMB_DISTAL_JOINTS } from './bones3d';
+import { depthOrder } from './depth';
 import { median } from './math';
 import { torsoLengths } from './clean';
 import type { RawFrame, Segment } from './types';
@@ -21,11 +23,15 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
   const seg: Segment = { start: range.start, end: range.end, t0: frames[range.start].t, t1: frames[range.end].t, cutReason: 'external' };
   const slice = frames.slice(range.start, range.end + 1);
   const { xy, conf } = toTrack(slice);
+  // Phase 2.5 step 4: 3D bone-length check first — flagged limb-frames become unknown in 2D too (→ gap fill)
+  const rawWorld: World = slice.map((f) => (f.w && f.w.length === 33 ? f.w : undefined));
+  const w3 = cleanWorld(rawWorld, fps);
+  for (const is of w3.issues) for (const limb of is.limbs) for (const j of LIMB_DISTAL_JOINTS[limb]) conf[is.frame][j] = 0;
   const full = clean(xy, conf, fps);
-  const issues = sanityCheck(full);
+  const issues = [...sanityCheck(full), ...w3.issues];
   const cl = hideImplausibleLimbs(clean(xy, conf, fps, { maxGapSeconds: 1.0 }), issues, fps);
   const period = full.length > fps * 2 ? findPeriod(full, fps) : null;
-  const world: World = slice.map((f) => (f.w && f.w.length === 33 ? f.w : undefined));
+  const world: World = w3.world;
   const torso = median(torsoLengths(full));
   const contacts = detectContacts(full, fps, torso);
   const floor = fitFloor(full, contacts, { world, matQuad: opts.matQuad });
@@ -39,6 +45,8 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
     contacts,
     floor,
     pinOffset: pinned.offset,
+    worldClean: w3.world,
+    depth: depthOrder(w3.world),
     issues,
     period,
     loop: period && period.periodic ? bestLoop(full, period.lag) : null,

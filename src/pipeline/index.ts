@@ -19,6 +19,8 @@ import { estimateFps } from './resample';
 import { hideImplausibleLimbs, sanityCheck } from './sanity';
 import { contacts as detectContacts, type Contacts } from './contacts';
 import { fitFloor, pinToFloor, type FloorLine, type World } from './floor';
+import { cleanWorld, LIMB_DISTAL_JOINTS } from './bones3d';
+import { depthOrder, type DepthOrder } from './depth';
 import { median } from './math';
 import { segment, sliceSegment, type SegmentOptions } from './segment';
 import type { FootTrack, LoopResult, PeriodResult, RawPose, SanityIssue, Segment, Track } from './types';
@@ -34,6 +36,9 @@ export type ProcessedSegment = {
   contacts: Contacts;
   floor: FloorLine;
   pinOffset: number[];
+  /** Phase 2.5: cleaned 3D world track (flag → mask → fill → smooth) and the depth order per limb pair */
+  worldClean: World;
+  depth: DepthOrder;
   issues: SanityIssue[];
   period: PeriodResult | null;
   loop: LoopResult | null;
@@ -48,11 +53,15 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
   return segment(raw.frames, opts.segment).map((seg) => {
     const frames = sliceSegment(raw.frames, seg);
     const { xy, conf } = toTrack(frames);
+    // Phase 2.5 step 4: 3D bone-length check first — flagged limb-frames become unknown in 2D too (→ gap fill)
+    const rawWorld: World = frames.map((f) => (f.w && f.w.length === 33 ? f.w : undefined));
+    const w3 = cleanWorld(rawWorld, fps);
+    for (const is of w3.issues) for (const limb of is.limbs) for (const j of LIMB_DISTAL_JOINTS[limb]) conf[is.frame][j] = 0;
     const full = clean(xy, conf, fps);
-    const issues = sanityCheck(full);
+    const issues = [...sanityCheck(full), ...w3.issues];
     const cl = hideImplausibleLimbs(clean(xy, conf, fps, { maxGapSeconds: 1.0 }), issues, fps);
     const period = findPeriod(full, fps);
-    const world: World = frames.map((f) => (f.w && f.w.length === 33 ? f.w : undefined));
+    const world: World = w3.world;
     const torso = median(torsoLengths(full));
     const contacts = detectContacts(full, fps, torso);
     const floor = fitFloor(full, contacts, { world, matQuad: opts.matQuad });
@@ -66,6 +75,8 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
       contacts,
       floor,
       pinOffset: pinned.offset,
+      worldClean: w3.world,
+      depth: depthOrder(w3.world),
       issues,
       period,
       loop: period && period.periodic ? bestLoop(full, period.lag) : null,

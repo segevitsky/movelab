@@ -19,11 +19,16 @@ export type FigureClip = {
   scene?: { matQuad?: XY[]; floor?: { a: number; b: number } };
   /** debug overlays (dev screen only): per-frame contact flags per point, flagged limb-frames */
   debug?: { contacts?: Record<string, boolean[]>; flagged?: { frame: number; limbs: string[] }[] };
+  /** Phase 2.5 step 5: per frame, is the right side nearer the camera (legs / arms)? default true */
+  depth?: { legsRightNear: boolean[]; armsRightNear: boolean[] };
 };
 
 export type PreparedFrame = {
   /** 33 joints + head centre at index 33, px (source space) */
   p: XY[];
+  /** right side nearer? (legs, arms) */
+  legsRightNear: boolean;
+  armsRightNear: boolean;
   toe: (XY | null)[]; // [left, right]
   heel: (XY | null)[];
   cam: { x0: number; y0: number; scale: number };
@@ -105,6 +110,8 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
 
   const frames: PreparedFrame[] = xy.map((f, i) => ({
     p: [...f.map((p) => [p[0], p[1]] as XY), [hx[i], hy[i]]],
+    legsRightNear: clip.depth?.legsRightNear[i] ?? true,
+    armsRightNear: clip.depth?.armsRightNear[i] ?? true,
     toe: clip.toes ? clip.toes.xy[i].map((p) => (p ? ([p[0], p[1]] as XY) : null)) : [null, null],
     heel: clip.heels ? clip.heels.xy[i].map((p) => (p ? ([p[0], p[1]] as XY) : null)) : [null, null],
     cam: { x0: cx[i] - width / (2 * scale), y0: ground - (0.87 * height) / scale, scale },

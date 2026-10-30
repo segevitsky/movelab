@@ -1,0 +1,98 @@
+{
+ "label": "step5",
+ "at": "2026-10-30T06:55:52.741Z",
+ "fixtures": {
+  "reel1_mobility": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 3.1333,
+    "metrics": {
+     "float": 0.017857334526282537,
+     "skate": 0.004796553605642652,
+     "boneJump": 0,
+     "flagged": 0.7894736842105263,
+     "depthFlips": 0.31610557926346877,
+     "frames": 95,
+     "contactFrames": 156
+    }
+   },
+   {
+    "label": "seg 2",
+    "t0": 3.2,
+    "t1": 12.9333,
+    "metrics": {
+     "float": 0.048350947159348165,
+     "skate": 0.008600460087204458,
+     "boneJump": 0,
+     "flagged": 0.3412969283276451,
+     "depthFlips": 0,
+     "frames": 293,
+     "contactFrames": 675
+    }
+   },
+   {
+    "label": "seg 3",
+    "t0": 13,
+    "t1": 27.8,
+    "metrics": {
+     "float": 0.0718955617814202,
+     "skate": 0.009046144837850009,
+     "boneJump": 0.4941860465116279,
+     "flagged": 5.280898876404494,
+     "depthFlips": 0.6748321355062816,
+     "frames": 445,
+     "contactFrames": 1108
+    }
+   }
+  ],
+  "reel2_staff": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 27.4667,
+    "metrics": {
+     "float": 0.049104640043081835,
+     "skate": 0.009355000870291104,
+     "boneJump": 0.593065693430657,
+     "flagged": 4.909090909090909,
+     "depthFlips": 0.5096005096005012,
+     "frames": 825,
+     "contactFrames": 1593
+    }
+   }
+  ],
+  "reel3_burpee": [
+   {
+    "label": "seg 1",
+    "t0": 0.6667,
+    "t1": 11.8667,
+    "metrics": {
+     "float": 0.037550349375254095,
+     "skate": 0.009189465244011756,
+     "boneJump": 0.33482142857142855,
+     "flagged": 3.5608308605341246,
+     "depthFlips": 0.7128790511579711,
+     "frames": 337,
+     "contactFrames": 553
+    }
+   }
+  ],
+  "reel4_phone_plank": [
+   {
+    "label": "seg 1",
+    "t0": 0.1917,
+    "t1": 10.7017,
+    "metrics": {
+     "float": 0.10041484362181137,
+     "skate": 0.016437532974275765,
+     "boneJump": 0,
+     "flagged": 5.990220048899755,
+     "depthFlips": 0,
+     "frames": 409,
+     "contactFrames": 553
+    }
+   }
+  ]
+ }
+}

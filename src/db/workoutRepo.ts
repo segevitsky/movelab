@@ -4,7 +4,7 @@ import { dosageFactors } from '../generator/feedback';
 import type { GenContext, GenExercise, GenGoal, GenWorkout, HistoryEntry, PairingEdge } from '../generator/types';
 import type { Db } from './index';
 import { exercise, framework, goal, pairing, session, sourceExercise, workout, type Exercise, type Framework } from './schema';
-import type { FrameworkBlocks, SessionFeedback, WorkoutInputs } from './types';
+import type { FrameworkBlocks, SessionFeedback, WorkoutInputs, WorkoutItem } from './types';
 import { newId } from './repo';
 
 export function toGenExercise(e: Exercise): GenExercise {
@@ -90,4 +90,9 @@ export async function toggleFavourite(db: Db, id: string, value: boolean) {
 export async function deleteWorkout(db: Db, id: string) {
   await db.delete(session).where(eq(session.workoutId, id));
   await db.delete(workout).where(eq(workout.id, id));
+}
+
+/** Replace the items of a saved workout (edits from the workout screen / the player's swap). */
+export async function updateWorkoutItems(db: Db, id: string, items: WorkoutItem[], inputs?: WorkoutInputs) {
+  await db.update(workout).set({ items, ...(inputs ? { inputs } : {}) }).where(eq(workout.id, id));
 }

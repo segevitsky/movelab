@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '../../src/db';
 import { clipFromExercise } from '../../src/db/repo';
-import { endSession, getFramework, getWorkout, startSession } from '../../src/db/workoutRepo';
+import { endSession, getFramework, getWorkout, startSession, updateWorkoutItems } from '../../src/db/workoutRepo';
+import { ExercisePicker } from '../../src/ui/ExercisePicker';
+import type { FrameworkBlocks } from '../../src/db/types';
 import { schema } from '../../src/db';
 import type { Exercise } from '../../src/db/schema';
 import type { SessionFeedback } from '../../src/db/types';
@@ -36,6 +38,9 @@ export default function Player() {
   const [blockNames, setBlockNames] = useState<Record<string, { name: string; rounds: number }>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [allEx, setAllEx] = useState<Exercise[]>([]);
+  const wRef = useRef<{ id: string; items: any[]; blocks: FrameworkBlocks } | null>(null);
   const sounds = useRef<{ tick?: AudioPlayer; go?: AudioPlayer; done?: AudioPlayer }>({});
   const stateRef = useRef<PlayerState | null>(null);
   stateRef.current = state;
@@ -49,6 +54,8 @@ export default function Player() {
       const rows = await db.select().from(schema.exercise);
       const map = new Map(rows.map((e) => [e.id, e]));
       setExById(map);
+      setAllEx(rows);
+      wRef.current = { id: w.id, items: w.items, blocks: fw.blocks };
       setBlockNames(Object.fromEntries(fw.blocks.blocks.map((b) => [b.id, { name: b.name, rounds: b.kind === 'rounds' ? b.rounds ?? 1 : 1 }])));
       const steps = buildTimeline(w.items, fw.blocks, { repSecondsOf: (id) => map.get(id)?.repSeconds ?? null, restBetweenRoundsSec: w.inputs.restBetweenRoundsSec, restBetweenExercisesSec: w.inputs.restBetweenExercisesSec });
       setState(createPlayer(steps));
@@ -88,6 +95,23 @@ export default function Player() {
   };
   const act = (fn: (s: PlayerState) => { state: PlayerState; events: ReturnType<typeof tick>['events'] } | PlayerState) => {
     setState((s) => { if (!s) return s; const r = fn(s); if ('events' in (r as any)) { const rr = r as { state: PlayerState; events: ReturnType<typeof tick>['events'] }; handleEvents(rr.events); return rr.state; } return r as PlayerState; });
+  };
+
+  /** Swap the drill of the current work step for the rest of the workout (persisted). */
+  const swapCurrent = async (ex: Exercise) => {
+    const s = stateRef.current;
+    const wr = wRef.current;
+    if (!s || !wr) return;
+    const cur = s.steps[s.index];
+    if (cur.kind !== 'work') return;
+    const items = wr.items.map((i: any) => (i.blockId === cur.blockId && i.slotId === cur.slotId && i.round >= cur.round ? { ...i, exerciseId: ex.id, locked: true } : i));
+    wr.items = items;
+    await updateWorkoutItems(db, wr.id, items);
+    const steps = buildTimeline(items, wr.blocks, { repSecondsOf: (id) => exById.get(id)?.repSeconds ?? null });
+    // continue from the same work step (block/slot/round), keeping its remaining time
+    const idx = steps.findIndex((st) => st.kind === 'work' && st.blockId === cur.blockId && st.slotId === cur.slotId && st.round === cur.round);
+    setState({ ...s, steps, index: Math.max(0, idx), remainingMs: Math.min(s.remainingMs, (steps[Math.max(0, idx)]?.seconds ?? 0) * 1000 || s.remainingMs) });
+    setSwapOpen(false);
   };
 
   const finish = async (feedback: SessionFeedback) => {
@@ -135,7 +159,12 @@ export default function Player() {
       <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
         <Pressable onPress={() => Alert.alert('Leave the workout?', undefined, [{ text: 'Keep going' }, { text: 'Leave', style: 'destructive', onPress: () => finish('right') }])} hitSlop={14} style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}><Ionicons name="close" size={24} color={colors.ink} /></Pressable>
         <Text style={styles.blockText}>{block?.name}{block && block.rounds > 1 && step.kind !== 'done' ? ` · round ${step.round}/${block.rounds}` : ''}</Text>
-        <Text style={styles.small}>{prog.done}/{prog.total}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={styles.small}>{prog.done}/{prog.total}</Text>
+          {step.kind === 'work' && (
+            <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); setSwapOpen(true); }} hitSlop={10} style={styles.swapBtn}><Ionicons name="swap-horizontal" size={20} color={colors.ink} /></Pressable>
+          )}
+        </View>
       </View>
       <View style={styles.progress}><View style={[styles.progressFill, { width: `${elapsedFrac * 100}%` }]} /></View>
 
@@ -156,6 +185,9 @@ export default function Player() {
       </Animated.View>
       </SwipeNav>
 
+      {swapOpen && step.kind === 'work' && (
+        <ExercisePicker visible title={`Swap "${ex?.name ?? ''}" for…`} exercises={allEx} preferTags={(() => { const b = wRef.current?.blocks.blocks.find((x) => x.id === step.blockId); return b?.slots.find((sl) => sl.id === step.slotId)?.tags ?? []; })()} onPick={swapCurrent} onClose={() => setSwapOpen(false)} />
+      )}
       <View style={[styles.controls, { paddingBottom: insets.bottom + 16 }]}>
         <Ctl icon="play-skip-back" onPress={() => act(back)} />
         <Ctl icon={state.playing ? 'pause' : 'play'} big onPress={() => act((s) => (s.playing ? pause(s) : play(s)))} />
@@ -182,6 +214,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.bg },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 6 },
+  swapBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   closeBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   blockText: { fontWeight: '700', color: colors.ink, fontSize: 15 },
   progress: { height: 4, backgroundColor: colors.line, marginHorizontal: 16, borderRadius: 2, overflow: 'hidden' },

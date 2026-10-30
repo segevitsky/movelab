@@ -248,18 +248,18 @@ export default function Today() {
             <SwipeRow key={r.id} actions={[{ label: 'Delete', icon: 'trash-outline', color: colors.danger, onPress: () => Alert.alert('Delete this workout?', 'It leaves your history too.', [{ text: 'Cancel' }, { text: 'Delete', style: 'destructive', onPress: () => deleteWorkout(db, r.id) }]) }]}>
               <Pressable
                 style={styles.recentRow}
-                onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: r.id } })}
+                onPress={() => router.push({ pathname: '/workout/[id]', params: { id: r.id } })}
                 onLongPress={() => Alert.alert('Delete this workout?', 'It leaves your history too.', [{ text: 'Cancel' }, { text: 'Delete', style: 'destructive', onPress: () => deleteWorkout(db, r.id) }])}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.itemName}>{new Date(r.createdAt).toLocaleDateString()} · {frameworks?.find((f) => f.id === r.frameworkId)?.name ?? 'workout'}</Text>
                   <Text style={styles.small} numberOfLines={1}>{r.why ?? `${r.items.length} items`}</Text>
                 </View>
-                <Ionicons name="play-circle" size={28} color={colors.accent} />
+                <Pressable onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: r.id } })} hitSlop={8}><Ionicons name="play-circle" size={30} color={colors.accent} /></Pressable>
               </Pressable>
             </SwipeRow>
           ))}
-          <Text style={styles.small}>swipe left or long-press to delete</Text>
+          <Text style={styles.small}>tap to view and edit · ▶ to start · swipe left or long-press to delete</Text>
         </View>
       )}
     </ScrollView>

@@ -26,7 +26,7 @@ export type EmbedMessage = {
   video: { x: number; y: number; width: number; height: number; paused: boolean; ended: boolean; currentTime: number; duration: number; readyState: number } | null;
   bodyText: string;
   viewport: { w: number; h: number; dpr: number; scrollY: number };
-  event?: 'play' | 'ended' | 'pause' | 'loadeddata' | 'looped';
+  event?: 'play' | 'ended' | 'pause' | 'loadeddata' | 'looped' | 'seekback';
 };
 
 /** Instagram serves phone browsers an "open the app" interstitial; desktop browsers get the inline player. */
@@ -59,19 +59,21 @@ export const EMBED_INJECTED_JS = `
     window.ReactNativeWebView.postMessage(JSON.stringify(msg));
   }
   var hooked = new WeakSet();
-  var lastT = 0, maxT = 0;
   function hook() {
     var v = document.querySelector('video');
     if (v && !hooked.has(v)) {
       hooked.add(v);
+      // the page may swap <video> elements (preview → real stream): keep the loop tracker per element
+      var st = { lastT: 0, maxT: 0 };
       v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
       ['play', 'ended', 'pause', 'loadeddata'].forEach(function (e) { v.addEventListener(e, function () { snapshot(e); }); });
       v.addEventListener('timeupdate', function () {
         // reels loop; a wrap-around = currentTime jumps back from near the END (not a re-buffer seek)
         var t = v.currentTime, d = v.duration || 0;
-        var nearEnd = d > 0 ? lastT > d - 1.5 : lastT > 3;
-        if (maxT > 3 && nearEnd && t + 1 < lastT) { snapshot('looped'); maxT = 0; }
-        lastT = t; if (t > maxT) maxT = t;
+        var nearEnd = d > 0 ? st.lastT > d - 1.5 : st.lastT > 3;
+        if (st.maxT > 3 && nearEnd && t + 1 < st.lastT) { snapshot('looped'); st.maxT = 0; }
+        else if (t + 1 < st.lastT) { snapshot('seekback'); }
+        st.lastT = t; if (t > st.maxT) st.maxT = t;
       });
     }
   }

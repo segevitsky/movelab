@@ -43,7 +43,7 @@ type Phase = 'scene' | 'pose' | 'pipeline' | 'review' | 'saving' | 'error';
  * exercise → confirm → saved to the library. The video is deleted after saving or discarding.
  */
 export default function Review() {
-  const params = useLocalSearchParams<{ uri: string; title?: string; code?: string; url?: string; username?: string; caption?: string; crop?: string }>();
+  const params = useLocalSearchParams<{ uri: string; title?: string; code?: string; url?: string; username?: string; caption?: string; crop?: string; timeline?: string; recordingSeconds?: string }>();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('scene');
   const [progress, setProgress] = useState('Looking at the recording…');
@@ -97,7 +97,7 @@ export default function Review() {
     setPhase('review');
     // Phase 13: keep the raw pose output so this capture can be replayed as a fixture on the Mac
     try {
-      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res,
+      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res, timeline: params.timeline ? JSON.parse(params.timeline) : undefined, recordingSeconds: params.recordingSeconds ? Number(params.recordingSeconds) : undefined,
         segments: built.map((b) => ({ start: b.range.start, end: b.range.end, name: b.name, frames: b.processed.xy.length, detectedPct: Math.round((b.processed.xy.filter((fr) => Number.isFinite(fr[0][0])).length / Math.max(1, b.processed.xy.length)) * 100) })) });
     } catch (e) { console.warn('raw capture not saved', e); }
   }

@@ -31,6 +31,8 @@ export default function Capture() {
   const loggedVideo = useRef(false);
   const autoStopped = useRef(false);
   const recStartedAt = useRef<number | null>(null);
+  /** player timeline while recording (event, video time, seconds recorded) — travels with the raw capture */
+  const timeline = useRef<{ e: string; t: number; d: number; rec: number }[]>([]);
   const webWrap = useRef<React.ComponentRef<typeof View>>(null);
 
   const src = mode === 'embed' ? embedUrl(code, kind ?? 'reel') : reelPageUrl(code, kind ?? 'reel');
@@ -73,10 +75,18 @@ export default function Capture() {
     } else if (!m.video) {
       patchAttempt(code, { username: m.username, captionChars: m.caption?.length ?? 0, bodyText: m.bodyText });
     }
+    if (m.event && recStartedAt.current) {
+      const rec = (Date.now() - recStartedAt.current) / 1000;
+      timeline.current.push({ e: m.event, t: Math.round((m.video?.currentTime ?? 0) * 10) / 10, d: Math.round((m.video?.duration ?? 0) * 10) / 10, rec: Math.round(rec * 10) / 10 });
+      if (timeline.current.length > 60) timeline.current.shift();
+    }
     if ((m.event === 'ended' || m.event === 'looped') && ScreenRecorder.isRecording() && !autoStopped.current) {
-      // never auto-stop a recording shorter than 5 s (player re-buffers can look like a loop)
+      // never auto-stop a recording shorter than 5 s (player re-buffers can look like a loop), nor before
+      // most of the reel's known length was recorded (a hiccup near the end must not cut the last drill)
       const recordedFor = recStartedAt.current ? (Date.now() - recStartedAt.current) / 1000 : 0;
-      if (recordedFor >= 5) {
+      const dur = m.video?.duration ?? 0;
+      const enough = recordedFor >= 5 && (dur <= 0 || recordedFor >= dur * 0.8);
+      if (enough) {
         autoStopped.current = true;
         stop(m.event === 'looped' ? 'one loop done' : 'video ended');
       }
@@ -93,6 +103,7 @@ export default function Capture() {
       setRecording(true);
       autoStopped.current = false;
       recStartedAt.current = Date.now();
+      timeline.current = [];
       // Try to start playback for the user (embeds usually still need a tap).
       webRef.current?.injectJavaScript(PLAY_JS);
     } catch (e) {
@@ -111,7 +122,7 @@ export default function Capture() {
       const crop = lastRect.current;
       router.replace({
         pathname: '/review',
-        params: { uri: rec.uri, title: `${code} (${why})`, code, url: url ?? '', username: msg?.username ?? '', caption: msg?.caption ?? '', crop: crop ? JSON.stringify(crop) : '' },
+        params: { uri: rec.uri, title: `${code} (${why})`, code, url: url ?? '', username: msg?.username ?? '', caption: msg?.caption ?? '', crop: crop ? JSON.stringify(crop) : '', timeline: JSON.stringify(timeline.current), recordingSeconds: String(rec.duration) },
       });
     } catch (e) {
       setRecording(false);

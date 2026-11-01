@@ -18,6 +18,9 @@ export type RawCapture = {
   caption?: string | null;
   crop?: NormRect | null;
   scene?: Scene | null;
+  /** player events while recording: event, video time, video duration, seconds recorded */
+  timeline?: { e: string; t: number; d: number; rec: number }[];
+  recordingSeconds?: number;
   /** what the pipeline made of it, for a quick look without replaying */
   segments?: { start: number; end: number; name: string; frames: number; detectedPct: number }[];
   /** the MediaPipe output: frames with xy / z / v / w per landmark */

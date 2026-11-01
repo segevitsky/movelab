@@ -5,7 +5,7 @@ import { buildPairings } from './pairing';
 import { dosageFactors } from './feedback';
 import { generate, swap, totalSeconds } from './generate';
 import { mulberry32 } from './rng';
-import { slotKey, type GenContext, type GenExercise, type HistoryEntry } from './types';
+import { alikeKey, slotKey, type GenContext, type GenExercise, type HistoryEntry } from './types';
 
 const SLOT_POOL: Slot[][] = [['warmup', 'mobility'], ['locomotion', 'warmup'], ['skill'], ['strength', 'pull'], ['pull'], ['push'], ['legs'], ['core'], ['cardio'], ['stretch', 'cooldown'], ['mobility', 'cooldown']];
 const EQ: Equipment[][] = [[], [], [], ['mat'], ['pullup-bar'], ['rings'], ['kettlebell']];
@@ -139,5 +139,28 @@ describe('phase 7: goals and feedback', () => {
     const ctx = { ...ctxFor(2, lib), dosageFactor: { [lib[0].id]: 0.8 }, goals: [{ id: 'g', name: 'G', exerciseId: lib[0].id, active: true }] };
     const it = generate(ctx).items.find((i) => i.exerciseId === lib[0].id)!;
     expect(it.dosage.value).toBe(50); // 60 × 0.8 = 48 → rounded to 5 s
+  });
+});
+
+describe('phase 12: look-alike drills', () => {
+  const pull = (id: string): GenExercise => ({ id, name: id, pattern: 'pull', slots: ['pull'], equipment: [], primaryMuscles: [], dosageDefault: { type: 'reps', value: 8 }, repSeconds: 3, startPose: null, endPose: null, archived: false });
+  const blocks = { blocks: [{ id: 'r', name: 'Rounds', kind: 'rounds' as const, rounds: 1, slots: [{ id: 's1', tags: ['pull' as Slot] }, { id: 's2', tags: ['pull' as Slot] }] }] };
+  const lib = [pull('A'), pull('B'), pull('C')];
+  const both = (alike?: Record<string, number>) => {
+    let n = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      const w = generate({ frameworkId: 'f', blocks, library: lib, pairings: [], goals: [], history: [], inputs: { surprise: 0.3 }, seed, alike });
+      const ids = new Set(w.items.map((i) => i.exerciseId));
+      if (ids.has('A') && ids.has('B')) n++;
+    }
+    return n;
+  };
+  it('rarely pairs two drills that move the same way, and says so when it must', () => {
+    const without = both();
+    const withAlike = both({ [alikeKey('A', 'B')]: 0.95 });
+    expect(without).toBeGreaterThan(50); // ≈ 1/3 of 300 when nothing steers it
+    expect(withAlike).toBeLessThan(15);
+    const forced = generate({ frameworkId: 'f', blocks, library: [pull('A'), pull('B')], pairings: [], goals: [], history: [], inputs: {}, seed: 1, alike: { [alikeKey('A', 'B')]: 0.95 } });
+    expect(forced.why).toMatch(/(A and B|B and A) move alike/);
   });
 });

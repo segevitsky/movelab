@@ -7,9 +7,14 @@ import type { Dosage, Slot } from '../db/vocab';
 import { poseDistance } from '../pipeline/features';
 import { pairingWeight } from './pairing';
 import { mulberry32 } from './rng';
-import { slotKey, type GenContext, type GenExercise, type GenItem, type GenWorkout } from './types';
+import { alikeKey, slotKey, type GenContext, type GenExercise, type GenItem, type GenWorkout } from './types';
 
-export const WEIGHTS = { pairing: 1.0, flow: 0.8, recency: 3.0, muscleClash: 1.2, focus: 1.5 };
+export const WEIGHTS = { pairing: 1.0, flow: 0.8, recency: 3.0, muscleClash: 1.2, focus: 1.5, alike: 2.5 };
+
+/** 0 below 0.6, 1 at the alike threshold, up to 1.5 above it. */
+export function alikePenalty(sim: number, threshold = 0.8) {
+  return Math.max(0, Math.min(1.5, (sim - 0.6) / Math.max(0.05, threshold - 0.6)));
+}
 const TRANSITION_SEC = 5;
 
 export function itemSeconds(ex: GenExercise | undefined, dosage: Dosage): number {
@@ -43,6 +48,8 @@ function score(ex: GenExercise, picksSoFar: GenExercise[], roundPicks: GenExerci
     const clash = ex.primaryMuscles.filter((m) => p.primaryMuscles.includes(m)).length;
     if (clash) s -= WEIGHTS.muscleClash * clash;
   }
+  // Phase 12: don't pair drills that move the same way (anywhere in the workout); soft, like everything here
+  if (ctx.alike) for (const p of picksSoFar) { const sim = ctx.alike[alikeKey(p.id, ex.id)]; if (sim !== undefined) s -= WEIGHTS.alike * alikePenalty(sim, ctx.alikeThreshold); }
   if (ctx.inputs.focus && (ex.slots.includes(ctx.inputs.focus) || slot.tags.includes(ctx.inputs.focus))) s += WEIGHTS.focus;
   if (ctx.inputs.energy === 'low' && ex.slots.includes('cardio')) s -= 1;
   if (ctx.inputs.energy === 'high' && ex.slots.includes('cardio')) s += 0.5;
@@ -209,6 +216,13 @@ export function explain(w: GenWorkout, ctx: GenContext): string {
     parts.push('first workout from this library');
   }
   if (w.unfilled.length) parts.push(`no card yet for ${w.unfilled.map((u) => u.tags[0]).join(', ')}`);
+  if (ctx.alike) {
+    const ids = [...new Set(w.items.map((i) => i.exerciseId))];
+    const th = ctx.alikeThreshold ?? 0.8;
+    outer: for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+      if ((ctx.alike[alikeKey(ids[i], ids[j])] ?? 0) >= th) { parts.push(`${byId.get(ids[i])?.name.replace(/\s*[·\-–]\s*@.*$/, '')} and ${byId.get(ids[j])?.name.replace(/\s*[·\-–]\s*@.*$/, '')} move alike — nothing else fit`); break outer; }
+    }
+  }
   const minutes = Math.round(w.totalSeconds / 60);
   if (ctx.inputs.timeAvailableMin && minutes < ctx.inputs.timeAvailableMin * 0.8) parts.push(`shorter than ${ctx.inputs.timeAvailableMin} min until more cards exist`);
   return `${[...slotsUsed].slice(0, 4).join(' + ')} today · ${parts.join(' · ')} · ≈ ${minutes} min`;

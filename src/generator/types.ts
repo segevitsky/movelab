@@ -75,6 +75,12 @@ export type GenContext = {
   locked?: Record<string, string>;
   /** per-exercise dosage multiplier from session feedback (easy → >1, hard → <1); default 1 */
   dosageFactor?: Record<string, number>;
+  /** Phase 12: motion similarity 0..1 per pair, key = alikeKey(a, b); only pairs ≥ 0.5 need to be present */
+  alike?: Record<string, number>;
+  /** at/above this two drills "move the same way" (default 0.8) */
+  alikeThreshold?: number;
 };
+
+export const alikeKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 export const slotKey = (blockId: string, slotId: string) => `${blockId}/${slotId}`;

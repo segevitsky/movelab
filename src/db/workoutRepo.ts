@@ -7,6 +7,8 @@ import { exercise, framework, goal, pairing, session, sourceExercise, workout, t
 import type { FrameworkBlocks, SessionFeedback, WorkoutInputs, WorkoutItem } from './types';
 import type { WorkoutTag } from './vocab';
 import { newId } from './repo';
+import { ALIKE_THRESHOLD, alikePairs, fingerprintOf } from '../similarity';
+import { alikeKey } from '../generator/types';
 
 export function toGenExercise(e: Exercise): GenExercise {
   return { id: e.id, name: e.name, pattern: e.pattern, slots: e.slots, equipment: e.equipment, primaryMuscles: e.primaryMuscles, dosageDefault: e.dosageDefault, repSeconds: e.repSeconds, startPose: e.startPose, endPose: e.endPose, archived: e.archived };
@@ -47,7 +49,11 @@ export async function rebuildPairings(db: Db): Promise<PairingEdge[]> {
 export async function loadGenContext(db: Db, frameworkId: string, inputs: WorkoutInputs, seed: number): Promise<GenContext> {
   const fw = await getFramework(db, frameworkId);
   if (!fw) throw new Error('framework not found');
-  const lib = (await db.select().from(exercise)).map(toGenExercise);
+  const rows = await db.select().from(exercise);
+  const lib = rows.map(toGenExercise);
+  // Phase 12: motion similarity per pair (≥ 0.5) so the generator avoids pairing look-alikes
+  const alike: Record<string, number> = {};
+  for (const p of alikePairs(rows.filter((r) => !r.archived && r.figure).map((r) => ({ item: r.id, fp: fingerprintOf(r) })), 0.5)) alike[alikeKey(p.a, p.b)] = p.score;
   const edges = await rebuildPairings(db);
   const goals: GenGoal[] = (await db.select().from(goal)).map((g) => ({ id: g.id, name: g.name, active: g.active, exerciseId: g.stages[g.currentStage]?.exerciseId ?? null }));
   const since = Date.now() - 14 * 86400000;
@@ -56,7 +62,7 @@ export async function loadGenContext(db: Db, frameworkId: string, inputs: Workou
   const sessions = await db.select().from(session);
   const wById = new Map((await db.select().from(workout)).map((w) => [w.id, w]));
   const factor = dosageFactors(sessions.map((s) => ({ feedback: s.feedback, endedAt: s.endedAt, exerciseIds: wById.get(s.workoutId)?.items.map((i) => i.exerciseId) ?? [] })));
-  return { frameworkId, blocks: fw.blocks, library: lib, pairings: edges, goals, history, inputs, seed, dosageFactor: factor };
+  return { frameworkId, blocks: fw.blocks, library: lib, pairings: edges, goals, history, inputs, seed, dosageFactor: factor, alike, alikeThreshold: ALIKE_THRESHOLD };
 }
 
 export async function saveWorkout(db: Db, w: GenWorkout) {

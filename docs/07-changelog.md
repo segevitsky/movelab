@@ -40,7 +40,8 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   (calibrate)". **Open: owner answers Alike / Different on the pairs and reports the suggested line; then set
   ALIKE_THRESHOLD (now 0.8).** Generator clash rule (step 5) not wired yet.
 - **Release APK** built: `~/Desktop/MoveLab-android/MoveLab-0.0.1.apk` (57 MB, arm64, signed with the debug
-  key, standalone). Not yet run on a device.
+  key, standalone). **Installed and launched on an Android phone (owner's wife's) the same evening — "looks really
+  good on first glance".** Still to check there: library import, player with sound/haptics, GIF share, 60 fps.
 - Design pass v2 parked by the owner ("cool enough for the MVP").
 - Tests: 98 green (`npm test`), `npm run typecheck` clean.
 

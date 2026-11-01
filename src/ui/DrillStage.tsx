@@ -5,6 +5,7 @@ import type { Exercise } from '../db/schema';
 import type { FigureClip } from '../figure/prepare';
 import { FigureCard, FigureStill } from '../figure';
 import { Tag } from './Button';
+import { CreatorName } from './CreatorName';
 import { colors, patternColor, radius, shadow, slotColor } from './theme';
 
 /** One drill, large and looping, with ◀ ▶ arrows that only render when there is somewhere to go. */
@@ -27,7 +28,7 @@ export function DrillStage({ e, clip, canBack, canNext, onBack, onNext, caption,
         {canBack && <Pressable onPress={onBack} hitSlop={12} style={[styles.arrow, { start: 6 }]}><Ionicons name="chevron-back" size={28} color="#ffffff" /></Pressable>}
         {canNext && <Pressable onPress={onNext} hitSlop={12} style={[styles.arrow, { end: 6 }]}><Ionicons name="chevron-forward" size={28} color="#ffffff" /></Pressable>}
       </View>
-      <Text style={styles.name}>{e.name}</Text>
+      <CreatorName name={e.name} style={styles.name} numberOfLines={2} />
       {caption ? <Text style={styles.caption}>{caption}</Text> : null}
       <View style={styles.tags}>
         {e.pattern && <Tag label={e.pattern} color={patternColor[e.pattern]} />}

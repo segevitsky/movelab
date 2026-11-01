@@ -10,6 +10,7 @@ import { EQUIPMENT, PATTERNS, SLOTS, type Equipment, type Pattern, type Slot } f
 import { useFilters } from '../../src/state/filters';
 import { FigureCard, FigureStill } from '../../src/figure';
 import { Chip, Tag } from '../../src/ui/Button';
+import { CreatorName } from '../../src/ui/CreatorName';
 import { Empty, OptionRow, Screen, Sheet, TitleBar } from '../../src/ui/primitives';
 import { colors, hit, patternColor, radius, slotColor, space, type } from '../../src/ui/theme';
 import { Rise } from '../../src/ui/motion';
@@ -137,7 +138,7 @@ const ExerciseTile = React.memo(function ExerciseTile({ e, width, live, onPress 
         <View style={[styles.stripe, { backgroundColor: stripe }]} />
       </View>
       <View style={styles.tileBody}>
-        <Text style={styles.name} numberOfLines={1}>{e.name}</Text>
+        <CreatorName name={e.name} style={styles.name} numberOfLines={1} />
         <View style={styles.tagRow}>
           {tags[0] ? <Tag label={tags[0].label} color={tags[0].color} /> : null}
           {second ? <Text style={styles.meta} numberOfLines={1}>{second}</Text> : null}

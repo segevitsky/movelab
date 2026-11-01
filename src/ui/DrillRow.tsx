@@ -7,6 +7,7 @@ import type { FigureClip } from '../figure/prepare';
 import { FigureStill } from '../figure';
 import { Tag } from './Button';
 import { DirectionalIcon } from './primitives';
+import { CreatorName } from './CreatorName';
 import { colors, patternColor, radius, space, type } from './theme';
 
 export const THUMB_W = 56;
@@ -37,7 +38,7 @@ export function DrillRow({ ex, clip, dosage, locked, caption, onPress, onLongPre
           <>
             <View style={styles.nameRow}>
               {locked ? <Ionicons name="lock-closed" size={14} color={colors.muted} /> : null}
-              <Text style={styles.name} numberOfLines={1}>{ex.name}</Text>
+              <CreatorName name={ex.name} style={styles.name} numberOfLines={1} />
             </View>
             <View style={styles.metaRow}>
               {dosage ? <Text style={styles.dose}>{doseText(dosage)}</Text> : null}

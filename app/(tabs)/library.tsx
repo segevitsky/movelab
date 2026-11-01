@@ -51,7 +51,7 @@ export default function Library() {
 
   return (
     <Screen>
-      <TitleBar title="Library" eyebrow="MoveLab" trailing={<Text style={styles.count}>{countText}</Text>} />
+      <TitleBar title="Library" brand trailing={<Text style={styles.count}>{countText}</Text>} />
       <View style={styles.filters}>
         <View style={styles.searchRow}>
           <Ionicons name="search" size={18} color={colors.muted} />

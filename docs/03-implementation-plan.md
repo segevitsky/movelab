@@ -166,8 +166,8 @@ Kotlin ports land (parking lot). Steps:
    + goals; skeletons only, never video) shared via the OS share sheet; *Import library* (document picker,
    upsert by id, newer wins). Works on both platforms → seeds Android from the iPhone. ✅ 2026-11-01
 3. **Android project.** `app.json` android block (adaptive icon from `assets/android-icon-*.png`), `expo
-   prebuild --platform android` clean, debug APK on a device via `npx expo run: android`. Needs a JDK + Android
-   SDK on the Mac (not installed as of 2026-11-01; commands in `docs/00-status-brief.md`). ⏳
+   prebuild --platform android` clean ✅; JDK + SDK installed 2026-11-01 ✅; first debug APK build running
+   (Gradle, first run stalled on downloads once). Then a release APK to sideload. ⏳
 4. **Device pass.** Library grid at 60 fps with 3 loops, player with timers/haptics/audio, share-as-GIF.
 5. Later (own phases): MediaPipe Pose Android (same model file), MediaProjection screen recorder, share intent
    from Instagram, scene analysis port.
@@ -175,9 +175,23 @@ Kotlin ports land (parking lot). Steps:
 Acceptance: an Android phone imports an iPhone export and plays a generated workout end-to-end; `npm test`
 and `npm run typecheck` green; iOS unchanged.
 
+## Phase 10 — Workout builder (planned 2026-11-01, owner request)
+Build a workout from the Library: select drills (long-press → select mode) → wizard: **shape** (sections:
+warm-up / rounds × N / finisher / cooldown, or from a framework) → **place** (drills under sections; move
+between sections, **drag to reorder**, add from library or the saved-sections bank) → **dose** (time/reps,
+per side, live total) → name + tags → save / start. Data: a built workout carries its own `blocks` on the
+workout row; player, viewer and saved-workout screen use them when present (generator untouched).
+Drag-to-reorder also in saved workouts and in the Library select mode (pure-JS pan responder; gesture-handler
+does not link). Acceptance: build, reorder, save, play end-to-end; `npm test` green.
+
+## Phase 11 — Bold design pass v2 (planned 2026-11-01)
+Display typeface (Barlow Condensed unless the owner picks another) for titles, sections, timer; signature
+stage (paper gradient, pattern-colour rim light, vignette, deeper shadow), full-bleed library tiles with
+overlaid names; player ring timer + rest wash + "GO" flash; Today as a session hero. See `docs/06` §8.
+
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
 Sync/accounts · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·
-public profiles / **sharing workouts between users** (owner discussed a concept with web Claude on 2026-11-01 — keep as a reference; needs the text-only backend: a workout is items + dosages + exercise *names/tags*, never video; receiver maps names onto their own library or imports a figure blob) · **workout defaults** (owner to explain) · **creator handle as a link** (owner, 2026-11-01: exercises/workouts carry the creator's @tag in the name — render it as a link to the creator's Instagram page / the source reel, wherever the name is shown) · **save the warm-up / reuse a section** (owner, 2026-11-01: "lets save the warmup — and use a section perhaps": a block of drills saved by name and dropped into other workouts/frameworks; to be detailed) · coach partnerships ·
+public profiles / **sharing workouts between users** (owner discussed a concept with web Claude on 2026-11-01 — keep as a reference; needs the text-only backend: a workout is items + dosages + exercise *names/tags*, never video; receiver maps names onto their own library or imports a figure blob) · **workout defaults** (owner to explain) · **balanced workouts + standards for workouts** (owner, 2026-11-01: wants to discuss what makes a generated workout balanced and what standards a workout must meet — remind him) · **creator handle as a link** (owner, 2026-11-01: exercises/workouts carry the creator's @tag in the name — render it as a link to the creator's Instagram page / the source reel, wherever the name is shown) · **save the warm-up / reuse a section** (owner, 2026-11-01: "lets save the warmup — and use a section perhaps": a block of drills saved by name and dropped into other workouts/frameworks; to be detailed) · coach partnerships ·
 an RTMW (whole-body) CoreML second model · Apple Vision 3D body pose · temporal 3D models (WHAM / GVHMR —
 note: SMPL licence is non-commercial).

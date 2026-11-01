@@ -146,7 +146,7 @@ export default function Today() {
 
   return (
     <Screen scroll footer={footer} contentStyle={{ gap: space.m }}>
-      <TitleBar title="MoveLab" icon={require('../../assets/icon.png')} iconSize={56} eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} style={{ paddingHorizontal: 0 }} trailing={<IconButton icon="ellipsis-horizontal" size={hit.min} onPress={() => setSheet('menu')} />} />
+      <TitleBar title="MoveLab" icon={require('../../assets/icon.png')} iconSize={64} eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} style={{ paddingHorizontal: 0 }} trailing={<IconButton icon="ellipsis-horizontal" size={hit.min} onPress={() => setSheet('menu')} />} />
       <Pressable onPress={() => setSheet('inputs')} style={({ pressed }) => [styles.strip, pressed && { backgroundColor: colors.surfaceAlt }]}>
         <Ionicons name="options-outline" size={18} color={colors.inkSoft} />
         <Text style={styles.stripText} numberOfLines={1}>{strip}</Text>

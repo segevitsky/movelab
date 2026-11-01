@@ -1,5 +1,5 @@
 import React from 'react';
-import { I18nManager, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { I18nManager, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
@@ -30,9 +30,19 @@ export function Screen({ children, footer, scroll, style, contentStyle }: {
   );
 }
 
+/** The MoveLab brand row: app icon + wordmark. `size` = icon size; the wordmark scales with it. */
+export function Brand({ size = 28, style }: { size?: number; style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={[styles.brand, style]}>
+      <Image source={require('../../assets/icon.png')} style={{ width: size, height: size, borderRadius: Math.round(size * 0.24) }} />
+      <Text style={[styles.brandText, { fontSize: Math.round(size * 0.62), lineHeight: Math.round(size * 0.8) }]}>MoveLab</Text>
+    </View>
+  );
+}
+
 /** Screen title row (h1 at the start, optional trailing element), under the status bar. */
-export function TitleBar({ title, eyebrow, icon, iconSize = 34, trailing, style }: {
-  iconSize?: number;
+export function TitleBar({ title, eyebrow, icon, iconSize = 34, brand, trailing, style }: {
+  iconSize?: number; /** show the MoveLab brand row above the title */ brand?: boolean;
   title: string; /** small label above the title (e.g. the app name, or the date) */ eyebrow?: string;
   /** image at the start of the title (the app icon on the home tab) */ icon?: ImageSourcePropType;
   trailing?: React.ReactNode; style?: StyleProp<ViewStyle>;
@@ -41,6 +51,7 @@ export function TitleBar({ title, eyebrow, icon, iconSize = 34, trailing, style 
   return (
     <View style={[styles.titleBar, { paddingTop: insets.top + space.s }, style]}>
       <View style={styles.titleBlock}>
+        {brand ? <Brand size={24} style={{ marginBottom: 4 }} /> : null}
         {eyebrow ? <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text> : null}
         <View style={styles.titleRow}>
           {icon ? <Image source={icon} style={[styles.titleIcon, { width: iconSize, height: iconSize, borderRadius: Math.round(iconSize * 0.24) }]} /> : null}
@@ -101,9 +112,11 @@ export function Sheet({ visible, onClose, title, children, scroll = true }: { vi
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Animated.View entering={FadeIn.duration(motion.standard)} exiting={FadeOut.duration(motion.micro)} style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
-        <Animated.View entering={SlideInDown.duration(motion.screen)} exiting={SlideOutDown.duration(motion.standard)} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, space.l) }]}>
-          {scroll ? <ScrollView bounces={false} contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">{body}</ScrollView> : <View style={styles.sheetBody}>{body}</View>}
-        </Animated.View>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents="box-none" style={styles.sheetAvoid}>
+          <Animated.View entering={SlideInDown.duration(motion.screen)} exiting={SlideOutDown.duration(motion.standard)} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, space.l) }]}>
+            {scroll ? <ScrollView bounces={false} contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">{body}</ScrollView> : <View style={styles.sheetBody}>{body}</View>}
+          </Animated.View>
+        </KeyboardAvoidingView>
       </Animated.View>
     </Modal>
   );
@@ -154,6 +167,8 @@ const styles = StyleSheet.create({
   scrollBody: { padding: space.l, gap: space.l },
   footer: { position: 'absolute', start: 0, end: 0, bottom: 0, paddingHorizontal: space.l, paddingTop: space.m, backgroundColor: colors.bg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   titleBar: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.m, paddingHorizontal: space.l, paddingBottom: space.m },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandText: { fontWeight: '900', letterSpacing: -0.5, color: colors.ink },
   titleBlock: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },
   titleIcon: { width: 34, height: 34, borderRadius: 8 },
@@ -164,6 +179,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...type.label, color: colors.muted, flexShrink: 1 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  sheetAvoid: { justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.surface, borderTopStartRadius: radius.xl, borderTopEndRadius: radius.xl, maxHeight: '85%' },
   sheetBody: { paddingHorizontal: space.l, paddingTop: space.s, gap: space.s },
   grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.line, marginBottom: space.s },

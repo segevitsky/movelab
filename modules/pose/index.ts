@@ -1,4 +1,6 @@
 import { requireNativeModule, type NativeModule } from 'expo-modules-core';
+import { Platform } from 'react-native';
+import { unsupportedModule } from '../unsupported';
 
 export type NormRect = { x: number; y: number; width: number; height: number };
 
@@ -58,4 +60,8 @@ declare class PoseNative extends NativeModule<PoseEvents> {
   processVision(fileUri: string, options: ProcessOptions): Promise<PoseResult>;
 }
 
-export const Pose = requireNativeModule<PoseNative>('Pose');
+/** True where the native pose module is built (iOS). Android: plan Phase 9 step 5. */
+export const POSE_SUPPORTED = Platform.OS === 'ios';
+export const Pose: PoseNative = POSE_SUPPORTED
+  ? requireNativeModule<PoseNative>('Pose')
+  : unsupportedModule<PoseNative>('Pose', { modelInfo: () => ({ path: null, bytes: 0, found: false }), cancel: () => {} } as Partial<PoseNative>);

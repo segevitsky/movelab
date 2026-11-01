@@ -156,9 +156,28 @@ Acceptance
 
 ---
 
+## Phase 9 — Android, player-first (started 2026-11-01)
+Goal: the owner can run his library and workouts on an Android phone. Capture stays iOS-only until the
+Kotlin ports land (parking lot). Steps:
+1. **JS runs on Android without the iOS-only natives.** `modules/pose` and `modules/screen-recorder` resolve to
+   an "unsupported" stand-in on Android (clear error per call, no crash at import); capture entry points are
+   hidden there. ✅ 2026-11-01
+2. **Library transfer.** Dev tab: *Export library* (one JSON: exercises + sources + pairings + own frameworks
+   + goals; skeletons only, never video) shared via the OS share sheet; *Import library* (document picker,
+   upsert by id, newer wins). Works on both platforms → seeds Android from the iPhone. ✅ 2026-11-01
+3. **Android project.** `app.json` android block (adaptive icon from `assets/android-icon-*.png`), `expo
+   prebuild --platform android` clean, debug APK on a device via `npx expo run: android`. Needs a JDK + Android
+   SDK on the Mac (not installed as of 2026-11-01; commands in `docs/00-status-brief.md`). ⏳
+4. **Device pass.** Library grid at 60 fps with 3 loops, player with timers/haptics/audio, share-as-GIF.
+5. Later (own phases): MediaPipe Pose Android (same model file), MediaProjection screen recorder, share intent
+   from Instagram, scene analysis port.
+
+Acceptance: an Android phone imports an iPhone export and plays a generated workout end-to-end; `npm test`
+and `npm run typecheck` green; iOS unchanged.
+
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
 Sync/accounts · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·
-public profiles / **sharing workouts between users** (owner discussed a concept with web Claude on 2026-11-01 — keep as a reference; needs the text-only backend: a workout is items + dosages + exercise *names/tags*, never video; receiver maps names onto their own library or imports a figure blob) · **workout defaults** (owner to explain) · coach partnerships ·
+public profiles / **sharing workouts between users** (owner discussed a concept with web Claude on 2026-11-01 — keep as a reference; needs the text-only backend: a workout is items + dosages + exercise *names/tags*, never video; receiver maps names onto their own library or imports a figure blob) · **workout defaults** (owner to explain) · **creator handle as a link** (owner, 2026-11-01: exercises/workouts carry the creator's @tag in the name — render it as a link to the creator's Instagram page / the source reel, wherever the name is shown) · **save the warm-up / reuse a section** (owner, 2026-11-01: "lets save the warmup — and use a section perhaps": a block of drills saved by name and dropped into other workouts/frameworks; to be detailed) · coach partnerships ·
 an RTMW (whole-body) CoreML second model · Apple Vision 3D body pose · temporal 3D models (WHAM / GVHMR —
 note: SMPL licence is non-commercial).

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,6 +13,8 @@ import { Button } from '../../src/ui/Button';
 import { db } from '../../src/db';
 import { importLabReels } from '../../src/db/devImport';
 import { loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
+import { exportLibrary, importLibrary, parseTransfer } from '../../src/db/transfer';
+import { File, Paths } from 'expo-file-system';
 import { generate } from '../../src/generator';
 import { colors, radius, shadow } from '../../src/ui/theme';
 
@@ -52,6 +54,31 @@ export default function DevHome() {
     } catch (e) { Alert.alert('Demo failed', String(e)); }
   }, [router]);
   useEffect(() => { if (demoParam === '1') demoWorkout(); }, [demoParam]);
+  const [transferBusy, setTransferBusy] = useState(false);
+  /** Export the whole library (skeletons + metadata, never video) as one JSON and open the share sheet. */
+  const exportLib = async () => {
+    setTransferBusy(true);
+    try {
+      const t = await exportLibrary(db);
+      const file = new File(Paths.cache, `movelab-library-${new Date().toISOString().slice(0, 10)}.json`);
+      if (file.exists) file.delete();
+      file.write(JSON.stringify(t));
+      await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'MoveLab library' });
+    } catch (e) { Alert.alert('Export failed', String(e)); } finally { setTransferBusy(false); }
+  };
+  /** Import a library JSON (document picker; loaded lazily so a build without the picker's native code still runs). */
+  const importLib = async () => {
+    setTransferBusy(true);
+    try {
+      const picker = await import('expo-document-picker');
+      const res = await picker.getDocumentAsync({ type: ['application/json', 'text/plain', '*/*'], copyToCacheDirectory: true, multiple: false });
+      if (res.canceled || !res.assets?.[0]) return;
+      const text = await new File(res.assets[0].uri).text();
+      const t = parseTransfer(text);
+      const r = await importLibrary(db, t);
+      Alert.alert('Imported', `${r.exercises} exercises, ${r.sources} sources, ${r.frameworks} frameworks, ${r.goals} goals (${r.skipped} already up to date)`);
+    } catch (e) { Alert.alert('Import failed', String(e)); } finally { setTransferBusy(false); }
+  };
   const insets = useSafeAreaInsets();
   const { import: importParam } = useLocalSearchParams<{ import?: string }>();
   const [url, setUrl] = useState('');
@@ -90,6 +117,7 @@ export default function DevHome() {
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic">
+      {Platform.OS === 'ios' && (
       <Section icon="logo-instagram" title="Capture a reel">
         <TextInput style={styles.input} value={url} onChangeText={setUrl} placeholder="Paste a reel link…" placeholderTextColor={colors.muted} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
         <Button title="Open capture" onPress={openCapture} />
@@ -101,6 +129,15 @@ export default function DevHome() {
           <View style={{ flex: 1 }}><Button title="Pose debug (pick a video)" onPress={async () => { const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 1 }); if (!res.canceled && res.assets[0]) router.push({ pathname: '/debug', params: { uri: res.assets[0].uri, title: res.assets[0].fileName ?? 'video' } }); }} secondary /></View>
         </View>
         <Text style={styles.hint}>Reel won't play? Log in once inside the app, then use "Open reel page (logged-in)".</Text>
+      </Section>
+      )}
+
+      <Section icon="swap-vertical-outline" title="Library transfer">
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}><Button title="Export library" icon="share-outline" onPress={exportLib} disabled={transferBusy} secondary /></View>
+          <View style={{ flex: 1 }}><Button title="Import library" icon="download-outline" onPress={importLib} disabled={transferBusy} secondary /></View>
+        </View>
+        <Text style={styles.hint}>One JSON with every exercise (skeletons + tags + source links, never video), your frameworks and goals. Import merges by id; newer wins. Use it to seed another phone (Android) or as a backup.</Text>
       </Section>
 
       <Section icon="body-outline" title="Pose lab">

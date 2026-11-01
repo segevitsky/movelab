@@ -20,7 +20,14 @@
       "appleTeamId": "AUT5N398FP"
     },
     "android": {
-      "package": "com.segev.movelab"
+      "package": "com.segev.movelab",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [],
+      "softwareKeyboardLayoutMode": "pan"
     },
     "plugins": [
       "expo-router",
@@ -63,7 +70,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "backgroundColor": "#f6f3ee",
+          "backgroundColor": "#0e1014",
           "imageWidth": 260
         }
       ]

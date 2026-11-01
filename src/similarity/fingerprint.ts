@@ -109,7 +109,12 @@ export function fingerprint(clip: FigureClip): Fingerprint | null {
 }
 
 /** Weights of the fingerprint parts in the distance (they sum to 1). */
-export const WEIGHTS: Record<keyof Components, number> = { orientation: 0.22, hipHeight: 0.1, angleMeans: 0.2, angleRanges: 0.18, energy: 0.12, contacts: 0.12, speed: 0.06 };
+/**
+ * Fitted on the owner's 60 verdicts (2026-11-01, scripts/fit-alike.ts): which body part moves (energy) and the
+ * body orientation carry the signal; angle statistics did not. With SCALE the 0.8 line flags only near-
+ * duplicates (0 false alarms on the verdicts, most "alike" pairs missed — a capture-quality problem, Phase 13).
+ */
+export const WEIGHTS: Record<keyof Components, number> = { orientation: 0.34, hipHeight: 0, angleMeans: 0, angleRanges: 0, energy: 0.48, contacts: 0.09, speed: 0.09 };
 
 export type Components = { orientation: number; hipHeight: number; angleMeans: number; angleRanges: number; energy: number; contacts: number; speed: number };
 
@@ -128,8 +133,8 @@ export function components(a: Fingerprint, b: Fingerprint): Components {
   };
 }
 
-/** Distance → similarity scale: a half-different fingerprint lands near 0.2. */
-export const SCALE = 1.6;
+/** Distance → similarity: fitted so the 0.8 line sits at the verdicts' best cut (distance ≈ 0.05). */
+export const SCALE = 4.0;
 
 /** 0 = nothing alike, 1 = identical motion. Symmetric. */
 export function similarity(a: Fingerprint, b: Fingerprint, w: Record<keyof Components, number> = WEIGHTS, scale = SCALE): number {

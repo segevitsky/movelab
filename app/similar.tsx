@@ -29,7 +29,15 @@ export default function SimilarPairs() {
   const clips = useClipCache(exercises);
   const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
-  useEffect(() => { try { const f = FILE(); if (f.exists) setVerdicts(JSON.parse(f.textSync())); } catch {} }, []);
+  useEffect(() => {
+    try {
+      const f = FILE();
+      if (f.exists) { setVerdicts(JSON.parse(f.textSync())); return; }
+      // answers from the first build lived in similar-verdicts.json (now the share payload's name)
+      const legacy = new File(Paths.document, 'similar-verdicts.json');
+      if (legacy.exists) { const j = JSON.parse(legacy.textSync()); const v = j.verdicts ?? j; if (v && typeof v === 'object' && !Array.isArray(v)) { setVerdicts(v); f.write(JSON.stringify(v)); } }
+    } catch {}
+  }, []);
   const save = (v: Record<string, Verdict>) => { setVerdicts(v); try { const f = FILE(); if (f.exists) f.delete(); f.write(JSON.stringify(v)); } catch (e) { Alert.alert('Could not save', String(e)); } };
 
   const pairs = useMemo(() => {

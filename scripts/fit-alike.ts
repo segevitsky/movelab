@@ -97,6 +97,17 @@ for (let round = 0; round < 6; round++) {
     const A = auc(tn); if (A > bestA + 1e-9) { bestA = A; w = tn; }
   }
 }
+// the same search with the sequence distance locked out (what the app can afford today)
+{
+  let w2 = keys.map((k) => (k === 'seq' ? 0 : 1 / (keys.length - 1)));
+  let a2 = auc(w2);
+  for (let round = 0; round < 6; round++) for (let i = 0; i < keys.length; i++) {
+    if (keys[i] === 'seq') continue;
+    for (const v of [0, 0.25, 0.5, 1, 1.5, 2, 3]) { const t = [...w2]; t[i] = v; const sum = t.reduce((a, b) => a + b, 0) || 1; const tn = t.map((x) => x / sum); const A = auc(tn); if (A > a2 + 1e-9) { a2 = A; w2 = tn; } }
+  }
+  const c2 = bestCut(w2);
+  console.log(`\nwithout the sequence distance: AUC ${a2.toFixed(3)} · accuracy ${(c2.acc * 100).toFixed(0)} % (false-alike ${c2.fa}, missed ${c2.miss}) · weights ${keys.map((k, i) => `${k}=${w2[i].toFixed(2)}`).join(' ')} · scale ${(0.2 / c2.cut).toFixed(2)}`);
+}
 console.log('\nfitted weights:'); keys.forEach((k, i) => console.log(`  ${k.padEnd(12)} ${w[i].toFixed(3)}`));
 const cut = bestCut(w);
 console.log(`AUC ${bestA.toFixed(3)} · best cut at distance ${cut.cut.toFixed(3)} → accuracy ${(cut.acc * 100).toFixed(0)} % (false-alike ${cut.fa}, missed ${cut.miss})`);

@@ -47,7 +47,12 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   look-alikes (Phase 12 step 5); calibration screen shows looping pairs; owner answered 60 pairs — the first
   score separates them poorly (AUC to be measured), so `scripts/fit-alike.ts` fits weights + a DTW sequence
   distance from the verdict file (which now carries the skeletons). Export/verdict share hardened (Documents,
-  Files-app access). **Phase 13 capture quality** opened (plan) — step 1: keep raw pose captures for replay.
+  Files-app access). **Phase 13 capture quality** opened (plan) — step 1 shipped: raw pose captures kept in Documents/captures,
+  shared from the Dev tab.
+- Calibration result (60 verdicts, 19 alike): the motion features reach AUC 0.71 (0.75 with DTW); pattern
+  tags carry no signal; "alike" answers cluster on short (3–5 s) clips with unknown joints → the
+  comparison is limited by capture quality. Shipped the fitted weights with a strict line (0 false alarms,
+  near-duplicates only). Revisit once Phase 13 improves the skeletons.
 - Tests: 98 green (`npm test`), `npm run typecheck` clean.
 
 **Verified on the owner's iPhone**: viewer swipe, player layout, export library, section bank save (after

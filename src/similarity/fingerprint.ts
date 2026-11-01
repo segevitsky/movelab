@@ -109,21 +109,33 @@ export function fingerprint(clip: FigureClip): Fingerprint | null {
 }
 
 /** Weights of the fingerprint parts in the distance (they sum to 1). */
-export const WEIGHTS = { orientation: 0.22, hipHeight: 0.1, angleMeans: 0.2, angleRanges: 0.18, energy: 0.12, contacts: 0.12, speed: 0.06 } as const;
+export const WEIGHTS: Record<keyof Components, number> = { orientation: 0.22, hipHeight: 0.1, angleMeans: 0.2, angleRanges: 0.18, energy: 0.12, contacts: 0.12, speed: 0.06 };
 
-/** 0 = nothing alike, 1 = identical motion. Symmetric. */
-export function similarity(a: Fingerprint, b: Fingerprint): number {
+export type Components = { orientation: number; hipHeight: number; angleMeans: number; angleRanges: number; energy: number; contacts: number; speed: number };
+
+/** Per-part distances in 0..1 (what `similarity` weighs; also used offline to fit the weights). */
+export function components(a: Fingerprint, b: Fingerprint): Components {
   const l1 = (x: number[], y: number[]) => x.reduce((s, v, i) => s + Math.abs(v - y[i]), 0);
   const keys = ['elbow', 'shoulder', 'hip', 'knee'] as const;
-  const dOrient = l1(a.orientation, b.orientation) / 2; // two fractions change at most → max 2
-  const dHip = Math.abs(a.hipHeight - b.hipHeight);
-  const dMeans = meanOf(keys.map((k) => Math.abs(a.angles[k].mean - b.angles[k].mean))) * 2; // angle means span ~0.5 of the scale
-  const dRanges = meanOf(keys.map((k) => Math.abs(a.angles[k].range - b.angles[k].range))) * 2;
-  const dEnergy = l1([a.energy.arms, a.energy.legs, a.energy.torso], [b.energy.arms, b.energy.legs, b.energy.torso]) / 2;
-  const dContacts = (Math.abs(a.contacts.hands - b.contacts.hands) + Math.abs(a.contacts.feet - b.contacts.feet)) / 2;
-  const dSpeed = Math.abs(a.speed - b.speed);
-  const d = WEIGHTS.orientation * dOrient + WEIGHTS.hipHeight * dHip + WEIGHTS.angleMeans * Math.min(1, dMeans) + WEIGHTS.angleRanges * Math.min(1, dRanges) + WEIGHTS.energy * dEnergy + WEIGHTS.contacts * dContacts + WEIGHTS.speed * dSpeed;
-  return Math.max(0, Math.min(1, 1 - d * 1.6)); // ×1.6: a half-different fingerprint lands near 0.2
+  return {
+    orientation: l1(a.orientation, b.orientation) / 2,
+    hipHeight: Math.abs(a.hipHeight - b.hipHeight),
+    angleMeans: Math.min(1, meanOf(keys.map((k) => Math.abs(a.angles[k].mean - b.angles[k].mean))) * 2),
+    angleRanges: Math.min(1, meanOf(keys.map((k) => Math.abs(a.angles[k].range - b.angles[k].range))) * 2),
+    energy: l1([a.energy.arms, a.energy.legs, a.energy.torso], [b.energy.arms, b.energy.legs, b.energy.torso]) / 2,
+    contacts: (Math.abs(a.contacts.hands - b.contacts.hands) + Math.abs(a.contacts.feet - b.contacts.feet)) / 2,
+    speed: Math.abs(a.speed - b.speed),
+  };
+}
+
+/** Distance → similarity scale: a half-different fingerprint lands near 0.2. */
+export const SCALE = 1.6;
+
+/** 0 = nothing alike, 1 = identical motion. Symmetric. */
+export function similarity(a: Fingerprint, b: Fingerprint, w: Record<keyof Components, number> = WEIGHTS, scale = SCALE): number {
+  const c = components(a, b);
+  const d = (Object.keys(c) as (keyof Components)[]).reduce((s, k) => s + w[k] * c[k], 0);
+  return Math.max(0, Math.min(1, 1 - d * scale));
 }
 
 /** Default threshold: at or above it two drills "move the same way". Calibrated with the owner (plan Phase 12). */

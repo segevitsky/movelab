@@ -3,7 +3,7 @@ import type { Exercise } from '../db/schema';
 import { clipFromExercise } from '../db/repo';
 import { fingerprint, type Fingerprint } from './fingerprint';
 
-export { fingerprint, similarity, alikePairs, ALIKE_THRESHOLD, WEIGHTS, type Fingerprint, type Pair } from './fingerprint';
+export { fingerprint, similarity, components, alikePairs, ALIKE_THRESHOLD, WEIGHTS, SCALE, type Fingerprint, type Pair, type Components } from './fingerprint';
 export { workoutReport, reportSummary, RULES, type Finding, type ReportDrill, type Rules } from './report';
 
 const cache = new Map<string, { key: string; fp: Fingerprint | null }>();

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { FlatList, PanResponder, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { desc } from 'drizzle-orm';
@@ -55,10 +55,19 @@ export default function Library() {
   const total = data?.length ?? 0;
   const countText = active ? `${rows.length} of ${total}` : `${total} ${total === 1 ? 'exercise' : 'exercises'}`;
 
+  // swipe the tray down to cancel the selection (native sheet feel)
+  const dismiss = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 16 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
+      onMoveShouldSetPanResponderCapture: (_, g) => g.dy > 16 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
+      onPanResponderRelease: (_, g) => { if (g.dy > 48 || g.vy > 0.8) setSelected(null); },
+    }),
+  ).current;
   const tray = selected ? (
-    <View style={styles.tray}>
+    <View style={styles.tray} {...dismiss.panHandlers}>
+      <View style={styles.grabber} />
       <View style={styles.trayHead}>
-        <Text style={styles.trayTitle}>{selected.length} picked · long-press to drag, tap a card to add or remove</Text>
+        <Text style={styles.trayTitle}>{selected.length} picked · drag to order · swipe down to cancel</Text>
         <IconButton icon="close" size={36} onPress={() => setSelected(null)} />
       </View>
       <DraggableList
@@ -202,6 +211,7 @@ const styles = StyleSheet.create({
   tileSelected: { borderWidth: 2, borderColor: colors.accent },
   check: { position: 'absolute', top: 8, end: 8, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: 'rgba(28,32,44,0.5)', backgroundColor: 'rgba(246,243,238,0.85)', alignItems: 'center', justifyContent: 'center' },
   tray: { gap: space.s },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.line, marginBottom: 2 },
   trayHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s },
   trayTitle: { ...type.caption, color: colors.muted, flex: 1 },
   trayThumb: { width: 56, height: 56, borderRadius: radius.s, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },

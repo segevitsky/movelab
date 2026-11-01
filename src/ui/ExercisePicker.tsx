@@ -7,7 +7,7 @@ import { useClipCache } from './useClipCache';
 import type { Slot } from '../db/vocab';
 import { FigureStill } from '../figure';
 import { Button, Tag } from './Button';
-import { SwipeNav } from './SwipeNav';
+import { DrillPager } from './DrillPager';
 import { DrillStage } from './DrillStage';
 import { colors, patternColor, radius, slotColor, tint } from './theme';
 
@@ -70,20 +70,26 @@ export function ExercisePicker({ visible, title, exercises, preferTags = [], onP
         </View>
 
         {viewed ? (
-          <SwipeNav onNext={() => go(1)} onBack={() => go(-1)} style={{ flex: 1 }}>
-            <DrillStage e={viewed} clip={clips.get(viewed)} canBack={viewIndex > 0} canNext={viewIndex < rows.length - 1} onBack={() => go(-1)} onNext={() => go(1)}>
-              {inSection.has(viewed.id) && (
-                <View style={[styles.notice, { backgroundColor: tint(colors.danger, 0.12) }]}>
-                  <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
-                  <Text style={[styles.small, { color: colors.danger, flex: 1 }]}>Already in this section.</Text>
+          <DrillPager
+            items={rows}
+            index={viewIndex}
+            onIndex={(i) => { const r = rows[i]; if (r) setViewId(r.e.id); }}
+            keyOf={(r) => r.e.id}
+            render={(r, i, active) => (
+              <DrillStage e={r.e} clip={clips.get(r.e)} canBack={i > 0} canNext={i < rows.length - 1} onBack={() => go(-1)} onNext={() => go(1)} active={active}>
+                {inSection.has(r.e.id) && (
+                  <View style={[styles.notice, { backgroundColor: tint(colors.danger, 0.12) }]}>
+                    <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
+                    <Text style={[styles.small, { color: colors.danger, flex: 1 }]}>Already in this section.</Text>
+                  </View>
+                )}
+                <View style={{ gap: 6, alignSelf: 'stretch' }}>
+                  <Button title={inSection.has(r.e.id) ? 'Use this drill anyway' : 'Use this drill'} onPress={() => pick(r.e)} secondary={inSection.has(r.e.id)} />
+                  <Text style={[styles.small, { textAlign: 'center' }]}>swipe or ◀ ▶ to see the next one in the list</Text>
                 </View>
-              )}
-              <View style={{ gap: 6, alignSelf: 'stretch' }}>
-                <Button title={inSection.has(viewed.id) ? 'Use this drill anyway' : 'Use this drill'} onPress={() => pick(viewed)} secondary={inSection.has(viewed.id)} />
-                <Text style={[styles.small, { textAlign: 'center' }]}>swipe or ◀ ▶ to see the next one in the list</Text>
-              </View>
-            </DrillStage>
-          </SwipeNav>
+              </DrillStage>
+            )}
+          />
         ) : (
           <>
             <TextInput style={styles.search} placeholder="Search" placeholderTextColor={colors.muted} value={text} onChangeText={setText} autoCorrect={false} />

@@ -8,6 +8,7 @@ import { clipFromExercise, deleteExercise, updateExercise } from '../../src/db/r
 import { EQUIPMENT, INTENSITY, PATTERNS, SLOTS, type Equipment, type Intensity, type Pattern, type Slot } from '../../src/db/vocab';
 import { FigurePlayer } from '../../src/figure';
 import { Button, Chip } from '../../src/ui/Button';
+import { shareExerciseGif } from '../../src/export/exerciseGif';
 import { colors, patternColor, radius, slotColor } from '../../src/ui/theme';
 
 export default function ExerciseDetail() {
@@ -21,6 +22,7 @@ export default function ExerciseDetail() {
   const [speed, setSpeed] = useState(1);
   const [mirror, setMirror] = useState(false);
   const [hud, setHud] = useState(false);
+  const [sharing, setSharing] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   useEffect(() => { if (e) { setName(e.name); setNotes(e.notes ?? ''); } }, [e?.id]);
@@ -43,6 +45,18 @@ export default function ExerciseDetail() {
           <View style={styles.toggle}><Switch value={mirror} onValueChange={setMirror} /><Text style={styles.small}>mirror</Text></View>
           <View style={styles.toggle}><Switch value={hud} onValueChange={setHud} /><Text style={styles.small}>angles</Text></View>
         </View>
+      )}
+      {clip && (
+        <Button
+          title={sharing !== null ? `Rendering GIF… ${Math.round(sharing * 100)} %` : 'Share as GIF'}
+          icon="share-outline"
+          secondary
+          disabled={sharing !== null}
+          onPress={async () => {
+            setSharing(0);
+            try { await shareExerciseGif(e.name, clip, { mirror, onProgress: (p) => setSharing(p) }); } catch (err) { Alert.alert('Could not share', String(err)); } finally { setSharing(null); }
+          }}
+        />
       )}
 
       <Text style={styles.label}>Name</Text>

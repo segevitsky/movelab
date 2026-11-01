@@ -41,7 +41,7 @@ export function SwipeRow({ children, actions, disabled }: { children: React.Reac
           </Pressable>
         ))}
       </View>
-      <Animated.View style={{ transform: [{ translateX: x }], backgroundColor: colors.surface }} {...pan.panHandlers}>
+      <Animated.View style={{ transform: [{ translateX: x }], backgroundColor: colors.bg }} {...pan.panHandlers}>
         {children}
       </Animated.View>
     </View>
@@ -50,7 +50,7 @@ export function SwipeRow({ children, actions, disabled }: { children: React.Reac
 
 const styles = StyleSheet.create({
   wrap: { overflow: 'hidden', borderRadius: 10 },
-  actions: { position: 'absolute', right: 0, top: 0, bottom: 0, flexDirection: 'row' },
+  actions: { position: 'absolute', end: 0, top: 0, bottom: 0, flexDirection: 'row' },
   action: { width: ACTION_W, alignItems: 'center', justifyContent: 'center', gap: 2 },
   actionText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 });

@@ -4,6 +4,7 @@ import { ActivityIndicator, AppState, I18nManager, Text, View } from 'react-nati
 // The UI is English/LTR; on Hebrew devices iOS would mirror rows (close buttons end up on the far edge).
 if (I18nManager.isRTL) { I18nManager.allowRTL(false); I18nManager.forceRTL(false); }
 import { Stack, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as Sharing from 'expo-sharing';
 import { parseReel } from '../src/capture/embed';
 import { sql } from 'drizzle-orm';
@@ -67,20 +68,22 @@ export default function Layout() {
 
   if (error) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
-        <Text style={{ fontWeight: '700' }}>Database migration failed</Text>
-        <Text selectable>{String(error)}</Text>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.bg }}>
+        <Text style={{ fontWeight: '700', color: colors.ink }}>Database migration failed</Text>
+        <Text selectable style={{ color: colors.inkSoft }}>{String(error)}</Text>
       </View>
     );
   }
   if (!success || !seeded) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator color={colors.muted} />
       </View>
     );
   }
   return (
+    <>
+    <StatusBar style="light" />
     <Stack screenOptions={{ headerTitleStyle: { fontSize: 16, fontWeight: '700', color: colors.ink }, headerTintColor: colors.accent, headerTransparent: false, headerShadowVisible: false, headerStyle: { backgroundColor: colors.bg }, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="exercise/[id]" options={{ title: 'Exercise' }} />
@@ -96,5 +99,6 @@ export default function Layout() {
       <Stack.Screen name="login" options={{ title: 'Instagram login (your session)' }} />
       <Stack.Screen name="figures" options={{ title: 'Figure renderer (Phase 2)' }} />
     </Stack>
+    </>
   );
 }

@@ -12,6 +12,8 @@ import { ScreenRecorder } from '../../modules/screen-recorder';
 import { Button } from '../../src/ui/Button';
 import { db } from '../../src/db';
 import { importLabReels } from '../../src/db/devImport';
+import { loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
+import { generate } from '../../src/generator';
 import { colors, radius, shadow } from '../../src/ui/theme';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -40,6 +42,16 @@ function StatusRow({ label, ok, detail }: { label: string; ok: boolean | null; d
 
 export default function DevHome() {
   const router = useRouter();
+  const demoParam = useLocalSearchParams<{ demo?: string }>().demo;
+  /** Generate a workout from the default framework, save it and open the player (demos, screenshots). */
+  const demoWorkout = useCallback(async () => {
+    try {
+      const ctx = await loadGenContext(db, 'preset-segev-3x6', { energy: 'medium', focus: null, surprise: 0.3 }, 42);
+      const id = await saveWorkout(db, generate(ctx));
+      router.push({ pathname: '/player/[workoutId]', params: { workoutId: id } });
+    } catch (e) { Alert.alert('Demo failed', String(e)); }
+  }, [router]);
+  useEffect(() => { if (demoParam === '1') demoWorkout(); }, [demoParam]);
   const insets = useSafeAreaInsets();
   const { import: importParam } = useLocalSearchParams<{ import?: string }>();
   const [url, setUrl] = useState('');
@@ -94,6 +106,9 @@ export default function DevHome() {
       <Section icon="body-outline" title="Pose lab">
         <View style={styles.row}>
           <View style={{ flex: 1 }}><Button title="Figure renderer" onPress={() => router.push('/figures')} secondary /></View>
+          <View style={{ flex: 1 }}><Button title="Demo workout → player" onPress={demoWorkout} secondary /></View>
+        </View>
+        <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <Button title="Import 3 lab reels" onPress={() => importLabReels(db).then((n) => Alert.alert('Imported', `${n} exercises added — see the Library tab`)).catch((e) => Alert.alert('Import failed', String(e)))} secondary />
           </View>
@@ -135,7 +150,7 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, color: colors.muted, lineHeight: 17 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusLabel: { fontSize: 14, color: colors.ink, fontWeight: '600' },
-  statusDetail: { fontSize: 12, color: colors.muted, marginLeft: 'auto' },
+  statusDetail: { fontSize: 12, color: colors.muted, marginStart: 'auto' },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.line },
   logTitle: { fontWeight: '600', color: colors.ink },
   mono: { fontFamily: 'Menlo', fontSize: 11, color: colors.muted },

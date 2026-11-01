@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import type { Exercise } from '../db/schema';
 import type { Dosage } from '../db/vocab';
 import type { FigureClip } from '../figure/prepare';
-import { SwipeNav } from './SwipeNav';
+import { DrillPager } from './DrillPager';
 import { DrillStage } from './DrillStage';
 import { colors, radius, shadow, tint } from './theme';
 
@@ -43,27 +43,34 @@ export function WorkoutViewer({ visible, entries, index, onIndex, onClose, clipO
           <Pressable onPress={onClose} hitSlop={10} style={styles.headBtn}><Ionicons name="close" size={24} color={colors.ink} /></Pressable>
         </View>
         {entry && (
-          <SwipeNav onNext={() => go(1)} onBack={() => go(-1)} style={{ flex: 1 }}>
-            <DrillStage
-              e={entry.exercise}
-              clip={clipOf(entry.exercise)}
-              caption={`${dose(entry.dosage)}${entry.locked ? ' · 🔒 locked' : ''}`}
-              canBack={index > 0}
-              canNext={index < entries.length - 1}
-              onBack={() => go(-1)}
-              onNext={() => go(1)}
-            >
-              <View style={styles.actions}>
-                {actions(entry).map((a) => (
-                  <Pressable key={a.label} onPress={() => { Haptics.selectionAsync().catch(() => {}); a.onPress(); }} style={[styles.action, a.destructive && { backgroundColor: tint(colors.danger, 0.12) }]}>
-                    <Ionicons name={a.icon} size={20} color={a.destructive ? colors.danger : colors.ink} />
-                    <Text style={[styles.actionText, a.destructive && { color: colors.danger }]}>{a.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              <Text style={styles.small}>swipe or ◀ ▶ for the next drill of this workout</Text>
-            </DrillStage>
-          </SwipeNav>
+          <DrillPager
+            items={entries}
+            index={index}
+            onIndex={onIndex}
+            keyOf={(en) => `${en.blockId}/${en.slotId}`}
+            render={(en, i, active) => (
+              <DrillStage
+                e={en.exercise}
+                clip={clipOf(en.exercise)}
+                caption={`${dose(en.dosage)}${en.locked ? ' · 🔒 locked' : ''}`}
+                canBack={i > 0}
+                canNext={i < entries.length - 1}
+                onBack={() => go(-1)}
+                onNext={() => go(1)}
+                active={active}
+              >
+                <View style={styles.actions}>
+                  {actions(en).map((a) => (
+                    <Pressable key={a.label} onPress={() => { Haptics.selectionAsync().catch(() => {}); a.onPress(); }} style={[styles.action, a.destructive && { backgroundColor: tint(colors.danger, 0.12) }]}>
+                      <Ionicons name={a.icon} size={20} color={a.destructive ? colors.danger : colors.ink} />
+                      <Text style={[styles.actionText, a.destructive && { color: colors.danger }]}>{a.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.small}>swipe or ◀ ▶ for the next drill of this workout</Text>
+              </DrillStage>
+            )}
+          />
         )}
       </View>
     </Modal>

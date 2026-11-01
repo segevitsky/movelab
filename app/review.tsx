@@ -221,7 +221,7 @@ export default function Review() {
                   <Text style={styles.reason} numberOfLines={2}>{it.suggestion.reasons.slice(0, 2).join(' · ')}</Text>
                   <View style={styles.row}>
                     <Pressable onPress={() => update(it.id, { editTags: !it.editTags })} style={styles.linkBtn}><Text style={styles.link}>{it.editTags ? 'Hide tags' : 'Edit tags'}</Text></Pressable>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' }}><Text style={styles.small}>add</Text><Switch value={it.include} onValueChange={(v) => update(it.id, { include: v })} /></View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginStart: 'auto' }}><Text style={styles.small}>add</Text><Switch value={it.include} onValueChange={(v) => update(it.id, { include: v })} /></View>
                   </View>
                 </View>
               </View>

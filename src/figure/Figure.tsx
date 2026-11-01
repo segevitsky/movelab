@@ -89,7 +89,7 @@ export function Figure({ clip, width, height, playing = true, speed = 1, mirror 
 }
 
 const styles = StyleSheet.create({
-  hud: { position: 'absolute', top: 8, right: 10, alignItems: 'flex-end' },
+  hud: { position: 'absolute', top: 8, end: 10, alignItems: 'flex-end' },
   hudText: { color: COLORS.accent, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });
 

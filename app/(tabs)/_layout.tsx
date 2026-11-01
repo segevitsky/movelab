@@ -14,14 +14,15 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
         headerStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
         headerTitleStyle: { fontSize: 17, fontWeight: '800', color: colors.ink },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="library" options={{ title: 'Library', tabBarIcon: icon('grid-outline') }} />
-      <Tabs.Screen name="today" options={{ title: 'Today', tabBarIcon: icon('play-circle-outline') }} />
+      <Tabs.Screen name="library" options={{ title: 'Library', headerShown: false, tabBarIcon: icon('grid-outline') }} />
+      <Tabs.Screen name="today" options={{ title: 'Today', headerShown: false, tabBarIcon: icon('play-circle-outline') }} />
       <Tabs.Screen name="goals" options={{ title: 'Goals', tabBarIcon: icon('flag-outline') }} />
       <Tabs.Screen name="dev" options={{ title: 'Dev', tabBarIcon: icon('construct-outline') }} />
     </Tabs>

@@ -96,6 +96,7 @@ export default function Layout() {
       <Stack.Screen name="player/[workoutId]" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="workout/[id]" options={{ title: 'Workout' }} />
       <Stack.Screen name="build" options={{ title: 'Build a workout', presentation: 'modal' }} />
+      <Stack.Screen name="similar" options={{ title: 'Alike drills (calibration)' }} />
       <Stack.Screen name="debug" options={{ title: 'Pose debug' }} />
       <Stack.Screen name="login" options={{ title: 'Instagram login (your session)' }} />
       <Stack.Screen name="figures" options={{ title: 'Figure renderer (Phase 2)' }} />

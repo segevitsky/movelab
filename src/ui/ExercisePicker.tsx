@@ -10,6 +10,7 @@ import { Button, Tag } from './Button';
 import { DrillPager } from './DrillPager';
 import { DrillStage } from './DrillStage';
 import { colors, patternColor, radius, slotColor, tint } from './theme';
+import { ALIKE_THRESHOLD, fingerprintOf, similarity, type Fingerprint } from '../similarity';
 
 type Props = {
   visible: boolean;
@@ -21,13 +22,23 @@ type Props = {
   onClose: () => void;
   /** exercise ids already used in the same section (duplicates are warned about, not forbidden) */
   inSectionIds?: string[];
+  /** drills already in the workout: candidates that move the same way get a note (advice only) */
+  avoid?: { id: string; name: string; fp: Fingerprint | null }[];
 };
 
 /**
  * Pick an exercise from the library. A plain list (tap a row to use it); the 👁 on a row opens that drill
  * large and looping, with ◀ ▶ / swipe to browse the same list and "Use this drill".
  */
-export function ExercisePicker({ visible, title, exercises, preferTags = [], onPick, onClose, inSectionIds = [] }: Props) {
+export function ExercisePicker({ visible, title, exercises, preferTags = [], onPick, onClose, inSectionIds = [], avoid = [] }: Props) {
+  const alikeNote = (e: Exercise): string | null => {
+    if (!avoid.length) return null;
+    const fp = fingerprintOf(e);
+    if (!fp) return null;
+    let best: { name: string; s: number } | null = null;
+    for (const a of avoid) { if (a.id === e.id || !a.fp) continue; const s = similarity(fp, a.fp); if (s >= ALIKE_THRESHOLD && (!best || s > best.s)) best = { name: a.name.replace(/\s*[·\-–]\s*@.*$/, ''), s }; }
+    return best ? `≈ moves like ${best.name}` : null;
+  };
   const [text, setText] = useState('');
   const [viewId, setViewId] = useState<string | null>(null);
   useEffect(() => { if (visible) { setText(''); setViewId(null); } }, [visible]);
@@ -112,6 +123,7 @@ export function ExercisePicker({ visible, title, exercises, preferTags = [], onP
                         {r.e.pattern && <Tag label={r.e.pattern} color={patternColor[r.e.pattern]} />}
                         {r.e.slots.slice(0, 3).map((t) => <Tag key={t} label={t} color={slotColor[t] ?? colors.muted} />)}
                         {dup && <Text style={[styles.small, { color: colors.danger }]}>· already in this section</Text>}
+                        {!dup && alikeNote(r.e) ? <Text style={[styles.small, { color: colors.danger }]}>· {alikeNote(r.e)}</Text> : null}
                         {!r.fits && !dup && <Text style={styles.small}>· other</Text>}
                       </View>
                     </View>

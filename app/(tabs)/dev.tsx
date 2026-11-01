@@ -146,6 +146,9 @@ export default function DevHome() {
           <View style={{ flex: 1 }}><Button title="Demo workout → player" onPress={demoWorkout} secondary /></View>
         </View>
         <View style={styles.row}>
+          <View style={{ flex: 1 }}><Button title="Alike drills (calibrate)" icon="git-compare-outline" onPress={() => router.push('/similar')} secondary /></View>
+        </View>
+        <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <Button title="Import 3 lab reels" onPress={() => importLabReels(db).then((n) => Alert.alert('Imported', `${n} exercises added — see the Library tab`)).catch((e) => Alert.alert('Import failed', String(e)))} secondary />
           </View>

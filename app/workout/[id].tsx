@@ -9,6 +9,8 @@ import { useClipCache } from '../../src/ui/useClipCache';
 import { deleteWorkout, suggestWorkoutTags, updateWorkoutBlocks, updateWorkoutItems, updateWorkoutMeta } from '../../src/db/workoutRepo';
 import { reorderDrills } from '../../src/db/builder';
 import { DragHandle, DraggableList } from '../../src/ui/DraggableList';
+import { GuidanceStrip } from '../../src/ui/Guidance';
+import { fingerprintOf, type ReportDrill } from '../../src/similarity';
 import { WORKOUT_TAGS, type WorkoutTag } from '../../src/db/vocab';
 import type { Exercise } from '../../src/db/schema';
 import type { FrameworkSlot, WorkoutItem } from '../../src/db/types';
@@ -66,6 +68,8 @@ export default function WorkoutScreen() {
       if (it && ex) entries.push({ blockId: b.id, slotId: sid, sectionName: b.name, exercise: ex, dosage: it.dosage, locked: it.locked });
     }
   }
+  const reportDrills: ReportDrill[] = entries.map((en) => ({ id: en.exercise.id, name: en.exercise.name, sectionId: en.blockId, sectionName: en.sectionName, pattern: en.exercise.pattern, slots: en.exercise.slots, fp: fingerprintOf(en.exercise), seconds: itemSeconds(toGenExercise(en.exercise), en.dosage) }));
+  const avoid = entries.map((en) => ({ id: en.exercise.id, name: en.exercise.name, fp: fingerprintOf(en.exercise) }));
   const save = (items: WorkoutItem[], inputs = w.inputs) => updateWorkoutItems(db, w.id, items, inputs).catch((e) => Alert.alert('Save failed', String(e)));
   const key = (b: string, s: string) => `${b}/${s}`;
   const replace = (blockId: string, slotId: string, ex: Exercise) => {
@@ -131,6 +135,7 @@ export default function WorkoutScreen() {
         {WORKOUT_TAGS.filter((t) => !tags.includes(t) && !suggested.includes(t)).map((t) => <Chip key={t} label={t} on={false} onPress={() => toggleTag(t)} />)}
       </ChipRow>
       <Text style={styles.small}>{fw.name} · {new Date(w.createdAt).toLocaleString()} · ≈ {Math.round(total / 60)} min of work{w.why ? `\n${w.why}` : ''}</Text>
+      <GuidanceStrip drills={reportDrills} />
       <View style={styles.headerTools}>
         <Pressable onPress={() => setRestSheet('drills')} hitSlop={8} style={styles.breakBtn}><Ionicons name="pause-outline" size={14} color={colors.muted} /><Text style={styles.breakText}>{w.inputs.restBetweenExercisesSec ?? 15} s between drills</Text><Ionicons name="chevron-down" size={14} color={colors.muted} /></Pressable>
         <Pressable onPress={() => setRestSheet('sections')} hitSlop={8} style={styles.breakBtn}><Ionicons name="cafe-outline" size={14} color={colors.muted} /><Text style={styles.breakText}>{w.inputs.restBetweenSectionsSec ?? 60} s between sections</Text><Ionicons name="chevron-down" size={14} color={colors.muted} /></Pressable>
@@ -207,6 +212,7 @@ export default function WorkoutScreen() {
           exercises={exercises ?? []}
           preferTags={picker.slot.tags}
           inSectionIds={w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId)}
+          avoid={avoid.filter((a) => !w.items.some((i) => i.blockId === picker.blockId && i.slotId === picker.slotId && i.exerciseId === a.id))}
           onPick={(e) => (picker.extra ? addExtra(picker.blockId, e) : replace(picker.blockId, picker.slotId, e))}
           onClose={() => setPicker(null)}
         />

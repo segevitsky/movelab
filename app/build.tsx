@@ -18,6 +18,8 @@ import { DragHandle, DraggableList } from '../src/ui/DraggableList';
 import { ExercisePicker } from '../src/ui/ExercisePicker';
 import { SectionBankSheet } from '../src/ui/SectionBank';
 import { colors, hit, radius, space, type } from '../src/ui/theme';
+import { GuidanceStrip } from '../src/ui/Guidance';
+import { fingerprintOf, type ReportDrill } from '../src/similarity';
 
 type Sec = SectionShape & { id: string };
 const ROW_H = 84;
@@ -98,6 +100,8 @@ export default function BuildWorkout() {
   const toggleType = (sec: string, i: number) => setPlaced((p) => ({ ...p, [sec]: (p[sec] ?? []).map((x, k) => (k !== i ? x : { ...x, dosage: x.dosage.type === 'time' ? { type: 'reps', value: 10, perSide: x.dosage.perSide } : { type: 'time', value: 45, perSide: x.dosage.perSide } })) }));
   const togglePerSide = (sec: string, i: number) => setPlaced((p) => ({ ...p, [sec]: (p[sec] ?? []).map((x, k) => (k !== i ? x : { ...x, dosage: { ...x.dosage, perSide: !x.dosage.perSide } })) }));
 
+  const reportDrills: ReportDrill[] = useMemo(() => sections.flatMap((sec) => (placed[sec.id] ?? []).map((p) => { const e = byId.get(p.exerciseId); return { id: p.exerciseId, name: e?.name ?? '?', sectionId: sec.id, sectionName: sec.name, pattern: e?.pattern ?? null, slots: e?.slots ?? [], fp: e ? fingerprintOf(e) : null, seconds: secondsOf(p.exerciseId, p.dosage) }; })), [sections, placed, byId]);
+  const avoid = useMemo(() => reportDrills.map((d) => ({ id: d.id, name: d.name, fp: d.fp })), [reportDrills]);
   const save = async (start: boolean) => {
     if (drillCount === 0) { Alert.alert('No drills', 'Add at least one drill.'); return; }
     const sugg = suggestWorkoutTags(built.items, byId);
@@ -154,6 +158,7 @@ export default function BuildWorkout() {
         </View>
       )}
 
+      {step >= 1 && <GuidanceStrip drills={reportDrills} />}
       {step === 1 && sections.map((sec) => {
         const list = placed[sec.id] ?? [];
         return (
@@ -220,7 +225,7 @@ export default function BuildWorkout() {
         {(frameworks ?? []).map((f) => <OptionRow key={f.id} label={f.name} caption={f.blocks.blocks.map((b) => `${b.name}${b.kind === 'rounds' ? ` ×${b.rounds ?? 1}` : ''}`).join(' · ')} onPress={() => fromFramework(f.id)} />)}
       </Sheet>
       {addFor?.kind === 'library' && (
-        <ExercisePicker visible title={`Add to ${sections.find((s) => s.id === addFor.sec)?.name ?? 'section'}`} exercises={exercises ?? []} inSectionIds={(placed[addFor.sec] ?? []).map((p) => p.exerciseId)} onPick={(e) => { setPlaced((p) => ({ ...p, [addFor.sec]: [...(p[addFor.sec] ?? []), toPlaced(e)] })); setAddFor(null); }} onClose={() => setAddFor(null)} />
+        <ExercisePicker visible title={`Add to ${sections.find((s) => s.id === addFor.sec)?.name ?? 'section'}`} exercises={exercises ?? []} inSectionIds={(placed[addFor.sec] ?? []).map((p) => p.exerciseId)} avoid={avoid} onPick={(e) => { setPlaced((p) => ({ ...p, [addFor.sec]: [...(p[addFor.sec] ?? []), toPlaced(e)] })); setAddFor(null); }} onClose={() => setAddFor(null)} />
       )}
       <SectionBankSheet visible={addFor?.kind === 'bank'} onClose={() => setAddFor(null)} exercisesById={byId} title="Add a saved section's drills" onPick={(preset) => { if (!addFor) return; setPlaced((p) => ({ ...p, [addFor.sec]: [...(p[addFor.sec] ?? []), ...preset.drills.map((d) => ({ exerciseId: d.exerciseId, dosage: d.dosage, tags: byId.get(d.exerciseId)?.slots }))] })); setAddFor(null); }} />
     </Screen>

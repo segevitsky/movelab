@@ -17,6 +17,8 @@ import { SectionBankSheet } from '../../src/ui/SectionBank';
 import { applySection, sectionDrills } from '../../src/db/sections';
 import { saveSectionPreset } from '../../src/db/sectionRepo';
 import { DrillRow } from '../../src/ui/DrillRow';
+import { GuidanceStrip } from '../../src/ui/Guidance';
+import { fingerprintOf, type ReportDrill } from '../../src/similarity';
 import { SwipeRow } from '../../src/ui/SwipeRow';
 import { ExercisePicker } from '../../src/ui/ExercisePicker';
 import { WorkoutViewer, type ViewerEntry } from '../../src/ui/WorkoutViewer';
@@ -85,6 +87,8 @@ export default function Today() {
     }
     return out;
   }, [w, fw, byId]);
+  const reportDrills: ReportDrill[] = useMemo(() => entries.map((en) => ({ id: en.exercise.id, name: en.exercise.name, sectionId: en.blockId, sectionName: en.sectionName, pattern: en.exercise.pattern, slots: en.exercise.slots, fp: fingerprintOf(en.exercise), seconds: 0 })), [entries]);
+  const avoid = useMemo(() => entries.map((en) => ({ id: en.exercise.id, name: en.exercise.name, fp: fingerprintOf(en.exercise) })), [entries]);
   const chooseFromLibrary = (blockId: string, slotId: string, exerciseId: string) => {
     if (!w || !ctx) return;
     const key = slotKey(blockId, slotId);
@@ -159,6 +163,7 @@ export default function Today() {
             <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
             <Text style={styles.whyText}>{w.why}</Text>
           </Drop>
+          <GuidanceStrip drills={reportDrills} />
           {fw.blocks.blocks.map((b, bi) => {
             const its = w.items.filter((i) => i.blockId === b.id && i.round === 1);
             const rounds = b.kind === 'rounds' ? b.rounds ?? 1 : 1;
@@ -244,6 +249,7 @@ export default function Today() {
           exercises={exercises ?? []}
           preferTags={picker.slot.tags}
           inSectionIds={w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId)}
+          avoid={avoid.filter((a) => !w.items.some((i) => i.blockId === picker.blockId && i.slotId === picker.slotId && i.exerciseId === a.id))}
           onPick={(e) => chooseFromLibrary(picker.blockId, picker.slotId, e.id)}
           onClose={() => setPicker(null)}
         />

@@ -9,6 +9,8 @@ import { EQUIPMENT, INTENSITY, PATTERNS, SLOTS, type Equipment, type Intensity, 
 import { FigurePlayer } from '../../src/figure';
 import { Button, Chip } from '../../src/ui/Button';
 import { shareExerciseGif } from '../../src/export/exerciseGif';
+import { fingerprintOf, similarity } from '../../src/similarity';
+import { Pressable } from 'react-native';
 import { colors, patternColor, radius, slotColor } from '../../src/ui/theme';
 
 export default function ExerciseDetail() {
@@ -17,6 +19,13 @@ export default function ExerciseDetail() {
   const { data } = useLiveQuery(db.select().from(schema.exercise).where(eq(schema.exercise.id, id)), [id]);
   const e = data?.[0];
   const { data: srcRows } = useLiveQuery(db.select().from(schema.source), []);
+  const { data: allRows } = useLiveQuery(db.select().from(schema.exercise), []);
+  const similar = useMemo(() => {
+    if (!e || !allRows) return [] as { id: string; name: string; score: number }[];
+    const fp = fingerprintOf(e);
+    if (!fp) return [];
+    return allRows.filter((o) => o.id !== e.id && !o.archived && o.figure).map((o) => { const f = fingerprintOf(o); return { id: o.id, name: o.name, score: f ? similarity(fp, f) : 0 }; }).filter((x) => x.score >= 0.6).sort((a, b) => b.score - a.score).slice(0, 5);
+  }, [e?.id, e?.updatedAt, allRows]);
   const src = useMemo(() => srcRows?.find((s) => s.id === e?.sourceId), [srcRows, e?.sourceId]);
   const clip = useMemo(() => (e ? clipFromExercise(e) : null), [e?.figure]);
   const [speed, setSpeed] = useState(1);
@@ -59,6 +68,17 @@ export default function ExerciseDetail() {
         />
       )}
 
+      {similar.length > 0 && (
+        <>
+          <Text style={styles.label}>Moves like</Text>
+          {similar.map((x) => (
+            <Pressable key={x.id} onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: x.id } })} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 40 }}>
+              <Text style={{ color: colors.accent, fontWeight: '600', flex: 1 }} numberOfLines={1}>{x.name}</Text>
+              <Text style={styles.small}>{Math.round(x.score * 100)} %</Text>
+            </Pressable>
+          ))}
+        </>
+      )}
       <Text style={styles.label}>Name</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} onBlur={() => name.trim() && name !== e.name && save({ name: name.trim() })} />
 

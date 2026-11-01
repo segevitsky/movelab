@@ -79,7 +79,12 @@ export default function Review() {
     // 3. pipeline
     setPhase('pipeline');
     setProgress('Splitting into exercises…');
-    const raw = res.frames;
+    // Phase 13: the owner records until the reel starts over — cut the recording at the loop point the
+    // player reported, so the repeated beginning never reaches the splitter (it merges with the last drill)
+    const timeline: { e: string; t: number; d: number; rec: number }[] = params.timeline ? JSON.parse(params.timeline) : [];
+    const loopAt = timeline.find((ev) => ev.e === 'looped' && ev.rec >= 5)?.rec;
+    const raw = loopAt ? res.frames.filter((fr) => fr.t <= loopAt - 0.3) : res.frames;
+    if (loopAt && raw.length < res.frames.length) setStats((st) => `${st} · cut at the loop (${loopAt.toFixed(1)} s)`);
     const f0 = estimateFps(raw);
     const rs = Math.abs(f0 - 30) > 1 ? resample(raw, 30) : raw;
     const fpsUsed = Math.abs(f0 - 30) > 1 ? 30 : f0;

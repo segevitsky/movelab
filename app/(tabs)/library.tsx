@@ -110,7 +110,7 @@ export default function Library() {
         onViewableItemsChanged={onViewableItemsChanged}
         renderItem={({ item, index }) => (
           <Rise index={index}>
-            <ExerciseTile e={item} width={cardW} live={live.has(item.id) && !selected} selected={selected ? selected.includes(item.id) : null} onLongPress={() => { if (!selected) setSelected([item.id]); }} onPress={() => (selected ? toggleSelect(item.id) : router.push({ pathname: '/exercise/[id]', params: { id: item.id } }))} />
+            <ExerciseTile e={item} width={cardW} live={live.has(item.id)} selected={selected ? selected.includes(item.id) : null} onLongPress={() => { if (!selected) setSelected([item.id]); }} onPress={() => (selected ? toggleSelect(item.id) : router.push({ pathname: '/exercise/[id]', params: { id: item.id } }))} />
           </Rise>
         )}
         ListEmptyComponent={

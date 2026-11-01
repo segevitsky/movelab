@@ -47,12 +47,16 @@ export default function BuildWorkout() {
 
   // seed the picked drills into the main section once the library is loaded
   useEffect(() => {
-    if (seeded.current || !exercises) return;
+    if (seeded.current) return;
+    const wanted = (ids ?? '').split(',').filter(Boolean);
+    if (wanted.length === 0) { seeded.current = true; return; }
+    // the live query may deliver an empty list first — wait until the picked ids resolve
+    const picked = wanted.map((id) => byId.get(id)).filter((e): e is Exercise => !!e);
+    if (picked.length === 0) return;
     seeded.current = true;
-    const picked = (ids ?? '').split(',').filter(Boolean).map((id) => byId.get(id)).filter((e): e is Exercise => !!e);
     const main = sections.find((s) => s.kind === 'rounds') ?? sections[0];
     setPlaced({ [main.id]: picked.map(toPlaced) });
-  }, [exercises]);
+  }, [byId]);
 
   const toPlaced = (e: Exercise): Placed => ({ exerciseId: e.id, dosage: e.dosageDefault ?? { type: 'time', value: 45 }, tags: e.slots });
   const secondsOf = (exerciseId: string, dosage: Placed['dosage']) => { const e = byId.get(exerciseId); return itemSeconds(e ? toGenExercise(e) : undefined, dosage); };

@@ -209,9 +209,14 @@ All four failure classes happen sometimes: wrong number of exercises, wrong/jitt
 count off, slow or missed frames; latest case: the last drill of a reel was not recognised at all.
 1. **Replayable captures.** Keep the raw pose output of every capture (the numbers, never video) in
    Documents/captures/<time>.json with the crop, scene, url and username; last 30 kept; Dev tab lists them with
-   share / delete. A bad reel → AirDrop → `src/pipeline/__fixtures__` → a failing test → a fix. ⏳
-2. **Diagnose the owner's failed captures** against those fixtures: auto-stop too early (capture), segmenter
-   cuts (segment thresholds, external cuts), person lost (tracking / multi-person), loop point.
+   share / delete. A bad reel → AirDrop → `src/pipeline/__fixtures__/owner` → a failing test → a fix. ✅ 2026-11-01
+   First fixture (reel DfGIOMWuPrs): the still poster frame before playback was processed as a drill, and the
+   repeated beginning after the loop merged with the last drill → **playback window from the player timeline**
+   (play → ended/looped) in Review ✅. The reel's two drills join at an edited transition that pose statistics
+   cannot separate from fast motion (tried a soft-cut rule: found it, but split the staff flow) → step 2.
+2. **Visual scene cuts from the native side** (frame-difference / histogram on the decoded video, before it is
+   deleted) → `segment({ cutTimes })`, which already exists. Then re-check the fixture (`owner.test.ts` todo).
+   Also: auto-stop too early (capture), person lost (tracking / multi-person), loop point.
 3. **Fixes with tests**; Vision fallback for flagged limbs; segment quality gating in Review (weak segments
    shown as such, re-record or skip rather than save a broken card).
 Acceptance: every owner-reported bad reel is a fixture; its failure is reproduced by a test, then fixed;

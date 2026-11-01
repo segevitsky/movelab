@@ -53,6 +53,11 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   last drill. Fixed: loop tracker per <video> element, auto-stop needs 80 % of the reel recorded, the player
   timeline travels with the raw capture, and Review cuts the recording at the loop point. Owner: "this is much
   better".
+- Night: first owner capture fixture (reel DfGIOMWuPrs). Found: the poster frame before playback was processed
+  as a drill ("Core 1" was a still image) and the reel's last drill merged with the repeated beginning → Review
+  now keeps only the playback window from the player timeline. The reel's two drills join at an edited
+  transition that pose statistics cannot separate from fast motion (soft-cut rule tried and dropped: it split
+  the staff flow) → next: visual scene cuts on the native side feeding `segment({ cutTimes })`.
 - Calibration result (60 verdicts, 19 alike): the motion features reach AUC 0.71 (0.75 with DTW); pattern
   tags carry no signal; "alike" answers cluster on short (3–5 s) clips with unknown joints → the
   comparison is limited by capture quality. Shipped the fitted weights with a strict line (0 false alarms,

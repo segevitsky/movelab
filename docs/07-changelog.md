@@ -26,17 +26,24 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   installed on the Mac. Debug APK build in progress (first Gradle run stalled on downloads once; restarted).
 - Dev tab: *Demo workout → player* (`movelab:///dev?demo=1`). Stack back label "Back". Bigger MoveLab
   wordmark on Today, brand row on Library.
-- Tests: 87 green (`npm test`), `npm run typecheck` clean.
+- **Phase 10 — workout builder** (afternoon): `workout.blocks` (migration 0003) lets a workout own its
+  sections; `src/db/builder.ts` (tested) builds blocks + items from sections and placed drills, and lets a
+  framework workout take ownership when drills are reordered. `app/build.tsx` wizard (Shape → Place → Dose
+  → Save / Save & start), Library select mode (long-press, tick, draggable tray, swipe down to cancel, "Build
+  workout"), drag handle on every drill of a saved workout, Today menu "Build a workout by hand".
+  `DraggableList` = pure-JS long-press-to-lift reorder (vertical + horizontal).
+- **Android debug APK builds** (1 m 36 s once restricted to arm64; the four-ABI Skia build ran > 1 h).
+  Release APK (standalone, to sideload) building next.
+- Tests: 90 green (`npm test`), `npm run typecheck` clean.
 
 **Verified on the owner's iPhone**: viewer swipe, player layout, export library, section bank save (after
 the keyboard fix), rests.
 
 **Owner's notes from the session (to do / to discuss)**
-1. **Workout builder wizard from the Library** — agreed design: select drills in the Library → wizard:
-   shape (sections / from a framework) → place (move drills between sections, drag to reorder, add from
-   library or bank) → dose (time/reps, per side, live total) → save or start. A built workout carries its
-   own sections (stored on the workout row); player/viewer/saved-workout use them when present. **Next.**
-2. **Drag-to-reorder drills** in saved workouts, the wizard and the Library select mode. **Next, with 1.**
+1. **Workout builder wizard from the Library** — ✅ shipped (see above). Owner feedback so far: cards must
+   keep looping in select mode (fixed), picked drills must land in the wizard (fixed), swipe down cancels
+   the selection (added).
+2. **Drag-to-reorder drills** in saved workouts, the wizard and the Library select mode — ✅ shipped.
 3. **Bold design pass v2** — display typeface (Barlow Condensed or owner's pick), signature stage (paper
    gradient, pattern rim light, vignette), player ring timer + rest wash, Today as a session hero. Owner:
    "it's cool but not a big difference, can we do more?" → yes, after 1–2.

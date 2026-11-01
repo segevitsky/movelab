@@ -5,6 +5,7 @@ import type { GenContext, GenExercise, GenGoal, GenWorkout, HistoryEntry, Pairin
 import type { Db } from './index';
 import { exercise, framework, goal, pairing, session, sourceExercise, workout, type Exercise, type Framework } from './schema';
 import type { FrameworkBlocks, SessionFeedback, WorkoutInputs, WorkoutItem } from './types';
+import type { WorkoutTag } from './vocab';
 import { newId } from './repo';
 
 export function toGenExercise(e: Exercise): GenExercise {
@@ -90,6 +91,26 @@ export async function toggleFavourite(db: Db, id: string, value: boolean) {
 export async function deleteWorkout(db: Db, id: string) {
   await db.delete(session).where(eq(session.workoutId, id));
   await db.delete(workout).where(eq(workout.id, id));
+}
+
+/** Name / description / tags of a saved workout. */
+export async function updateWorkoutMeta(db: Db, id: string, meta: { name?: string | null; description?: string | null; tags?: WorkoutTag[] | null }) {
+  await db.update(workout).set(meta).where(eq(workout.id, id));
+}
+
+/** Suggest workout tags from what the drills are tagged with (most frequent slots first, warm-up/cool-down ignored). */
+export function suggestWorkoutTags(items: WorkoutItem[], byId: Map<string, Pick<Exercise, 'slots'>>, max = 3): WorkoutTag[] {
+  const count = new Map<WorkoutTag, number>();
+  for (const it of items) {
+    if (it.round !== 1) continue;
+    for (const s of byId.get(it.exerciseId)?.slots ?? []) {
+      const t = (s === 'legs' || s === 'push' || s === 'pull' || s === 'core' || s === 'cardio' || s === 'mobility' || s === 'skill' || s === 'strength') ? (s as WorkoutTag) : null;
+      if (t) count.set(t, (count.get(t) ?? 0) + 1);
+    }
+  }
+  const sorted = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t);
+  if (sorted.includes('push') && sorted.includes('pull') && !sorted.includes('upper')) sorted.push('upper');
+  return sorted.slice(0, max);
 }
 
 /** Replace the items of a saved workout (edits from the workout screen / the player's swap). */

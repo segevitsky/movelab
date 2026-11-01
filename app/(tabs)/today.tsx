@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import type { Exercise } from '../../src/db/schema';
 import type { FrameworkSlot } from '../../src/db/types';
 import { Button, Chip, Tag } from '../../src/ui/Button';
 import { SwipeRow } from '../../src/ui/SwipeRow';
+import { ExercisePicker } from '../../src/ui/ExercisePicker';
 import { Drop, Pop, Rise } from '../../src/ui/motion';
 import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
 
@@ -55,8 +56,7 @@ export default function Today() {
     const key = slotKey(blockId, slotId);
     setW({ ...w, items: w.items.map((i) => (slotKey(i.blockId, i.slotId) === key ? { ...i, locked: !i.locked } : i)) });
   };
-  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot } | null>(null);
-  const [pickerText, setPickerText] = useState('');
+  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; currentId?: string } | null>(null);
   const chooseFromLibrary = (blockId: string, slotId: string, exerciseId: string) => {
     if (!w || !ctx) return;
     const key = slotKey(blockId, slotId);
@@ -149,27 +149,17 @@ export default function Today() {
                   const it = its.find((i) => i.slotId === s.id);
                   const ex = it ? byId.get(it.exerciseId) : undefined;
                   const clip = clips.get(ex);
-                  const actions = () => {
-                    if (!ex || !it) return;
-                    Alert.alert(ex.name, undefined, [
-                      { text: 'Choose from library…', onPress: () => { setPickerText(''); setPicker({ blockId: b.id, slotId: s.id, slot: s }); } },
-                      { text: 'Surprise me (random swap)', onPress: () => doSwap(b.id, s.id) },
-                      { text: it.locked ? 'Unlock (may change next time)' : 'Lock (keep on regenerate)', onPress: () => toggleLock(b.id, s.id) },
-                      { text: 'Open card', onPress: () => router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }) },
-                      { text: 'Remove from this workout', style: 'destructive', onPress: () => removeItem(b.id, s.id) },
-                      { text: 'Cancel', style: 'cancel' },
-                    ]);
-                  };
+                  const actions = () => { if (ex && it) setPicker({ blockId: b.id, slotId: s.id, slot: s, currentId: ex.id }); };
                   return (
                     <Rise key={`${s.id}-${it?.exerciseId ?? 'none'}`} index={0}>
                     <SwipeRow
                       disabled={!ex}
                       actions={[
-                        { label: 'Choose', icon: 'albums-outline', color: colors.accent, onPress: () => { setPickerText(''); setPicker({ blockId: b.id, slotId: s.id, slot: s }); } },
+                        { label: 'Choose', icon: 'albums-outline', color: colors.accent, onPress: () => setPicker({ blockId: b.id, slotId: s.id, slot: s }) },
                         { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => removeItem(b.id, s.id) },
                       ]}
                     >
-                    <Pressable style={styles.item} onPress={ex ? actions : () => { setPickerText(''); setPicker({ blockId: b.id, slotId: s.id, slot: s }); }}>
+                    <Pressable style={styles.item} onPress={ex ? actions : () => setPicker({ blockId: b.id, slotId: s.id, slot: s })}>
                       <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name={ex ? 'body-outline' : 'help-outline'} size={22} color={colors.muted} />}</View>
                       <View style={{ flex: 1, gap: 3 }}>
                         {ex ? (
@@ -187,7 +177,7 @@ export default function Today() {
                           <Text style={styles.missing}>no card for {s.tags.join(' / ')} yet{s.optional ? ' (optional)' : ''} · tap to choose one</Text>
                         )}
                       </View>
-                      {ex && <Ionicons name="ellipsis-horizontal" size={20} color={colors.muted} />}
+                      {ex && <Ionicons name="chevron-forward" size={20} color={colors.muted} />}
                     </Pressable>
                     </SwipeRow>
                     </Rise>
@@ -197,51 +187,36 @@ export default function Today() {
             );
           })}
           <View style={styles.rowBetween}>
-            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a row for options, swipe left for quick actions</Text>
+            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a drill to view it and browse others · swipe left for quick actions</Text>
           </View>
           <Pressable onPress={() => save(false)} style={{ alignSelf: 'center', paddingVertical: 6 }}><Text style={styles.link}>Save for later without starting</Text></Pressable>
         </View>
       )}
       {!w && (exercises?.length ?? 0) === 0 && <Text style={styles.small}>Your library is empty — capture a few reels first.</Text>}
-      <Modal visible={!!picker} animationType="slide" onRequestClose={() => setPicker(null)}>
-        {picker && (
-          <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: 56 }}>
-            <View style={[styles.rowBetween, { paddingHorizontal: 16 }]}>
-              <Text style={styles.blockTitle}>Choose a drill · {picker.slot.tags.join(' / ')}</Text>
-              <Pressable onPress={() => setPicker(null)} hitSlop={8}><Ionicons name="close" size={24} color={colors.ink} /></Pressable>
-            </View>
-            <TextInput style={styles.search} placeholder="Search" placeholderTextColor={colors.muted} value={pickerText} onChangeText={setPickerText} autoCorrect={false} />
-            <FlatList
-              data={(() => {
-                const all = (exercises ?? []).filter((e: Exercise) => !e.archived && (!pickerText || e.name.toLowerCase().includes(pickerText.toLowerCase())));
-                const fits = all.filter((e: Exercise) => picker.slot.tags.some((t) => e.slots.includes(t)));
-                const rest = all.filter((e: Exercise) => !fits.includes(e));
-                return [...fits.map((e: Exercise) => ({ e, fits: true })), ...rest.map((e: Exercise) => ({ e, fits: false }))];
-              })()}
-              keyExtractor={(r) => r.e.id}
-              contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 60 }}
-              renderItem={({ item: r }) => {
-                const clip = clips.get(r.e);
-                return (
-                  <Pressable onPress={() => chooseFromLibrary(picker.blockId, picker.slotId, r.e.id)} style={[styles.item, styles.pickRow, !r.fits && { opacity: 0.75 }]}>
-                    <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name="body-outline" size={22} color={colors.muted} />}</View>
-                    <View style={{ flex: 1, gap: 3 }}>
-                      <Text style={styles.itemName}>{r.e.name}</Text>
-                      <View style={styles.tagRow}>
-                        {r.e.pattern && <Tag label={r.e.pattern} color={patternColor[r.e.pattern]} />}
-                        {r.e.slots.slice(0, 3).map((t) => <Tag key={t} label={t} color={slotColor[t] ?? colors.muted} />)}
-                        {!r.fits && <Text style={styles.small}>· not tagged for this slot</Text>}
-                      </View>
-                    </View>
-                    <Ionicons name="add-circle" size={24} color={colors.accent} />
-                  </Pressable>
-                );
-              }}
-              ListEmptyComponent={<Text style={[styles.small, { padding: 16 }]}>No exercises yet.</Text>}
-            />
-          </View>
-        )}
-      </Modal>
+      {picker && w && (() => {
+        const it = w.items.find((i) => i.blockId === picker.blockId && i.slotId === picker.slotId && i.round === 1);
+        const inSectionIds = w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId);
+        const ex = picker.currentId ? byId.get(picker.currentId) : undefined;
+        const close = () => setPicker(null);
+        return (
+          <ExercisePicker
+            visible
+            title={`Choose a drill · ${picker.slot.tags.join(' / ')}`}
+            exercises={exercises ?? []}
+            preferTags={picker.slot.tags}
+            currentId={picker.currentId}
+            inSectionIds={inSectionIds}
+            onPick={(e) => chooseFromLibrary(picker.blockId, picker.slotId, e.id)}
+            onClose={close}
+            actions={ex && it ? [
+              { label: 'Surprise me', icon: 'shuffle-outline', onPress: () => { doSwap(picker.blockId, picker.slotId); close(); } },
+              { label: it.locked ? 'Unlock' : 'Lock', icon: it.locked ? 'lock-open-outline' : 'lock-closed-outline', onPress: () => { toggleLock(picker.blockId, picker.slotId); close(); } },
+              { label: 'Open card', icon: 'id-card-outline', onPress: () => { close(); router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }); } },
+              { label: 'Remove', icon: 'trash-outline', destructive: true, onPress: () => { removeItem(picker.blockId, picker.slotId); close(); } },
+            ] : []}
+          />
+        );
+      })()}
       {recentList.length > 0 && (
         <View style={[styles.panel, shadow.card]}>
           <Text style={styles.label}>Recent workouts</Text>
@@ -253,8 +228,9 @@ export default function Today() {
                 onLongPress={() => Alert.alert('Delete this workout?', 'It leaves your history too.', [{ text: 'Cancel' }, { text: 'Delete', style: 'destructive', onPress: () => deleteWorkout(db, r.id) }])}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.itemName}>{new Date(r.createdAt).toLocaleDateString()} · {frameworks?.find((f) => f.id === r.frameworkId)?.name ?? 'workout'}</Text>
-                  <Text style={styles.small} numberOfLines={1}>{r.why ?? `${r.items.length} items`}</Text>
+                  <Text style={styles.itemName} numberOfLines={1}>{r.name?.trim() || frameworks?.find((f) => f.id === r.frameworkId)?.name || 'workout'}</Text>
+                  <Text style={styles.small} numberOfLines={1}>{new Date(r.createdAt).toLocaleDateString()} · {r.description?.trim() || r.why || `${r.items.length} items`}</Text>
+                  {!!r.tags?.length && <View style={[styles.tagRow, { marginTop: 3 }]}>{r.tags.map((t) => <Tag key={t} label={t} color={slotColor[t as never] ?? colors.inkSoft} />)}</View>}
                 </View>
                 <Pressable onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: r.id } })} hitSlop={8}><Ionicons name="play-circle" size={30} color={colors.accent} /></Pressable>
               </Pressable>

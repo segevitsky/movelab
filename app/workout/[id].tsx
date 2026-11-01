@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
 import { useClipCache } from '../../src/ui/useClipCache';
-import { deleteWorkout, updateWorkoutItems } from '../../src/db/workoutRepo';
+import { deleteWorkout, suggestWorkoutTags, updateWorkoutItems, updateWorkoutMeta } from '../../src/db/workoutRepo';
+import { WORKOUT_TAGS, type WorkoutTag } from '../../src/db/vocab';
 import type { Exercise } from '../../src/db/schema';
 import type { FrameworkSlot, WorkoutItem } from '../../src/db/types';
 import { itemSeconds } from '../../src/generator';
@@ -28,7 +29,10 @@ export default function WorkoutScreen() {
   const fw = fws?.find((f) => f.id === w?.frameworkId);
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
   const clips = useClipCache(exercises);
-  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; extra?: boolean } | null>(null);
+  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; extra?: boolean; currentId?: string } | null>(null);
+  const [name, setName] = useState('');
+  const [desc, setDesc] = useState('');
+  useEffect(() => { if (w) { setName(w.name ?? ''); setDesc(w.description ?? ''); } }, [w?.id]);
   if (!w || !fw) return <View style={{ padding: 24 }}><Text style={styles.small}>Loading…</Text></View>;
 
   const save = (items: WorkoutItem[], inputs = w.inputs) => updateWorkoutItems(db, w.id, items, inputs).catch((e) => Alert.alert('Save failed', String(e)));
@@ -46,6 +50,10 @@ export default function WorkoutScreen() {
     setPicker(null);
   };
   const remove = (blockId: string, slotId: string) => save(w.items.filter((i) => key(i.blockId, i.slotId) !== key(blockId, slotId)));
+  const meta = (patch: Parameters<typeof updateWorkoutMeta>[2]) => updateWorkoutMeta(db, w.id, patch).catch((e) => Alert.alert('Save failed', String(e)));
+  const tags: WorkoutTag[] = w.tags ?? [];
+  const suggested = suggestWorkoutTags(w.items, byId).filter((t) => !tags.includes(t));
+  const toggleTag = (t: WorkoutTag) => meta({ tags: tags.includes(t) ? tags.filter((x) => x !== t) : [...tags, t] });
   const ov = (blockId: string) => w.inputs.blockOverrides?.[blockId] ?? {};
   const setOv = (blockId: string, patch: { skipped?: boolean; rounds?: number }) => save(w.items, { ...w.inputs, blockOverrides: { ...(w.inputs.blockOverrides ?? {}), [blockId]: { ...ov(blockId), ...patch } } });
   const addExtra = (blockId: string, ex: Exercise) => {
@@ -67,8 +75,30 @@ export default function WorkoutScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
-        <Text style={styles.h1}>{fw.name}</Text>
-        <Text style={styles.small}>{new Date(w.createdAt).toLocaleString()} · ≈ {Math.round(total / 60)} min of work{w.why ? `\n${w.why}` : ''}</Text>
+        <TextInput
+          style={styles.h1Input}
+          value={name}
+          onChangeText={setName}
+          placeholder={fw.name}
+          placeholderTextColor={colors.muted}
+          onBlur={() => (name.trim() || null) !== (w.name ?? null) && meta({ name: name.trim() || null })}
+          returnKeyType="done"
+        />
+        <TextInput
+          style={styles.descInput}
+          value={desc}
+          onChangeText={setDesc}
+          placeholder="What is this workout about? (legs day, quick aerobic…)"
+          placeholderTextColor={colors.muted}
+          multiline
+          onBlur={() => (desc.trim() || null) !== (w.description ?? null) && meta({ description: desc.trim() || null })}
+        />
+        <View style={styles.chips}>
+          {tags.map((t) => <Chip key={t} label={t} color={slotColor[t as never] ?? colors.accent} on onPress={() => toggleTag(t)} />)}
+          {suggested.map((t) => <Chip key={`s-${t}`} label={`+ ${t}`} color={colors.muted} on={false} onPress={() => toggleTag(t)} />)}
+          {WORKOUT_TAGS.filter((t) => !tags.includes(t) && !suggested.includes(t)).map((t) => <Chip key={t} label={t} color={colors.inkSoft} on={false} onPress={() => toggleTag(t)} />)}
+        </View>
+        <Text style={styles.small}>{fw.name} · {new Date(w.createdAt).toLocaleString()} · ≈ {Math.round(total / 60)} min of work{w.why ? `\n${w.why}` : ''}</Text>
         {fw.blocks.blocks.map((b) => {
           const o = ov(b.id);
           const rounds = b.kind === 'rounds' ? o.rounds ?? b.rounds ?? 1 : 1;
@@ -99,9 +129,10 @@ export default function WorkoutScreen() {
                 const it = w.items.find((i) => i.blockId === b.id && i.slotId === sid && i.round === 1);
                 const ex = it ? byId.get(it.exerciseId) : undefined;
                 const clip = clips.get(ex);
-                const open = () => setPicker({ blockId: b.id, slotId: sid, slot: s });
+                const open = () => setPicker({ blockId: b.id, slotId: sid, slot: s, currentId: ex?.id });
+                const choose = () => setPicker({ blockId: b.id, slotId: sid, slot: s });
                 return (
-                  <SwipeRow key={sid} disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accent, onPress: open }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, sid) }]}>
+                  <SwipeRow key={sid} disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accent, onPress: choose }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, sid) }]}>
                     <Pressable style={styles.item} onPress={ex ? () => router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }) : open} onLongPress={open}>
                       <View style={styles.thumb}>{clip ? <FigureStill clip={clip} width={64} height={78} /> : <Ionicons name={ex ? 'body-outline' : 'add-circle-outline'} size={24} color={colors.muted} />}</View>
                       <View style={{ flex: 1, gap: 3 }}>
@@ -137,7 +168,27 @@ export default function WorkoutScreen() {
       <Pressable onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: w.id } })} style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.92 }] }]}>
         <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
       </Pressable>
-      {picker && <ExercisePicker visible title={picker.extra ? 'Add a drill' : `Choose for ${picker.slot.tags.join(' / ')}`} exercises={exercises ?? []} preferTags={picker.slot.tags} onPick={(e) => (picker.extra ? addExtra(picker.blockId, e) : replace(picker.blockId, picker.slotId, e))} onClose={() => setPicker(null)} />}
+      {picker && (() => {
+        const inSectionIds = w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId);
+        const ex = picker.currentId ? byId.get(picker.currentId) : undefined;
+        const close = () => setPicker(null);
+        return (
+          <ExercisePicker
+            visible
+            title={picker.extra ? 'Add a drill' : `Choose for ${picker.slot.tags.join(' / ')}`}
+            exercises={exercises ?? []}
+            preferTags={picker.slot.tags}
+            currentId={picker.currentId}
+            inSectionIds={inSectionIds}
+            onPick={(e) => (picker.extra ? addExtra(picker.blockId, e) : replace(picker.blockId, picker.slotId, e))}
+            onClose={close}
+            actions={ex ? [
+              { label: 'Open card', icon: 'id-card-outline', onPress: () => { close(); router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }); } },
+              { label: 'Remove', icon: 'trash-outline', destructive: true, onPress: () => { remove(picker.blockId, picker.slotId); close(); } },
+            ] : []}
+          />
+        );
+      })()}
     </View>
   );
 }
@@ -145,6 +196,8 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 12, paddingBottom: 120 },
   h1: { fontSize: 20, fontWeight: '800', color: colors.ink },
+  h1Input: { fontSize: 22, fontWeight: '800', color: colors.ink, paddingVertical: 4 },
+  descInput: { fontSize: 14, color: colors.ink, paddingVertical: 2, minHeight: 22 },
   block: { backgroundColor: colors.surface, borderRadius: radius.l, padding: 12, gap: 8 },
   blockTitle: { fontWeight: '800', fontSize: 15, color: colors.ink },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

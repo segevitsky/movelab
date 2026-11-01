@@ -16,3 +16,7 @@ export const MUSCLES = ['chest', 'shoulders', 'triceps', 'biceps', 'back', 'lats
 export type Muscle = (typeof MUSCLES)[number];
 
 export type Dosage = { type: 'reps' | 'time'; value: number; perSide?: boolean };
+
+/** Tags a user can put on a saved workout (what is it about). */
+export const WORKOUT_TAGS = ['legs', 'upper', 'push', 'pull', 'core', 'cardio', 'mobility', 'skill', 'strength', 'full-body', 'quick', 'recovery'] as const;
+export type WorkoutTag = (typeof WORKOUT_TAGS)[number];

@@ -1,6 +1,6 @@
 import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { FrameworkBlocks, GoalStage, Scene, SessionFeedback, WorkoutInputs, WorkoutItem } from './types';
-import type { Dosage, Equipment, Intensity, Muscle, Pattern, Slot } from './vocab';
+import type { Dosage, Equipment, Intensity, Muscle, Pattern, Slot, WorkoutTag } from './vocab';
 
 /** Architecture §7. JSON columns are typed via `$type`; the figure is a binary blob (see src/figure/codec). */
 
@@ -99,6 +99,10 @@ export const workout = sqliteTable('workout', {
   items: text('items', { mode: 'json' }).$type<WorkoutItem[]>().notNull(),
   why: text('why'),
   favourite: integer('favourite', { mode: 'boolean' }).notNull().default(false),
+  /** user-given name / description / tags — what this workout is about */
+  name: text('name'),
+  description: text('description'),
+  tags: text('tags', { mode: 'json' }).$type<WorkoutTag[]>(),
   createdAt: integer('created_at').notNull(),
 });
 

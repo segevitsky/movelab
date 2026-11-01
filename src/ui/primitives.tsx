@@ -1,5 +1,5 @@
 import React from 'react';
-import { I18nManager, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { I18nManager, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
@@ -31,7 +31,8 @@ export function Screen({ children, footer, scroll, style, contentStyle }: {
 }
 
 /** Screen title row (h1 at the start, optional trailing element), under the status bar. */
-export function TitleBar({ title, eyebrow, icon, trailing, style }: {
+export function TitleBar({ title, eyebrow, icon, iconSize = 34, trailing, style }: {
+  iconSize?: number;
   title: string; /** small label above the title (e.g. the app name, or the date) */ eyebrow?: string;
   /** image at the start of the title (the app icon on the home tab) */ icon?: ImageSourcePropType;
   trailing?: React.ReactNode; style?: StyleProp<ViewStyle>;
@@ -42,7 +43,7 @@ export function TitleBar({ title, eyebrow, icon, trailing, style }: {
       <View style={styles.titleBlock}>
         {eyebrow ? <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text> : null}
         <View style={styles.titleRow}>
-          {icon ? <Image source={icon} style={styles.titleIcon} /> : null}
+          {icon ? <Image source={icon} style={[styles.titleIcon, { width: iconSize, height: iconSize, borderRadius: Math.round(iconSize * 0.24) }]} /> : null}
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
         </View>
       </View>
@@ -122,6 +123,22 @@ export function OptionRow({ label, selected, onPress, color, icon, caption }: { 
   );
 }
 
+/** Text prompt in a sheet (Alert.prompt is iOS-only). */
+export function PromptSheet({ visible, title, placeholder, initial = '', confirm = 'Save', onConfirm, onClose }: {
+  visible: boolean; title: string; placeholder?: string; initial?: string; confirm?: string; onConfirm: (text: string) => void; onClose: () => void;
+}) {
+  const [text, setText] = React.useState(initial);
+  React.useEffect(() => { if (visible) setText(initial); }, [visible, initial]);
+  return (
+    <Sheet visible={visible} onClose={onClose} title={title} scroll={false}>
+      <TextInput value={text} onChangeText={setText} placeholder={placeholder} placeholderTextColor={colors.muted} autoFocus style={styles.promptInput} returnKeyType="done" onSubmitEditing={() => text.trim() && onConfirm(text.trim())} />
+      <Pressable onPress={() => text.trim() && onConfirm(text.trim())} disabled={!text.trim()} style={({ pressed }) => [styles.promptBtn, !text.trim() && { opacity: 0.4 }, pressed && { opacity: 0.85 }]}>
+        <Text style={styles.promptBtnText}>{confirm}</Text>
+      </Pressable>
+    </Sheet>
+  );
+}
+
 /** Empty state: icon + one sentence. */
 export function Empty({ icon, text }: { icon: IconName; text: string }) {
   return (
@@ -157,6 +174,9 @@ const styles = StyleSheet.create({
   swatch: { width: 12, height: 12, borderRadius: 6 },
   optionText: { ...type.body, color: colors.inkSoft },
   optionCaption: { ...type.caption, color: colors.muted },
+  promptInput: { ...type.body, color: colors.ink, backgroundColor: colors.surfaceAlt, borderRadius: radius.m, paddingHorizontal: space.m, minHeight: 48 },
+  promptBtn: { minHeight: 48, borderRadius: radius.m, backgroundColor: colors.accentDeep, alignItems: 'center', justifyContent: 'center', marginTop: space.xs },
+  promptBtnText: { ...type.bodyStrong, color: colors.onAccent },
   empty: { padding: space.xxl, alignItems: 'center', gap: space.s },
   emptyText: { ...type.body, color: colors.muted, textAlign: 'center' },
 });

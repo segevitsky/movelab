@@ -12,7 +12,10 @@ import { SLOTS, type Slot } from '../../src/db/vocab';
 import { generate, swap, slotKey, itemSeconds, type GenContext, type GenWorkout } from '../../src/generator';
 import type { FrameworkSlot } from '../../src/db/types';
 import { Button, Chip, ChipRow, IconButton, Tag } from '../../src/ui/Button';
-import { Card, Divider, OptionRow, Screen, SectionHeader, Sheet, TitleBar } from '../../src/ui/primitives';
+import { Divider, OptionRow, PromptSheet, Screen, SectionHeader, Sheet, TitleBar } from '../../src/ui/primitives';
+import { SectionBankSheet } from '../../src/ui/SectionBank';
+import { applySection, sectionDrills } from '../../src/db/sections';
+import { saveSectionPreset } from '../../src/db/sectionRepo';
 import { DrillRow } from '../../src/ui/DrillRow';
 import { SwipeRow } from '../../src/ui/SwipeRow';
 import { ExercisePicker } from '../../src/ui/ExercisePicker';
@@ -22,6 +25,8 @@ import { colors, hit, radius, slotColor, space, type } from '../../src/ui/theme'
 
 const SURPRISE: [number, string][] = [[0, 'safe'], [0.3, 'mix'], [0.8, 'surprise me']];
 const BREAKS = [60, 90, 120, 180];
+const DRILL_RESTS = [0, 15, 30, 45];
+const SECTION_BREAKS = [0, 30, 60, 90, 120];
 
 export default function Today() {
   const router = useRouter();
@@ -36,6 +41,8 @@ export default function Today() {
   const [busy, setBusy] = useState(false);
   const [removed, setRemoved] = useState<string[]>([]);
   const [sheet, setSheet] = useState<'inputs' | 'menu' | 'break' | null>(null);
+  const [saveFor, setSaveFor] = useState<string | null>(null);
+  const [bankFor, setBankFor] = useState<string | null>(null);
   const { data: recent } = useLiveQuery(db.select().from(schema.workout));
   const recentList = useMemo(() => (recent ?? []).slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 5), [recent]);
   useEffect(() => { if (!fwId && frameworks?.length) setFwId(frameworks.find((f) => f.id === 'preset-segev-3x6')?.id ?? frameworks[0].id); }, [frameworks]);
@@ -67,10 +74,14 @@ export default function Today() {
   const entries: ViewerEntry[] = useMemo(() => {
     if (!w || !fw) return [];
     const out: ViewerEntry[] = [];
-    for (const b of fw.blocks.blocks) for (const s of b.slots) {
-      const it = w.items.find((i) => i.blockId === b.id && i.slotId === s.id && i.round === 1);
-      const ex = it ? byId.get(it.exerciseId) : undefined;
-      if (it && ex) out.push({ blockId: b.id, slotId: s.id, sectionName: b.name, exercise: ex, dosage: it.dosage, locked: it.locked });
+    for (const b of fw.blocks.blocks) {
+      const known = new Set(b.slots.map((s) => s.id));
+      const round1 = w.items.filter((i) => i.blockId === b.id && i.round === 1);
+      const ordered = [...b.slots.map((s) => round1.find((i) => i.slotId === s.id)).filter((i): i is NonNullable<typeof i> => !!i), ...round1.filter((i) => !known.has(i.slotId))];
+      for (const it of ordered) {
+        const ex = byId.get(it.exerciseId);
+        if (ex) out.push({ blockId: b.id, slotId: it.slotId, sectionName: b.name, exercise: ex, dosage: it.dosage, locked: it.locked });
+      }
     }
     return out;
   }, [w, fw, byId]);
@@ -135,7 +146,7 @@ export default function Today() {
 
   return (
     <Screen scroll footer={footer} contentStyle={{ gap: space.m }}>
-      <TitleBar title="MoveLab" icon={require('../../assets/icon.png')} eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} style={{ paddingHorizontal: 0 }} trailing={<IconButton icon="ellipsis-horizontal" size={hit.min} onPress={() => setSheet('menu')} />} />
+      <TitleBar title="MoveLab" icon={require('../../assets/icon.png')} iconSize={56} eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} style={{ paddingHorizontal: 0 }} trailing={<IconButton icon="ellipsis-horizontal" size={hit.min} onPress={() => setSheet('menu')} />} />
       <Pressable onPress={() => setSheet('inputs')} style={({ pressed }) => [styles.strip, pressed && { backgroundColor: colors.surfaceAlt }]}>
         <Ionicons name="options-outline" size={18} color={colors.inkSoft} />
         <Text style={styles.stripText} numberOfLines={1}>{strip}</Text>
@@ -156,12 +167,18 @@ export default function Today() {
               <Drop key={b.id} index={bi} style={{ gap: 2 }}>
                 <SectionHeader
                   title={title}
-                  trailing={rounds > 1 ? (
-                    <Pressable onPress={() => setSheet('break')} hitSlop={8} style={styles.breakBtn}>
-                      <Text style={styles.breakText}>{breakSec(b)} s break</Text>
-                      <Ionicons name="chevron-down" size={14} color={colors.muted} />
-                    </Pressable>
-                  ) : undefined}
+                  trailing={
+                    <View style={styles.headerTools}>
+                      {rounds > 1 && (
+                        <Pressable onPress={() => setSheet('break')} hitSlop={8} style={styles.breakBtn}>
+                          <Text style={styles.breakText}>{breakSec(b)} s break</Text>
+                          <Ionicons name="chevron-down" size={14} color={colors.muted} />
+                        </Pressable>
+                      )}
+                      <IconButton icon="bookmark-outline" size={32} onPress={() => setSaveFor(b.id)} />
+                      <IconButton icon="albums-outline" size={32} onPress={() => setBankFor(b.id)} />
+                    </View>
+                  }
                 />
                 {b.slots.map((s, si) => {
                   const it = its.find((i) => i.slotId === s.id);
@@ -178,6 +195,18 @@ export default function Today() {
                         <DrillRow ex={ex} clip={clips.get(ex)} dosage={it?.dosage} locked={it?.locked} onPress={ex ? open : choose} missingText={`no card for ${s.tags.join(' / ')} yet${s.optional ? ' (optional)' : ''} · tap to choose`} />
                       </SwipeRow>
                     </Rise>
+                  );
+                })}
+                {w.items.filter((i) => i.blockId === b.id && i.round === 1 && !b.slots.some((s) => s.id === i.slotId)).map((it, xi) => {
+                  const ex = byId.get(it.exerciseId);
+                  const open = () => { const i = entries.findIndex((en) => en.blockId === b.id && en.slotId === it.slotId); if (i >= 0) setView(i); };
+                  return (
+                    <View key={it.slotId}>
+                      {(xi > 0 || b.slots.length > 0) ? <Divider /> : null}
+                      <SwipeRow disabled={!ex} actions={[{ label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => setW({ ...w, items: w.items.filter((i) => !(i.blockId === b.id && i.slotId === it.slotId)) }) }]}>
+                        <DrillRow ex={ex} clip={clips.get(ex)} dosage={it.dosage} locked={it.locked} onPress={open} />
+                      </SwipeRow>
+                    </View>
                   );
                 })}
               </Drop>
@@ -242,6 +271,36 @@ export default function Today() {
         />
       )}
 
+      <PromptSheet
+        visible={!!saveFor}
+        title="Save this section"
+        placeholder="e.g. Saturday warm-up"
+        initial={fw?.blocks.blocks.find((b) => b.id === saveFor)?.name ?? ''}
+        onClose={() => setSaveFor(null)}
+        onConfirm={async (name) => {
+          const b = fw?.blocks.blocks.find((x) => x.id === saveFor);
+          if (!b || !w) return;
+          const drills = sectionDrills(w.items, b.id, b.slots.map((s) => s.id));
+          if (drills.length === 0) { Alert.alert('Nothing to save', 'This section has no drills yet.'); return; }
+          await saveSectionPreset(db, { name, drills, fromBlockName: b.name });
+          setSaveFor(null);
+          Alert.alert('Saved', `"${name}" · ${drills.length} drills.`);
+        }}
+      />
+      <SectionBankSheet
+        visible={!!bankFor}
+        onClose={() => setBankFor(null)}
+        exercisesById={byId}
+        onPick={(preset) => {
+          const b = fw?.blocks.blocks.find((x) => x.id === bankFor);
+          if (!b || !w || !ctx) return;
+          const rounds = b.kind === 'rounds' ? b.rounds ?? 1 : 1;
+          const lib = new Map(ctx.library.map((e) => [e.id, e]));
+          const items = applySection(w.items, b.id, rounds, preset.drills).map((i) => ('seconds' in i ? i : { ...i, seconds: itemSeconds(lib.get(i.exerciseId), i.dosage) }));
+          setW({ ...w, items: items as typeof w.items, unfilled: w.unfilled.filter((u) => u.blockId !== b.id) });
+          setBankFor(null);
+        }}
+      />
       <Sheet visible={sheet === 'inputs'} onClose={() => setSheet(null)} title="Today's inputs">
         <Text style={styles.sheetLabel}>Framework</Text>
         <ChipRow>{(frameworks ?? []).map((f) => <Chip key={f.id} label={f.name} on={f.id === fwId} onPress={() => setFwId(f.id)} />)}</ChipRow>
@@ -249,6 +308,10 @@ export default function Today() {
         <ChipRow>{(['low', 'medium', 'high'] as const).map((e) => <Chip key={e} label={e} on={inputs.energy === e} onPress={() => setInputs({ ...inputs, energy: e })} />)}</ChipRow>
         <Text style={styles.sheetLabel}>Focus (optional)</Text>
         <ChipRow>{SLOTS.map((s) => <Chip key={s} label={s} color={slotColor[s] ?? colors.accent} on={inputs.focus === s} onPress={() => setInputs({ ...inputs, focus: inputs.focus === s ? null : (s as Slot) })} />)}</ChipRow>
+        <Text style={styles.sheetLabel}>Rest between drills</Text>
+        <ChipRow>{DRILL_RESTS.map((r) => <Chip key={r} label={`${r} s`} on={(inputs.restBetweenExercisesSec ?? 15) === r} onPress={() => setInputs({ ...inputs, restBetweenExercisesSec: r })} />)}</ChipRow>
+        <Text style={styles.sheetLabel}>Break between sections</Text>
+        <ChipRow>{SECTION_BREAKS.map((r) => <Chip key={r} label={`${r} s`} on={(inputs.restBetweenSectionsSec ?? 60) === r} onPress={() => setInputs({ ...inputs, restBetweenSectionsSec: r })} />)}</ChipRow>
         <Text style={styles.sheetLabel}>Surprise</Text>
         <ChipRow>{SURPRISE.map(([v, l]) => <Chip key={String(v)} label={l} on={inputs.surprise === v} onPress={() => setInputs({ ...inputs, surprise: v })} />)}</ChipRow>
         <Button title={w ? 'Generate again' : 'Generate'} size="l" icon="sparkles" onPress={() => { setSheet(null); run(); }} disabled={busy || !fwId} style={{ marginTop: space.s }} />
@@ -269,6 +332,7 @@ const styles = StyleSheet.create({
   stripText: { ...type.body, fontSize: 14, color: colors.inkSoft, flex: 1 },
   why: { flexDirection: 'row', gap: space.s, alignItems: 'center', padding: space.m, borderRadius: radius.m, backgroundColor: colors.accentSoft },
   whyText: { ...type.body, fontSize: 14, color: colors.ink, flex: 1 },
+  headerTools: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   breakBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 28, paddingHorizontal: space.s, borderRadius: radius.pill, backgroundColor: colors.surface },
   breakText: { ...type.caption, color: colors.inkSoft, fontVariant: ['tabular-nums'] },
   note: { ...type.body, color: colors.muted },

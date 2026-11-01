@@ -45,9 +45,12 @@ export type WorkoutItem = {
   locked?: boolean;
 };
 
-export type WorkoutInputs = { timeAvailableMin?: number; energy?: 'low' | 'medium' | 'high'; equipment?: Equipment[]; focus?: Slot | null; surprise?: number; /** overrides the framework's rest between rounds for this workout */ restBetweenRoundsSec?: number; restBetweenExercisesSec?: number; /** per-section tweaks for this workout */ blockOverrides?: Record<string, { skipped?: boolean; rounds?: number }> };
+export type WorkoutInputs = { timeAvailableMin?: number; energy?: 'low' | 'medium' | 'high'; equipment?: Equipment[]; focus?: Slot | null; surprise?: number; /** overrides the framework's rest between rounds for this workout */ restBetweenRoundsSec?: number; restBetweenExercisesSec?: number; /** break when a new section starts */ restBetweenSectionsSec?: number; /** per-section tweaks for this workout */ blockOverrides?: Record<string, { skipped?: boolean; rounds?: number }> };
 
 export type SessionFeedback = 'easy' | 'right' | 'hard';
+
+/** One fixed drill of a saved section. */
+export type SectionDrill = { exerciseId: string; dosage: Dosage };
 
 /** Architecture §5a. Mat quad in source pixels (TL, TR, BR, BL); crop rect normalised to the recording. */
 export type Scene = {

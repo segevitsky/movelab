@@ -13,7 +13,10 @@ import type { FrameworkSlot, WorkoutItem } from '../../src/db/types';
 import { itemSeconds } from '../../src/generator';
 import { toGenExercise } from '../../src/db/workoutRepo';
 import { Button, Chip, ChipRow, IconButton } from '../../src/ui/Button';
-import { Divider, OptionRow, Screen, SectionHeader, Sheet } from '../../src/ui/primitives';
+import { Divider, OptionRow, PromptSheet, Screen, SectionHeader, Sheet } from '../../src/ui/primitives';
+import { SectionBankSheet } from '../../src/ui/SectionBank';
+import { applySection, sectionDrills } from '../../src/db/sections';
+import { saveSectionPreset } from '../../src/db/sectionRepo';
 import { DrillRow } from '../../src/ui/DrillRow';
 import { ExercisePicker } from '../../src/ui/ExercisePicker';
 import { WorkoutViewer, type ViewerEntry } from '../../src/ui/WorkoutViewer';
@@ -21,6 +24,8 @@ import { SwipeRow } from '../../src/ui/SwipeRow';
 import { colors, hit, radius, slotColor, space, type } from '../../src/ui/theme';
 
 const BREAKS = [60, 90, 120, 180];
+const DRILL_RESTS = [0, 15, 30, 45];
+const SECTION_BREAKS = [0, 30, 60, 90, 120];
 
 /** Workout preview: see every drill, step through them, change any of them, adjust dosage and breaks, then start. */
 export default function WorkoutScreen() {
@@ -36,6 +41,9 @@ export default function WorkoutScreen() {
   const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; extra?: boolean } | null>(null);
   const [view, setView] = useState<number | null>(null);
   const [breakSheet, setBreakSheet] = useState<string | null>(null);
+  const [restSheet, setRestSheet] = useState<'drills' | 'sections' | null>(null);
+  const [saveFor, setSaveFor] = useState<string | null>(null); // blockId being saved as a section
+  const [bankFor, setBankFor] = useState<string | null>(null); // blockId being replaced from the bank
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   useEffect(() => { if (w) { setName(w.name ?? ''); setDesc(w.description ?? ''); } }, [w?.id]);
@@ -116,6 +124,10 @@ export default function WorkoutScreen() {
         {WORKOUT_TAGS.filter((t) => !tags.includes(t) && !suggested.includes(t)).map((t) => <Chip key={t} label={t} on={false} onPress={() => toggleTag(t)} />)}
       </ChipRow>
       <Text style={styles.small}>{fw.name} · {new Date(w.createdAt).toLocaleString()} · ≈ {Math.round(total / 60)} min of work{w.why ? `\n${w.why}` : ''}</Text>
+      <View style={styles.headerTools}>
+        <Pressable onPress={() => setRestSheet('drills')} hitSlop={8} style={styles.breakBtn}><Ionicons name="pause-outline" size={14} color={colors.muted} /><Text style={styles.breakText}>{w.inputs.restBetweenExercisesSec ?? 15} s between drills</Text><Ionicons name="chevron-down" size={14} color={colors.muted} /></Pressable>
+        <Pressable onPress={() => setRestSheet('sections')} hitSlop={8} style={styles.breakBtn}><Ionicons name="cafe-outline" size={14} color={colors.muted} /><Text style={styles.breakText}>{w.inputs.restBetweenSectionsSec ?? 60} s between sections</Text><Ionicons name="chevron-down" size={14} color={colors.muted} /></Pressable>
+      </View>
 
       {fw.blocks.blocks.map((b) => {
         const o = ov(b.id);
@@ -141,6 +153,9 @@ export default function WorkoutScreen() {
                       )}
                     </>
                   )}
+                  {!o.skipped && <IconButton icon="add" size={32} onPress={() => setPicker({ blockId: b.id, slotId: 'extra', slot: { id: 'extra', tags: [...new Set(b.slots.flatMap((s) => s.tags))] } as FrameworkSlot, extra: true })} />}
+                  {!o.skipped && <IconButton icon="bookmark-outline" size={32} onPress={() => setSaveFor(b.id)} />}
+                  {!o.skipped && <IconButton icon="albums-outline" size={32} onPress={() => setBankFor(b.id)} />}
                   <Pressable onPress={() => setOv(b.id, { skipped: !o.skipped })} hitSlop={8} style={[styles.skipBtn, o.skipped && { backgroundColor: colors.accentDeep }]}>
                     <Text style={[styles.skipText, o.skipped && { color: colors.onAccent }]}>{o.skipped ? 'include' : 'skip'}</Text>
                   </Pressable>
@@ -161,11 +176,6 @@ export default function WorkoutScreen() {
                 </View>
               );
             })}
-            {!o.skipped && (
-              <Pressable onPress={() => setPicker({ blockId: b.id, slotId: 'extra', slot: { id: 'extra', tags: [...new Set(b.slots.flatMap((s) => s.tags))] } as FrameworkSlot, extra: true })} style={styles.addRow}>
-                <Ionicons name="add-circle-outline" size={18} color={colors.accent} /><Text style={styles.link}>Add a drill to this section</Text>
-              </Pressable>
-            )}
           </View>
         );
       })}
@@ -203,6 +213,40 @@ export default function WorkoutScreen() {
           }}
         />
       )}
+      <PromptSheet
+        visible={!!saveFor}
+        title="Save this section"
+        placeholder="e.g. Saturday warm-up"
+        initial={fw.blocks.blocks.find((b) => b.id === saveFor)?.name ?? ''}
+        onClose={() => setSaveFor(null)}
+        onConfirm={async (name) => {
+          const b = fw.blocks.blocks.find((x) => x.id === saveFor);
+          if (!b) return;
+          const drills = sectionDrills(w.items, b.id, b.slots.map((s) => s.id));
+          if (drills.length === 0) { Alert.alert('Nothing to save', 'This section has no drills yet.'); return; }
+          await saveSectionPreset(db, { name, drills, fromBlockName: b.name });
+          setSaveFor(null);
+          Alert.alert('Saved', `"${name}" · ${drills.length} drills. Use the ⊞ button on any section to drop it in.`);
+        }}
+      />
+      <SectionBankSheet
+        visible={!!bankFor}
+        onClose={() => setBankFor(null)}
+        exercisesById={byId}
+        onPick={(preset) => {
+          const b = fw.blocks.blocks.find((x) => x.id === bankFor);
+          if (!b) return;
+          const rounds = b.kind === 'rounds' ? ov(b.id).rounds ?? b.rounds ?? 1 : 1;
+          save(applySection(w.items, b.id, rounds, preset.drills));
+          setBankFor(null);
+        }}
+      />
+      <Sheet visible={restSheet === 'drills'} onClose={() => setRestSheet(null)} title="Rest between drills">
+        {DRILL_RESTS.map((r) => <OptionRow key={r} label={r === 0 ? '0 s (just a 5 s cue)' : `${r} s`} selected={(w.inputs.restBetweenExercisesSec ?? 15) === r} onPress={() => { save(w.items, { ...w.inputs, restBetweenExercisesSec: r }); setRestSheet(null); }} />)}
+      </Sheet>
+      <Sheet visible={restSheet === 'sections'} onClose={() => setRestSheet(null)} title="Break between sections">
+        {SECTION_BREAKS.map((r) => <OptionRow key={r} label={r === 0 ? '0 s (just a 10 s get-ready)' : `${r} s`} selected={(w.inputs.restBetweenSectionsSec ?? 60) === r} onPress={() => { save(w.items, { ...w.inputs, restBetweenSectionsSec: r }); setRestSheet(null); }} />)}
+      </Sheet>
       <Sheet visible={!!breakSheet} onClose={() => setBreakSheet(null)} title="Break between rounds">
         {BREAKS.map((r) => {
           const b = fw.blocks.blocks.find((x) => x.id === breakSheet);
@@ -217,7 +261,7 @@ const styles = StyleSheet.create({
   h1Input: { ...type.h2, color: colors.ink, paddingVertical: 4 },
   descInput: { ...type.body, fontSize: 14, color: colors.inkSoft, paddingVertical: 2, minHeight: 22 },
   small: { ...type.caption, color: colors.muted },
-  headerTools: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerTools: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   breakBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 28, paddingHorizontal: space.s, borderRadius: radius.pill, backgroundColor: colors.surface },
   breakText: { ...type.caption, color: colors.inkSoft, fontVariant: ['tabular-nums'] },
   skipBtn: { minHeight: 32, paddingHorizontal: space.m, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },

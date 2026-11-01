@@ -15,6 +15,13 @@
       "when": 1793522037529,
       "tag": "0001_workout_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793536947384,
+      "tag": "0002_section_preset",
+      "breakpoints": true
     }
   ]
 }

@@ -59,7 +59,7 @@ export default function Player() {
       setAllEx(rows);
       wRef.current = { id: w.id, items: w.items, blocks: fw.blocks };
       setBlockNames(Object.fromEntries(fw.blocks.blocks.map((b) => [b.id, { name: b.name, rounds: b.kind === 'rounds' ? b.rounds ?? 1 : 1 }])));
-      const steps = buildTimeline(w.items, fw.blocks, { repSecondsOf: (id) => map.get(id)?.repSeconds ?? null, restBetweenRoundsSec: w.inputs.restBetweenRoundsSec, restBetweenExercisesSec: w.inputs.restBetweenExercisesSec, blockOverrides: w.inputs.blockOverrides });
+      const steps = buildTimeline(w.items, fw.blocks, { repSecondsOf: (id) => map.get(id)?.repSeconds ?? null, restBetweenRoundsSec: w.inputs.restBetweenRoundsSec, restBetweenExercisesSec: w.inputs.restBetweenExercisesSec, restBetweenSectionsSec: w.inputs.restBetweenSectionsSec, blockOverrides: w.inputs.blockOverrides });
       wRef.current = { id: w.id, items: w.items, blocks: fw.blocks, inputs: w.inputs } as any;
       setState(createPlayer(steps));
       setSessionId(await startSession(db, w.id));
@@ -100,21 +100,34 @@ export default function Player() {
     setState((s) => { if (!s) return s; const r = fn(s); if ('events' in (r as any)) { const rr = r as { state: PlayerState; events: ReturnType<typeof tick>['events'] }; handleEvents(rr.events); return rr.state; } return r as PlayerState; });
   };
 
-  /** Swap the drill of the current work step for the rest of the workout (persisted). */
+  /** The work step a swap applies to: the current one, or the upcoming one during rest / get-ready. */
+  const swapTarget = (s: PlayerState) => {
+    const cur = s.steps[s.index];
+    if (cur.kind === 'work') return cur;
+    for (let i = s.index + 1; i < s.steps.length; i++) { const st = s.steps[i]; if (st.kind === 'work') return st; }
+    return null;
+  };
+  /** Swap a drill for the rest of the workout (persisted): the current one, or the next one during rest. */
   const swapCurrent = async (ex: Exercise) => {
     const s = stateRef.current;
     const wr = wRef.current;
     if (!s || !wr) return;
     const cur = s.steps[s.index];
-    if (cur.kind !== 'work') return;
-    const items = wr.items.map((i: any) => (i.blockId === cur.blockId && i.slotId === cur.slotId && i.round >= cur.round ? { ...i, exerciseId: ex.id, locked: true } : i));
+    const target = swapTarget(s);
+    if (!target) return;
+    const items = wr.items.map((i: any) => (i.blockId === target.blockId && i.slotId === target.slotId && i.round >= target.round ? { ...i, exerciseId: ex.id, locked: true } : i));
     wr.items = items;
     await updateWorkoutItems(db, wr.id, items);
     const inp = (wr as any).inputs ?? {};
-    const steps = buildTimeline(items, wr.blocks, { repSecondsOf: (id) => exById.get(id)?.repSeconds ?? null, restBetweenRoundsSec: inp.restBetweenRoundsSec, restBetweenExercisesSec: inp.restBetweenExercisesSec, blockOverrides: inp.blockOverrides });
-    // continue from the same work step (block/slot/round), keeping its remaining time
-    const idx = steps.findIndex((st) => st.kind === 'work' && st.blockId === cur.blockId && st.slotId === cur.slotId && st.round === cur.round);
-    setState({ ...s, steps, index: Math.max(0, idx), remainingMs: Math.min(s.remainingMs, (steps[Math.max(0, idx)]?.seconds ?? 0) * 1000 || s.remainingMs) });
+    const steps = buildTimeline(items, wr.blocks, { repSecondsOf: (id) => exById.get(id)?.repSeconds ?? null, restBetweenRoundsSec: inp.restBetweenRoundsSec, restBetweenExercisesSec: inp.restBetweenExercisesSec, restBetweenSectionsSec: inp.restBetweenSectionsSec, blockOverrides: inp.blockOverrides });
+    if (cur.kind === 'work') {
+      // continue from the same work step (block/slot/round), keeping its remaining time
+      const idx = steps.findIndex((st) => st.kind === 'work' && st.blockId === cur.blockId && st.slotId === cur.slotId && st.round === cur.round);
+      setState({ ...s, steps, index: Math.max(0, idx), remainingMs: Math.min(s.remainingMs, (steps[Math.max(0, idx)]?.seconds ?? 0) * 1000 || s.remainingMs) });
+    } else {
+      // same structure, same position: only the upcoming drill changed
+      setState({ ...s, steps });
+    }
     setSwapOpen(false);
   };
 
@@ -190,8 +203,11 @@ export default function Player() {
         </SwipeNav>
         <View style={styles.topEnd}>
           <Text style={styles.progressText}>{prog.done}/{prog.total}</Text>
-          {step.kind === 'work' ? (
-            <IconButton icon="swap-horizontal" size={hit.min} onPress={() => { Haptics.selectionAsync().catch(() => {}); setSwapOpen(true); }} />
+          {step.kind !== 'done' ? (
+            <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); setSwapOpen(true); }} hitSlop={6} style={({ pressed }) => [styles.swapBtn, pressed && { opacity: 0.8 }]} accessibilityLabel="Swap drill">
+              <Ionicons name="swap-horizontal" size={18} color={colors.ink} />
+              <Text style={styles.swapText}>Swap</Text>
+            </Pressable>
           ) : <View style={{ width: hit.min }} />}
         </View>
       </View>
@@ -213,9 +229,14 @@ export default function Player() {
         </Animated.View>
       </SwipeNav>
 
-      {swapOpen && step.kind === 'work' && (
-        <ExercisePicker visible title={`Swap "${ex?.name ?? ''}" for…`} exercises={allEx} preferTags={(() => { const b = wRef.current?.blocks.blocks.find((x) => x.id === step.blockId); return b?.slots.find((sl) => sl.id === step.slotId)?.tags ?? []; })()} onPick={swapCurrent} onClose={() => setSwapOpen(false)} />
-      )}
+      {swapOpen && step.kind !== 'done' && (() => {
+        const target = swapTarget(state);
+        if (!target) return null;
+        const tEx = exById.get(target.exerciseId);
+        const b = wRef.current?.blocks.blocks.find((x) => x.id === target.blockId);
+        const tags = b?.slots.find((sl) => sl.id === target.slotId)?.tags ?? [];
+        return <ExercisePicker visible title={`Swap "${tEx?.name ?? ''}" for…`} exercises={allEx} preferTags={tags} onPick={swapCurrent} onClose={() => setSwapOpen(false)} />;
+      })()}
       <View style={[styles.controls, { paddingBottom: insets.bottom + space.m }]}>
         {isRest ? (
           <IconButton icon="add" label="15 s" size={hit.control} onPress={() => { Haptics.selectionAsync().catch(() => {}); act((s) => plus(s, 15)); }} />
@@ -234,6 +255,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl, backgroundColor: colors.bg },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.m, paddingBottom: space.s, gap: space.s },
   topEnd: { flexDirection: 'row', alignItems: 'center', gap: space.s },
+  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: hit.min, paddingHorizontal: space.m, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt },
+  swapText: { ...type.caption, fontWeight: '700', color: colors.ink },
   progressText: { ...type.caption, color: colors.muted, fontVariant: ['tabular-nums'] },
   sectionPill: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: hit.min, borderRadius: radius.pill, backgroundColor: colors.surface },
   sectionArrow: { width: 36, height: hit.min, alignItems: 'center', justifyContent: 'center' },

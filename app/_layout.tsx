@@ -84,7 +84,7 @@ export default function Layout() {
   return (
     <>
     <StatusBar style="light" />
-    <Stack screenOptions={{ headerTitleStyle: { fontSize: 16, fontWeight: '700', color: colors.ink }, headerTintColor: colors.accent, headerTransparent: false, headerShadowVisible: false, headerStyle: { backgroundColor: colors.bg }, contentStyle: { backgroundColor: colors.bg } }}>
+    <Stack screenOptions={{ headerBackTitle: 'Back', headerTitleStyle: { fontSize: 16, fontWeight: '700', color: colors.ink }, headerTintColor: colors.accent, headerTransparent: false, headerShadowVisible: false, headerStyle: { backgroundColor: colors.bg }, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="exercise/[id]" options={{ title: 'Exercise' }} />
       <Stack.Screen name="exercise/new" options={{ title: 'New exercise', presentation: 'modal' }} />

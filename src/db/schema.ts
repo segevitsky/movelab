@@ -1,5 +1,5 @@
 import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import type { FrameworkBlocks, GoalStage, Scene, SessionFeedback, WorkoutInputs, WorkoutItem } from './types';
+import type { FrameworkBlocks, GoalStage, Scene, SectionDrill, SessionFeedback, WorkoutInputs, WorkoutItem } from './types';
 import type { Dosage, Equipment, Intensity, Muscle, Pattern, Slot, WorkoutTag } from './vocab';
 
 /** Architecture §7. JSON columns are typed via `$type`; the figure is a binary blob (see src/figure/codec). */
@@ -106,6 +106,17 @@ export const workout = sqliteTable('workout', {
   createdAt: integer('created_at').notNull(),
 });
 
+/** A saved section: fixed drills (owner, 2026-11-01: "save the warm-up"), dropped into any workout's section. */
+export const sectionPreset = sqliteTable('section_preset', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  /** fixed drills in order */
+  drills: text('drills', { mode: 'json' }).$type<SectionDrill[]>().notNull(),
+  /** section kind it came from (informational) */
+  fromBlockName: text('from_block_name'),
+  createdAt: integer('created_at').notNull(),
+});
+
 export const session = sqliteTable('session', {
   id: text('id').primaryKey(),
   workoutId: text('workout_id').notNull(),
@@ -118,6 +129,7 @@ export const session = sqliteTable('session', {
 export type Exercise = typeof exercise.$inferSelect;
 export type NewExercise = typeof exercise.$inferInsert;
 export type Source = typeof source.$inferSelect;
+export type SectionPreset = typeof sectionPreset.$inferSelect;
 export type Framework = typeof framework.$inferSelect;
 export type Goal = typeof goal.$inferSelect;
 export type Workout = typeof workout.$inferSelect;

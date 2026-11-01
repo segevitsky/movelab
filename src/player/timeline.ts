@@ -15,10 +15,16 @@ export type TimelineOptions = {
   repSecondsOf?: (exerciseId: string) => number | null;
   /** per-workout overrides (apply to 'rounds' blocks) */
   restBetweenRoundsSec?: number;
+  /** between two drills of the same round (default 15 s; 0 = a 5 s "next" cue only) */
   restBetweenExercisesSec?: number;
+  /** break when a new section starts (default 60 s; 0 = the 10 s "get ready" cue only) */
+  restBetweenSectionsSec?: number;
   /** skip a whole section / change its round count for this workout */
   blockOverrides?: Record<string, { skipped?: boolean; rounds?: number }>;
 };
+
+export const DEFAULT_DRILL_REST = 15;
+export const DEFAULT_SECTION_BREAK = 60;
 
 export function workSeconds(dosage: Dosage, repSeconds: number | null | undefined) {
   if (dosage.type === 'time') return dosage.value * (dosage.perSide ? 2 : 1);
@@ -51,13 +57,17 @@ export function buildTimeline(items: TimelineItem[], blocks: FrameworkBlocks, op
     const next = ordered[k + 1] ?? null;
     const firstOfBlock = !prev || prev.blockId !== it.blockId;
     const newRound = !!prev && prev.blockId === it.blockId && prev.round !== it.round;
-    if (firstOfBlock) steps.push({ kind: 'ready', seconds: ready0, blockId: b.id, round: it.round, nextExerciseId: it.exerciseId, label: `${b.name} — get ready` });
+    if (firstOfBlock) {
+      const brk = prev ? (opts.restBetweenSectionsSec ?? DEFAULT_SECTION_BREAK) : 0;
+      if (brk > 0) steps.push({ kind: 'rest', seconds: brk, blockId: b.id, round: it.round, label: `Break — ${b.name} next`, nextExerciseId: it.exerciseId });
+      else steps.push({ kind: 'ready', seconds: ready0, blockId: b.id, round: it.round, nextExerciseId: it.exerciseId, label: `${b.name} — get ready` });
+    }
     else if (newRound) {
       const rest = opts.restBetweenRoundsSec ?? b.restBetweenRoundsSec ?? 0;
       if (rest > 0) steps.push({ kind: 'rest', seconds: rest, blockId: b.id, round: it.round, label: `Rest — round ${it.round} next`, nextExerciseId: it.exerciseId });
       else steps.push({ kind: 'ready', seconds: 5, blockId: b.id, round: it.round, nextExerciseId: it.exerciseId, label: `Round ${it.round}` });
     } else {
-      const rest = (b.kind === 'rounds' ? opts.restBetweenExercisesSec : undefined) ?? b.restBetweenExercisesSec ?? 0;
+      const rest = opts.restBetweenExercisesSec ?? b.restBetweenExercisesSec ?? DEFAULT_DRILL_REST;
       if (rest > 0) steps.push({ kind: 'rest', seconds: rest, blockId: b.id, round: it.round, label: 'Rest', nextExerciseId: it.exerciseId });
       else steps.push({ kind: 'ready', seconds: 5, blockId: b.id, round: it.round, nextExerciseId: it.exerciseId, label: 'Next' });
     }

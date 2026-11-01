@@ -49,6 +49,10 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   distance from the verdict file (which now carries the skeletons). Export/verdict share hardened (Documents,
   Files-app access). **Phase 13 capture quality** opened (plan) — step 1 shipped: raw pose captures kept in Documents/captures,
   shared from the Dev tab.
+- Late evening, capture: owner records until the reel starts over, so the repeated beginning merged with the
+  last drill. Fixed: loop tracker per <video> element, auto-stop needs 80 % of the reel recorded, the player
+  timeline travels with the raw capture, and Review cuts the recording at the loop point. Owner: "this is much
+  better".
 - Calibration result (60 verdicts, 19 alike): the motion features reach AUC 0.71 (0.75 with DTW); pattern
   tags carry no signal; "alike" answers cluster on short (3–5 s) clips with unknown joints → the
   comparison is limited by capture quality. Shipped the fitted weights with a strict line (0 false alarms,

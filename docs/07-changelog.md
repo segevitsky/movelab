@@ -34,7 +34,15 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   `DraggableList` = pure-JS long-press-to-lift reorder (vertical + horizontal).
 - **Android debug APK builds** (1 m 36 s once restricted to arm64; the four-ABI Skia build ran > 1 h).
   Release APK (standalone, to sideload) building next.
-- Tests: 90 green (`npm test`), `npm run typecheck` clean.
+- **Phase 12 steps 1–3** (late afternoon): motion fingerprint + similarity (`src/similarity`, tested on the
+  lab reels: upright flows 0.61, lunging drills 0.65, unrelated ≈ 0.4), advisory guidance strips (wizard,
+  saved workout, Today), picker note "≈ moves like X", card "Moves like" list, Dev ▸ "Alike drills
+  (calibrate)". **Open: owner answers Alike / Different on the pairs and reports the suggested line; then set
+  ALIKE_THRESHOLD (now 0.8).** Generator clash rule (step 5) not wired yet.
+- **Release APK** built: `~/Desktop/MoveLab-android/MoveLab-0.0.1.apk` (57 MB, arm64, signed with the debug
+  key, standalone). Not yet run on a device.
+- Design pass v2 parked by the owner ("cool enough for the MVP").
+- Tests: 98 green (`npm test`), `npm run typecheck` clean.
 
 **Verified on the owner's iPhone**: viewer swipe, player layout, export library, section bank save (after
 the keyboard fix), rests.

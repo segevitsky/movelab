@@ -15,6 +15,7 @@ import { importLabReels } from '../../src/db/devImport';
 import { loadGenContext, saveWorkout } from '../../src/db/workoutRepo';
 import { exportLibrary, importLibrary, parseTransfer } from '../../src/db/transfer';
 import { File, Paths } from 'expo-file-system';
+import { deleteRawCapture, listRawCaptures } from '../../src/capture/rawStore';
 import { generate } from '../../src/generator';
 import { colors, radius, shadow } from '../../src/ui/theme';
 
@@ -55,6 +56,9 @@ export default function DevHome() {
   }, [router]);
   useEffect(() => { if (demoParam === '1') demoWorkout(); }, [demoParam]);
   const [transferBusy, setTransferBusy] = useState(false);
+  const [raws, setRaws] = useState<File[]>([]);
+  const refreshRaws = () => { try { setRaws(listRawCaptures()); } catch { setRaws([]); } };
+  useFocusEffect(useCallback(() => { refreshRaws(); }, []));
   /** Export the whole library (skeletons + metadata, never video) as one JSON and open the share sheet. */
   const exportLib = async () => {
     setTransferBusy(true);
@@ -137,6 +141,17 @@ export default function DevHome() {
         <Text style={styles.hint}>Reel won't play? Log in once inside the app, then use "Open reel page (logged-in)".</Text>
       </Section>
       )}
+
+      <Section icon="film-outline" title={`Raw captures · ${raws.length}`}>
+        <Text style={styles.hint}>The pose numbers of each capture (never video), kept for replaying a bad reel on the Mac. Share one that went wrong.</Text>
+        {raws.slice(0, 10).map((f) => (
+          <View key={f.uri} style={[styles.row, { alignItems: 'center' }]}>
+            <Text style={[styles.mono, { flex: 1 }]} numberOfLines={1}>{f.name.replace('capture-', '').replace('.json', '')} · {Math.round((f.size ?? 0) / 1024)} KB</Text>
+            <Button title="Share" icon="share-outline" secondary onPress={() => Sharing.shareAsync(f.uri, { mimeType: 'application/json', dialogTitle: f.name }).catch((e) => Alert.alert('Share failed', `Also in Files ▸ On My iPhone ▸ MoveLab ▸ captures.\n${String(e)}`))} />
+            <Button title="Delete" ghost onPress={() => { deleteRawCapture(f); refreshRaws(); }} />
+          </View>
+        ))}
+      </Section>
 
       <Section icon="swap-vertical-outline" title="Library transfer">
         <View style={styles.row}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { saveRawCapture } from '../src/capture/rawStore';
 import { Image } from 'react-native';
 import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,6 +95,11 @@ export default function Review() {
     }
     setItems(built);
     setPhase('review');
+    // Phase 13: keep the raw pose output so this capture can be replayed as a fixture on the Mac
+    try {
+      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res,
+        segments: built.map((b) => ({ start: b.range.start, end: b.range.end, name: b.name, frames: b.processed.xy.length, detectedPct: Math.round((b.processed.xy.filter((fr) => Number.isFinite(fr[0][0])).length / Math.max(1, b.processed.xy.length)) * 100) })) });
+    } catch (e) { console.warn('raw capture not saved', e); }
   }
 
   function makeItem(fr: RawFrame[], range: Range, fpsUsed: number, index: number, prev?: Partial<Item>): Item {

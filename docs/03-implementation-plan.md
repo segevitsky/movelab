@@ -204,6 +204,19 @@ overlaid names; player ring timer + rest wash + "GO" flash; Today as a session h
 Acceptance: owner-flagged alike pairs score above the threshold, clearly-different pairs below; report on all
 three screens; tests green; nothing blocks saving or starting.
 
+## Phase 13 — Capture quality (owner, 2026-11-01: "one of the most important tasks we can have")
+All four failure classes happen sometimes: wrong number of exercises, wrong/jittery skeleton, loop or rep
+count off, slow or missed frames; latest case: the last drill of a reel was not recognised at all.
+1. **Replayable captures.** Keep the raw pose output of every capture (the numbers, never video) in
+   Documents/captures/<time>.json with the crop, scene, url and username; last 30 kept; Dev tab lists them with
+   share / delete. A bad reel → AirDrop → `src/pipeline/__fixtures__` → a failing test → a fix. ⏳
+2. **Diagnose the owner's failed captures** against those fixtures: auto-stop too early (capture), segmenter
+   cuts (segment thresholds, external cuts), person lost (tracking / multi-person), loop point.
+3. **Fixes with tests**; Vision fallback for flagged limbs; segment quality gating in Review (weak segments
+   shown as such, re-record or skip rather than save a broken card).
+Acceptance: every owner-reported bad reel is a fixture; its failure is reproduced by a test, then fixed;
+`npm test` green; the eval harness numbers (Phase 2.5) do not regress.
+
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
 Sync/accounts · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·

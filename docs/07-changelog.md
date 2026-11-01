@@ -43,6 +43,11 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   key, standalone). **Installed and launched on an Android phone (owner's wife's) the same evening — "looks really
   good on first glance".** Still to check there: library import, player with sound/haptics, GIF share, 60 fps.
 - Design pass v2 parked by the owner ("cool enough for the MVP").
+- Evening: Release iOS build on the owner's phone (standalone, signature to 2026-11-08); generator avoids
+  look-alikes (Phase 12 step 5); calibration screen shows looping pairs; owner answered 60 pairs — the first
+  score separates them poorly (AUC to be measured), so `scripts/fit-alike.ts` fits weights + a DTW sequence
+  distance from the verdict file (which now carries the skeletons). Export/verdict share hardened (Documents,
+  Files-app access). **Phase 13 capture quality** opened (plan) — step 1: keep raw pose captures for replay.
 - Tests: 98 green (`npm test`), `npm run typecheck` clean.
 
 **Verified on the owner's iPhone**: viewer swipe, player layout, export library, section bank save (after

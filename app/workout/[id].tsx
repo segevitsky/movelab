@@ -147,28 +147,32 @@ export default function WorkoutScreen() {
             <SectionHeader
               title={o.skipped ? `${title} · skipped` : title}
               trailing={
-                <View style={styles.headerTools}>
-                  {b.kind === 'rounds' && !o.skipped && (
-                    <>
-                      <IconButton icon="remove" size={32} onPress={() => setOv(b.id, { rounds: Math.max(1, rounds - 1) })} />
-                      <IconButton icon="add" size={32} onPress={() => setOv(b.id, { rounds: Math.min(8, rounds + 1) })} />
-                      {rounds > 1 && (
-                        <Pressable onPress={() => setBreakSheet(b.id)} hitSlop={8} style={styles.breakBtn}>
-                          <Text style={styles.breakText}>{breakOf(b)} s break</Text>
-                          <Ionicons name="chevron-down" size={14} color={colors.muted} />
-                        </Pressable>
-                      )}
-                    </>
-                  )}
-                  {!o.skipped && <IconButton icon="add" size={32} onPress={() => setPicker({ blockId: b.id, slotId: 'extra', slot: { id: 'extra', tags: [...new Set(b.slots.flatMap((s) => s.tags))] } as FrameworkSlot, extra: true })} />}
-                  {!o.skipped && <IconButton icon="bookmark-outline" size={32} onPress={() => setSaveFor(b.id)} />}
-                  {!o.skipped && <IconButton icon="albums-outline" size={32} onPress={() => setBankFor(b.id)} />}
-                  <Pressable onPress={() => setOv(b.id, { skipped: !o.skipped })} hitSlop={8} style={[styles.skipBtn, o.skipped && { backgroundColor: colors.accentDeep }]}>
-                    <Text style={[styles.skipText, o.skipped && { color: colors.onAccent }]}>{o.skipped ? 'include' : 'skip'}</Text>
-                  </Pressable>
-                </View>
+                <Pressable onPress={() => setOv(b.id, { skipped: !o.skipped })} hitSlop={8} style={[styles.skipBtn, o.skipped && { backgroundColor: colors.accentDeep }]}>
+                  <Text style={[styles.skipText, o.skipped && { color: colors.onAccent }]}>{o.skipped ? 'include' : 'skip'}</Text>
+                </Pressable>
               }
             />
+            {!o.skipped && (
+              <View style={[styles.headerTools, { marginBottom: space.xs }]}>
+                {b.kind === 'rounds' && (
+                  <>
+                    <IconButton icon="remove" size={32} onPress={() => setOv(b.id, { rounds: Math.max(1, rounds - 1) })} />
+                    <Text style={styles.roundsText}>× {rounds}</Text>
+                    <IconButton icon="add" size={32} onPress={() => setOv(b.id, { rounds: Math.min(8, rounds + 1) })} />
+                    {rounds > 1 && (
+                      <Pressable onPress={() => setBreakSheet(b.id)} hitSlop={8} style={styles.breakBtn}>
+                        <Text style={styles.breakText}>{breakOf(b)} s break</Text>
+                        <Ionicons name="chevron-down" size={14} color={colors.muted} />
+                      </Pressable>
+                    )}
+                  </>
+                )}
+                <View style={{ flex: 1 }} />
+                <IconButton icon="add" size={32} onPress={() => setPicker({ blockId: b.id, slotId: 'extra', slot: { id: 'extra', tags: [...new Set(b.slots.flatMap((s) => s.tags))] } as FrameworkSlot, extra: true })} />
+                <IconButton icon="bookmark-outline" size={32} onPress={() => setSaveFor(b.id)} />
+                <IconButton icon="albums-outline" size={32} onPress={() => setBankFor(b.id)} />
+              </View>
+            )}
             {!o.skipped && (
               <DraggableList
                 data={allSlotIds}
@@ -279,6 +283,7 @@ const styles = StyleSheet.create({
   headerTools: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   breakBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 28, paddingHorizontal: space.s, borderRadius: radius.pill, backgroundColor: colors.surface },
   breakText: { ...type.caption, color: colors.inkSoft, fontVariant: ['tabular-nums'] },
+  roundsText: { ...type.bodyStrong, color: colors.ink, fontVariant: ['tabular-nums'], minWidth: 34, textAlign: 'center' },
   skipBtn: { minHeight: 32, paddingHorizontal: space.m, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   skipText: { ...type.caption, fontWeight: '700', color: colors.ink },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: hit.min, paddingHorizontal: space.xs },

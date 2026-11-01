@@ -189,9 +189,24 @@ Display typeface (Barlow Condensed unless the owner picks another) for titles, s
 stage (paper gradient, pattern-colour rim light, vignette, deeper shadow), full-bleed library tiles with
 overlaid names; player ring timer + rest wash + "GO" flash; Today as a session hero. See `docs/06` §8.
 
+## Phase 12 — Motion similarity + workout guidance (agreed 2026-11-01, owner answers: motion first, advise only)
+1. **Motion fingerprint** per drill from its skeleton (pure TS, tested on the lab reels): body orientation
+   over the loop, joint-angle ranges (shoulders, elbows, hips, knees), per-part motion energy, floor contacts
+   of hands/feet, tempo. No new data needed.
+2. **Similarity** between two drills from fingerprints, pattern tag as a tie-breaker; threshold calibrated on
+   the owner's library (he flags pairs: e.g. "Pull 1 · @floweducationbr" ≈ "Mobility 1 · @athleticsbyd…").
+3. **Guidance, advisory only, never blocking**: a quiet strip on the wizard, the saved workout and Today
+   ("X and Y move the same way — keep one", "No pull today"); a badge in the picker when a candidate overlaps
+   a drill already in the workout; "Similar drills" on the exercise card.
+4. **Balance** in the same report: push vs pull, upper vs lower, core present, mobility at the start,
+   stretch at the end — rules in one editable list.
+5. Generator reads the same score for its (soft) clash rule.
+Acceptance: owner-flagged alike pairs score above the threshold, clearly-different pairs below; report on all
+three screens; tests green; nothing blocks saving or starting.
+
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
 Sync/accounts · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·
-public profiles / **sharing workouts between users** (owner discussed a concept with web Claude on 2026-11-01 — keep as a reference; needs the text-only backend: a workout is items + dosages + exercise *names/tags*, never video; receiver maps names onto their own library or imports a figure blob) · **workout defaults** (owner to explain) · **balanced workouts + standards for workouts** (owner, 2026-11-01: wants to discuss what makes a generated workout balanced and what standards a workout must meet — remind him) · **creator handle as a link** (owner, 2026-11-01: exercises/workouts carry the creator's @tag in the name — render it as a link to the creator's Instagram page / the source reel, wherever the name is shown) · **save the warm-up / reuse a section** (owner, 2026-11-01: "lets save the warmup — and use a section perhaps": a block of drills saved by name and dropped into other workouts/frameworks; to be detailed) · coach partnerships ·
+public profiles / **sharing workouts between users** (owner discussed a concept with web Claude on 2026-11-01 — keep as a reference; needs the text-only backend: a workout is items + dosages + exercise *names/tags*, never video; receiver maps names onto their own library or imports a figure blob) · **workout defaults** (owner to explain) ·  **creator handle as a link** (owner, 2026-11-01: exercises/workouts carry the creator's @tag in the name — render it as a link to the creator's Instagram page / the source reel, wherever the name is shown) · **save the warm-up / reuse a section** (owner, 2026-11-01: "lets save the warmup — and use a section perhaps": a block of drills saved by name and dropped into other workouts/frameworks; to be detailed) · coach partnerships ·
 an RTMW (whole-body) CoreML second model · Apple Vision 3D body pose · temporal 3D models (WHAM / GVHMR —
 note: SMPL licence is non-commercial).

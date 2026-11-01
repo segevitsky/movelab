@@ -15,7 +15,7 @@ import { CreatorName } from '../src/ui/CreatorName';
 import { colors, hit, radius, space, type } from '../src/ui/theme';
 
 type Verdict = 'yes' | 'no';
-const FILE = () => new File(Paths.document, 'similar-verdicts.json');
+const FILE = () => new File(Paths.document, 'similar-answers.json');
 const pairKey = (a: string, b: string) => [a, b].sort().join('|');
 
 /**
@@ -52,11 +52,23 @@ export default function SimilarPairs() {
   }, [pairs, verdicts]);
 
   const share = async () => {
-    const payload = { verdicts, pairs: pairs.map((p) => ({ a: p.a.name, b: p.b.name, score: Math.round(p.score * 100) / 100, verdict: verdicts[pairKey(p.a.id, p.b.id)] ?? null })), suggestion };
-    const out = new File(Paths.cache, 'similar-verdicts.json');
+    // the drills involved travel with the verdicts (skeleton + tags, never video) so the fit can be redone offline
+    const involved = new Map<string, Exercise>();
+    for (const p of pairs) { involved.set(p.a.id, p.a); involved.set(p.b.id, p.b); }
+    const payload = {
+      verdicts,
+      pairs: pairs.map((p) => ({ aId: p.a.id, bId: p.b.id, a: p.a.name, b: p.b.name, score: Math.round(p.score * 100) / 100, verdict: verdicts[pairKey(p.a.id, p.b.id)] ?? null })),
+      suggestion,
+      exercises: [...involved.values()].map((e) => ({ id: e.id, name: e.name, pattern: e.pattern, slots: e.slots, figure: e.figure, figureFps: e.figureFps, loopStart: e.loopStart, loopEnd: e.loopEnd, scene: e.scene, repSeconds: e.repSeconds })),
+    };
+    const out = new File(Paths.document, 'similar-verdicts.json');
     if (out.exists) out.delete();
-    out.write(JSON.stringify(payload, null, 2));
-    await Sharing.shareAsync(out.uri, { mimeType: 'application/json', dialogTitle: 'Similar-pairs verdicts' });
+    out.write(JSON.stringify(payload));
+    try {
+      await Sharing.shareAsync(out.uri, { mimeType: 'application/json', dialogTitle: 'Similar-pairs verdicts' });
+    } catch (e) {
+      Alert.alert('Share sheet failed', `Saved anyway: Files app ▸ On My iPhone ▸ MoveLab ▸ similar-verdicts.json. AirDrop it from there.\n\n${String(e)}`);
+    }
   };
 
   const W = Math.floor((width - space.l * 2 - space.s) / 2);

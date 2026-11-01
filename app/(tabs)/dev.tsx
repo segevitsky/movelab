@@ -60,10 +60,16 @@ export default function DevHome() {
     setTransferBusy(true);
     try {
       const t = await exportLibrary(db);
-      const file = new File(Paths.cache, `movelab-library-${new Date().toISOString().slice(0, 10)}.json`);
+      const text = JSON.stringify(t);
+      const file = new File(Paths.document, `movelab-library-${new Date().toISOString().slice(0, 10)}.json`);
       if (file.exists) file.delete();
-      file.write(JSON.stringify(t));
-      await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'MoveLab library' });
+      file.write(text);
+      if (!file.exists || !file.size) throw new Error(`file not written (${text.length} chars)`);
+      try {
+        await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'MoveLab library' });
+      } catch (e) {
+        Alert.alert('Share sheet failed', `The file is saved anyway: Files app ▸ On My iPhone ▸ MoveLab ▸ ${file.name} (${Math.round(file.size / 1024)} KB). AirDrop it from there.\n\n${String(e)}`);
+      }
     } catch (e) { Alert.alert('Export failed', String(e)); } finally { setTransferBusy(false); }
   };
   /** Import a library JSON (document picker; loaded lazily so a build without the picker's native code still runs). */

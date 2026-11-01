@@ -109,7 +109,7 @@ export function suggestWorkoutTags(items: WorkoutItem[], byId: Map<string, Pick<
     }
   }
   const sorted = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t);
-  if (sorted.includes('push') && sorted.includes('pull') && !sorted.includes('upper')) sorted.push('upper');
+  if (sorted.includes('push') && sorted.includes('pull')) sorted.splice(Math.min(sorted.indexOf('push'), sorted.indexOf('pull')), 0, 'upper'); // push + pull → an upper-body day
   return sorted.slice(0, max);
 }
 

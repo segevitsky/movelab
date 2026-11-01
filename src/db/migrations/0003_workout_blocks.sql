@@ -1,0 +1,1 @@
+ALTER TABLE `workout` ADD `blocks` text;

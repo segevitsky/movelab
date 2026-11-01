@@ -65,6 +65,24 @@ export async function saveWorkout(db: Db, w: GenWorkout) {
   return id;
 }
 
+/** Phase 10: a workout built by hand owns its sections (blocks on the row); frameworkId is the 'built' marker. */
+export async function saveBuiltWorkout(db: Db, w: { name: string | null; description?: string | null; tags?: WorkoutTag[] | null; blocks: FrameworkBlocks; items: WorkoutItem[]; inputs?: WorkoutInputs; why?: string | null }) {
+  const id = newId('wo');
+  await db.insert(workout).values({ id, frameworkId: 'built', seed: 0, inputs: w.inputs ?? {}, items: w.items, blocks: w.blocks, why: w.why ?? null, favourite: false, name: w.name, description: w.description ?? null, tags: w.tags ?? null, createdAt: Date.now() });
+  return id;
+}
+
+/** Replace a workout's sections + items (reordering by hand takes ownership of the sections). */
+export async function updateWorkoutBlocks(db: Db, id: string, blocks: FrameworkBlocks, items: WorkoutItem[], inputs?: WorkoutInputs) {
+  await db.update(workout).set({ blocks, items, ...(inputs ? { inputs } : {}) }).where(eq(workout.id, id));
+}
+
+/** The sections a workout plays: its own, else its framework's. */
+export async function workoutBlocks(db: Db, w: { frameworkId: string; blocks?: FrameworkBlocks | null }): Promise<FrameworkBlocks | undefined> {
+  if (w.blocks) return w.blocks;
+  return (await getFramework(db, w.frameworkId))?.blocks;
+}
+
 export async function recentWorkouts(db: Db, n = 10) {
   return db.select().from(workout).orderBy(desc(workout.createdAt)).limit(n);
 }

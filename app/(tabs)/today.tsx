@@ -225,7 +225,7 @@ export default function Today() {
               <SwipeRow actions={[{ label: 'Delete', icon: 'trash-outline', color: colors.danger, onPress: () => confirmDelete(r) }]}>
                 <Pressable style={({ pressed }) => [styles.recentRow, pressed && { backgroundColor: colors.surfaceAlt }]} onPress={() => router.push({ pathname: '/workout/[id]', params: { id: r.id } })} onLongPress={() => confirmDelete(r)}>
                   <View style={{ flex: 1, gap: 3 }}>
-                    <Text style={styles.recentName} numberOfLines={1}>{r.name?.trim() || frameworks?.find((f) => f.id === r.frameworkId)?.name || 'workout'}</Text>
+                    <Text style={styles.recentName} numberOfLines={1}>{r.name?.trim() || frameworks?.find((f) => f.id === r.frameworkId)?.name || (r.blocks ? 'Built workout' : 'workout')}</Text>
                     <Text style={styles.recentMeta} numberOfLines={1}>{new Date(r.createdAt).toLocaleDateString()} · {r.description?.trim() || r.why || `${r.items.length} items`}</Text>
                     {!!r.tags?.length && <View style={styles.tagRow}>{r.tags.slice(0, 3).map((t) => <Tag key={t} label={t} color={slotColor[t as never] ?? colors.muted} />)}</View>}
                   </View>
@@ -318,6 +318,7 @@ export default function Today() {
       </Sheet>
       <Sheet visible={sheet === 'menu'} onClose={() => setSheet(null)}>
         {w ? <OptionRow label="Save for later without starting" icon="bookmark-outline" onPress={() => { setSheet(null); save(false); }} /> : null}
+        <OptionRow label="Build a workout by hand" icon="hammer-outline" onPress={() => { setSheet(null); router.push('/build'); }} />
         <OptionRow label="Edit frameworks" icon="construct-outline" onPress={() => { setSheet(null); router.push('/frameworks'); }} />
       </Sheet>
       <Sheet visible={sheet === 'break'} onClose={() => setSheet(null)} title="Break between rounds">

@@ -99,6 +99,8 @@ export const workout = sqliteTable('workout', {
   items: text('items', { mode: 'json' }).$type<WorkoutItem[]>().notNull(),
   why: text('why'),
   favourite: integer('favourite', { mode: 'boolean' }).notNull().default(false),
+  /** built workouts (Phase 10) carry their own sections; null = use the framework's blocks */
+  blocks: text('blocks', { mode: 'json' }).$type<FrameworkBlocks>(),
   /** user-given name / description / tags — what this workout is about */
   name: text('name'),
   description: text('description'),

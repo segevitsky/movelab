@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '../../src/db';
 import { clipFromExercise } from '../../src/db/repo';
-import { endSession, getFramework, getWorkout, startSession, updateWorkoutItems } from '../../src/db/workoutRepo';
+import { endSession, getWorkout, startSession, updateWorkoutItems, workoutBlocks } from '../../src/db/workoutRepo';
 import { ExercisePicker } from '../../src/ui/ExercisePicker';
 import type { FrameworkBlocks } from '../../src/db/types';
 import { schema } from '../../src/db';
@@ -51,8 +51,9 @@ export default function Player() {
     (async () => {
       const w = await getWorkout(db, workoutId);
       if (!w) { Alert.alert('Workout not found'); router.back(); return; }
-      const fw = await getFramework(db, w.frameworkId);
-      if (!fw) { Alert.alert('Framework not found'); router.back(); return; }
+      const blocks = await workoutBlocks(db, w);
+      if (!blocks) { Alert.alert('Framework not found'); router.back(); return; }
+      const fw = { blocks };
       const rows = await db.select().from(schema.exercise);
       const map = new Map(rows.map((e) => [e.id, e]));
       setExById(map);

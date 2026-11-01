@@ -6,7 +6,9 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
 import { useClipCache } from '../../src/ui/useClipCache';
-import { deleteWorkout, suggestWorkoutTags, updateWorkoutItems, updateWorkoutMeta } from '../../src/db/workoutRepo';
+import { deleteWorkout, suggestWorkoutTags, updateWorkoutBlocks, updateWorkoutItems, updateWorkoutMeta } from '../../src/db/workoutRepo';
+import { reorderDrills } from '../../src/db/builder';
+import { DragHandle, DraggableList } from '../../src/ui/DraggableList';
 import { WORKOUT_TAGS, type WorkoutTag } from '../../src/db/vocab';
 import type { Exercise } from '../../src/db/schema';
 import type { FrameworkSlot, WorkoutItem } from '../../src/db/types';
@@ -35,7 +37,9 @@ export default function WorkoutScreen() {
   const w = rows?.[0];
   const { data: fws } = useLiveQuery(db.select().from(schema.framework));
   const { data: exercises } = useLiveQuery(db.select().from(schema.exercise));
-  const fw = fws?.find((f) => f.id === w?.frameworkId);
+  const fwRow = fws?.find((f) => f.id === w?.frameworkId);
+  // a built (or hand-reordered) workout owns its sections; otherwise the framework's
+  const fw = w ? (w.blocks ? { name: fwRow?.name ?? 'Built by hand', blocks: w.blocks } : fwRow) : undefined;
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
   const clips = useClipCache(exercises);
   const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; extra?: boolean } | null>(null);
@@ -48,6 +52,9 @@ export default function WorkoutScreen() {
   const [desc, setDesc] = useState('');
   useEffect(() => { if (w) { setName(w.name ?? ''); setDesc(w.description ?? ''); } }, [w?.id]);
   if (!w || !fw) return <Screen><Text style={[styles.small, { padding: space.xl }]}>Loading…</Text></Screen>;
+  const ROW_H = 84;
+  /** drag reorder: the workout takes ownership of its sections (every drill its own slot) */
+  const reorder = (blockId: string, from: number, to: number) => { const r = reorderDrills(fw.blocks, w.items, blockId, from, to); updateWorkoutBlocks(db, w.id, r.blocks, r.items).catch((e) => Alert.alert('Save failed', String(e))); };
 
   const entries: ViewerEntry[] = [];
   for (const b of fw.blocks.blocks) {
@@ -162,20 +169,28 @@ export default function WorkoutScreen() {
                 </View>
               }
             />
-            {!o.skipped && allSlotIds.map(({ id: sid, slot: s }, si) => {
-              const it = w.items.find((i) => i.blockId === b.id && i.slotId === sid && i.round === 1);
-              const ex = it ? byId.get(it.exerciseId) : undefined;
-              const choose = () => setPicker({ blockId: b.id, slotId: sid, slot: s });
-              const open = () => { const i = entries.findIndex((en) => en.blockId === b.id && en.slotId === sid); if (i >= 0) setView(i); else choose(); };
-              return (
-                <View key={sid}>
-                  {si > 0 ? <Divider /> : null}
-                  <SwipeRow disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accentDeep, onPress: choose }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, sid) }]}>
-                    <DrillRow ex={ex} clip={clips.get(ex)} dosage={it?.dosage} locked={it?.locked} onPress={open} missingText={`empty slot (${s.tags.join(' / ')}) · tap to choose`} />
-                  </SwipeRow>
-                </View>
-              );
-            })}
+            {!o.skipped && (
+              <DraggableList
+                data={allSlotIds}
+                keyOf={(x) => x.id}
+                rowHeight={ROW_H}
+                onReorder={(f, t) => reorder(b.id, f, t)}
+                render={({ id: sid, slot: s }, si, dragging, lift) => {
+                  const it = w.items.find((i) => i.blockId === b.id && i.slotId === sid && i.round === 1);
+                  const ex = it ? byId.get(it.exerciseId) : undefined;
+                  const choose = () => setPicker({ blockId: b.id, slotId: sid, slot: s });
+                  const open = () => { const i = entries.findIndex((en) => en.blockId === b.id && en.slotId === sid); if (i >= 0) setView(i); else choose(); };
+                  return (
+                    <View style={{ height: ROW_H, justifyContent: 'center' }}>
+                      {si > 0 && !dragging ? <Divider style={{ position: 'absolute', top: 0, left: 0, right: 0 }} /> : null}
+                      <SwipeRow disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accentDeep, onPress: choose }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, sid) }]}>
+                        <DrillRow ex={ex} clip={clips.get(ex)} dosage={it?.dosage} locked={it?.locked} onPress={open} onLongPress={ex ? lift : undefined} missingText={`empty slot (${s.tags.join(' / ')}) · tap to choose`} trailing={ex ? <DragHandle onLift={lift} dragging={dragging} /> : undefined} />
+                      </SwipeRow>
+                    </View>
+                  );
+                }}
+              />
+            )}
           </View>
         );
       })}

@@ -12,6 +12,8 @@ import { FigureCard, FigureStill } from '../../src/figure';
 import { Chip, Tag } from '../../src/ui/Button';
 import { CreatorName } from '../../src/ui/CreatorName';
 import { Empty, OptionRow, Screen, Sheet, TitleBar } from '../../src/ui/primitives';
+import { DraggableList } from '../../src/ui/DraggableList';
+import { Button, IconButton } from '../../src/ui/Button';
 import { colors, hit, patternColor, radius, slotColor, space, type } from '../../src/ui/theme';
 import { Rise } from '../../src/ui/motion';
 import type { Exercise } from '../../src/db/schema';
@@ -38,6 +40,10 @@ export default function Library() {
   const cardW = Math.floor((W - space.l * 2 - space.m * (COLS - 1)) / COLS);
   const active = !!(f.pattern || f.slot || f.equipment || f.text);
   const [sheet, setSheet] = useState<SheetKind>(null);
+  // select mode: long-press a card → tick cards → Build workout (order = the tray, drag to reorder)
+  const [selected, setSelected] = useState<string[] | null>(null);
+  const toggleSelect = (id: string) => setSelected((sel) => { const cur = sel ?? []; return cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]; });
+  const selectedRows = useMemo(() => (selected ?? []).map((id) => (data ?? []).find((e) => e.id === id)).filter((e): e is Exercise => !!e), [selected, data]);
 
   // which tiles loop: the first MAX_LIVE that are ≥ 50 % visible
   const [live, setLive] = useState<Set<string>>(new Set());
@@ -49,8 +55,34 @@ export default function Library() {
   const total = data?.length ?? 0;
   const countText = active ? `${rows.length} of ${total}` : `${total} ${total === 1 ? 'exercise' : 'exercises'}`;
 
+  const tray = selected ? (
+    <View style={styles.tray}>
+      <View style={styles.trayHead}>
+        <Text style={styles.trayTitle}>{selected.length} picked · long-press to drag, tap a card to add or remove</Text>
+        <IconButton icon="close" size={36} onPress={() => setSelected(null)} />
+      </View>
+      <DraggableList
+        horizontal
+        data={selectedRows}
+        keyOf={(e) => e.id}
+        rowHeight={56}
+        gap={6}
+        onReorder={(f, t) => setSelected((sel) => { const l = [...(sel ?? [])]; const [m] = l.splice(f, 1); l.splice(t, 0, m); return l; })}
+        render={(e, _i, dragging, lift) => {
+          const clip = clipFromExercise(e);
+          return (
+            <Pressable onLongPress={lift} onPress={() => toggleSelect(e.id)} delayLongPress={180} style={[styles.trayThumb, dragging && { borderColor: colors.accent }]}>
+              {clip ? <FigureStill clip={clip} width={56} height={56} /> : <Ionicons name="body-outline" size={20} color={colors.muted} />}
+            </Pressable>
+          );
+        }}
+      />
+      <Button title={`Build workout · ${selected.length}`} size="l" icon="hammer-outline" disabled={selected.length === 0} onPress={() => { const ids = selected.join(','); setSelected(null); router.push({ pathname: '/build', params: { ids } }); }} />
+    </View>
+  ) : undefined;
+
   return (
-    <Screen>
+    <Screen footer={tray}>
       <TitleBar title="Library" brand trailing={<Text style={styles.count}>{countText}</Text>} />
       <View style={styles.filters}>
         <View style={styles.searchRow}>
@@ -72,13 +104,13 @@ export default function Library() {
         key={COLS}
         numColumns={COLS}
         keyExtractor={(e) => e.id}
-        contentContainerStyle={styles.grid}
+        contentContainerStyle={[styles.grid, selected && { paddingBottom: 230 }]}
         columnWrapperStyle={{ gap: space.m }}
         viewabilityConfig={viewabilityConfig}
         onViewableItemsChanged={onViewableItemsChanged}
         renderItem={({ item, index }) => (
           <Rise index={index}>
-            <ExerciseTile e={item} width={cardW} live={live.has(item.id)} onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: item.id } })} />
+            <ExerciseTile e={item} width={cardW} live={live.has(item.id) && !selected} selected={selected ? selected.includes(item.id) : null} onLongPress={() => { if (!selected) setSelected([item.id]); }} onPress={() => (selected ? toggleSelect(item.id) : router.push({ pathname: '/exercise/[id]', params: { id: item.id } }))} />
           </Rise>
         )}
         ListEmptyComponent={
@@ -88,9 +120,11 @@ export default function Library() {
         windowSize={5}
         keyboardDismissMode="on-drag"
       />
-      <Pressable style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85, transform: [{ scale: 0.94 }] }]} onPress={() => router.push('/exercise/new')} accessibilityLabel="Add exercise">
-        <Ionicons name="add" size={28} color={colors.onAccent} />
-      </Pressable>
+      {!selected && (
+        <Pressable style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85, transform: [{ scale: 0.94 }] }]} onPress={() => router.push('/exercise/new')} accessibilityLabel="Add exercise">
+          <Ionicons name="add" size={28} color={colors.onAccent} />
+        </Pressable>
+      )}
 
       <Sheet visible={sheet === 'pattern'} onClose={() => setSheet(null)} title="Movement pattern">
         <OptionRow label="Any" selected={!f.pattern} onPress={() => { f.set({ pattern: null }); setSheet(null); }} />
@@ -117,7 +151,7 @@ export function tileTags(e: Pick<Exercise, 'pattern' | 'slots'>) {
 }
 
 /** The card is the figure: paper stage with a 3 pt pattern stripe on the start edge, one name line, one tag. */
-const ExerciseTile = React.memo(function ExerciseTile({ e, width, live, onPress }: { e: Exercise; width: number; live: boolean; onPress: () => void }) {
+const ExerciseTile = React.memo(function ExerciseTile({ e, width, live, onPress, onLongPress, selected }: { e: Exercise; width: number; live: boolean; onPress: () => void; onLongPress?: () => void; /** null = not in select mode */ selected: boolean | null }) {
   const clip = useMemo(() => clipFromExercise(e), [e.figure, e.scene]);
   const h = Math.round(width * 1.1);
   const stripe = e.pattern ? patternColor[e.pattern] : colors.line;
@@ -125,7 +159,7 @@ const ExerciseTile = React.memo(function ExerciseTile({ e, width, live, onPress 
   const second = tags[1]?.label;
   const Fig = live ? FigureCard : FigureStill;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, { width }, pressed && { transform: [{ scale: 0.98 }] }]}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={260} style={({ pressed }) => [styles.tile, { width }, selected === true && styles.tileSelected, pressed && { transform: [{ scale: 0.98 }] }]}>
       <View style={[styles.stage, { width, height: h }]}>
         {clip ? (
           <Fig clip={clip} width={width} height={h} />
@@ -136,6 +170,7 @@ const ExerciseTile = React.memo(function ExerciseTile({ e, width, live, onPress 
           </View>
         )}
         <View style={[styles.stripe, { backgroundColor: stripe }]} />
+        {selected !== null && <View style={[styles.check, selected && { backgroundColor: colors.accentDeep, borderColor: colors.accentDeep }]}>{selected ? <Ionicons name="checkmark" size={16} color={colors.onAccent} /> : null}</View>}
       </View>
       <View style={styles.tileBody}>
         <CreatorName name={e.name} style={styles.name} numberOfLines={1} />
@@ -164,5 +199,11 @@ const styles = StyleSheet.create({
   name: { ...type.bodyStrong, color: colors.ink },
   tagRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   meta: { ...type.caption, color: colors.muted, flexShrink: 1 },
+  tileSelected: { borderWidth: 2, borderColor: colors.accent },
+  check: { position: 'absolute', top: 8, end: 8, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: 'rgba(28,32,44,0.5)', backgroundColor: 'rgba(246,243,238,0.85)', alignItems: 'center', justifyContent: 'center' },
+  tray: { gap: space.s },
+  trayHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s },
+  trayTitle: { ...type.caption, color: colors.muted, flex: 1 },
+  trayThumb: { width: 56, height: 56, borderRadius: radius.s, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   fab: { position: 'absolute', end: 18, bottom: 18, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accentDeep, alignItems: 'center', justifyContent: 'center' },
 });

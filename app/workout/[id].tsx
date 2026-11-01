@@ -15,6 +15,7 @@ import { toGenExercise } from '../../src/db/workoutRepo';
 import { FigureStill } from '../../src/figure';
 import { Button, Chip, Tag } from '../../src/ui/Button';
 import { ExercisePicker } from '../../src/ui/ExercisePicker';
+import { WorkoutViewer, type ViewerEntry } from '../../src/ui/WorkoutViewer';
 import { SwipeRow } from '../../src/ui/SwipeRow';
 import { colors, patternColor, radius, shadow, slotColor } from '../../src/ui/theme';
 
@@ -29,12 +30,23 @@ export default function WorkoutScreen() {
   const fw = fws?.find((f) => f.id === w?.frameworkId);
   const byId = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises]);
   const clips = useClipCache(exercises);
-  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; extra?: boolean; currentId?: string } | null>(null);
+  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; extra?: boolean } | null>(null);
+  const [view, setView] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   useEffect(() => { if (w) { setName(w.name ?? ''); setDesc(w.description ?? ''); } }, [w?.id]);
   if (!w || !fw) return <View style={{ padding: 24 }}><Text style={styles.small}>Loading…</Text></View>;
 
+  const entries: ViewerEntry[] = [];
+  for (const b of fw.blocks.blocks) {
+    if (w.inputs.blockOverrides?.[b.id]?.skipped) continue;
+    const slotIds = [...b.slots.map((s) => s.id), ...w.items.filter((i) => i.blockId === b.id && !b.slots.some((s) => s.id === i.slotId)).map((i) => i.slotId)];
+    for (const sid of [...new Set(slotIds)]) {
+      const it = w.items.find((i) => i.blockId === b.id && i.slotId === sid && i.round === 1);
+      const ex = it ? byId.get(it.exerciseId) : undefined;
+      if (it && ex) entries.push({ blockId: b.id, slotId: sid, sectionName: b.name, exercise: ex, dosage: it.dosage, locked: it.locked });
+    }
+  }
   const save = (items: WorkoutItem[], inputs = w.inputs) => updateWorkoutItems(db, w.id, items, inputs).catch((e) => Alert.alert('Save failed', String(e)));
   const key = (b: string, s: string) => `${b}/${s}`;
   const replace = (blockId: string, slotId: string, ex: Exercise) => {
@@ -129,7 +141,7 @@ export default function WorkoutScreen() {
                 const it = w.items.find((i) => i.blockId === b.id && i.slotId === sid && i.round === 1);
                 const ex = it ? byId.get(it.exerciseId) : undefined;
                 const clip = clips.get(ex);
-                const open = () => setPicker({ blockId: b.id, slotId: sid, slot: s, currentId: ex?.id });
+                const open = () => { const i = entries.findIndex((en) => en.blockId === b.id && en.slotId === sid); if (i >= 0) setView(i); else choose(); };
                 const choose = () => setPicker({ blockId: b.id, slotId: sid, slot: s });
                 return (
                   <SwipeRow key={sid} disabled={!ex} actions={[{ label: 'Change', icon: 'albums-outline', color: colors.accent, onPress: choose }, { label: 'Remove', icon: 'trash-outline', color: colors.danger, onPress: () => remove(b.id, sid) }]}>
@@ -168,27 +180,36 @@ export default function WorkoutScreen() {
       <Pressable onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: w.id } })} style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.92 }] }]}>
         <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
       </Pressable>
-      {picker && (() => {
-        const inSectionIds = w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId);
-        const ex = picker.currentId ? byId.get(picker.currentId) : undefined;
-        const close = () => setPicker(null);
-        return (
-          <ExercisePicker
-            visible
-            title={picker.extra ? 'Add a drill' : `Choose for ${picker.slot.tags.join(' / ')}`}
-            exercises={exercises ?? []}
-            preferTags={picker.slot.tags}
-            currentId={picker.currentId}
-            inSectionIds={inSectionIds}
-            onPick={(e) => (picker.extra ? addExtra(picker.blockId, e) : replace(picker.blockId, picker.slotId, e))}
-            onClose={close}
-            actions={ex ? [
-              { label: 'Open card', icon: 'id-card-outline', onPress: () => { close(); router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }); } },
-              { label: 'Remove', icon: 'trash-outline', destructive: true, onPress: () => { remove(picker.blockId, picker.slotId); close(); } },
-            ] : []}
-          />
-        );
-      })()}
+      {picker && (
+        <ExercisePicker
+          visible
+          title={picker.extra ? 'Add a drill' : `Choose for ${picker.slot.tags.join(' / ')}`}
+          exercises={exercises ?? []}
+          preferTags={picker.slot.tags}
+          inSectionIds={w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId)}
+          onPick={(e) => (picker.extra ? addExtra(picker.blockId, e) : replace(picker.blockId, picker.slotId, e))}
+          onClose={() => setPicker(null)}
+        />
+      )}
+      {view !== null && entries.length > 0 && (
+        <WorkoutViewer
+          visible
+          entries={entries}
+          index={Math.min(view, entries.length - 1)}
+          onIndex={setView}
+          onClose={() => setView(null)}
+          clipOf={(e) => clips.get(e)}
+          actions={(en) => {
+            const block = fw.blocks.blocks.find((b) => b.id === en.blockId)!;
+            const slot = block.slots.find((s) => s.id === en.slotId) ?? ({ id: en.slotId, tags: [...new Set(block.slots.flatMap((s) => s.tags))] } as FrameworkSlot);
+            return [
+              { label: 'Replace', icon: 'albums-outline', onPress: () => { setView(null); setPicker({ blockId: en.blockId, slotId: en.slotId, slot }); } },
+              { label: 'Card', icon: 'id-card-outline', onPress: () => { setView(null); router.push({ pathname: '/exercise/[id]', params: { id: en.exercise.id } }); } },
+              { label: 'Remove', icon: 'trash-outline', destructive: true, onPress: () => { if (entries.length <= 1) setView(null); remove(en.blockId, en.slotId); } },
+            ];
+          }}
+        />
+      )}
     </View>
   );
 }

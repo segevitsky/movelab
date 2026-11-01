@@ -16,6 +16,7 @@ import type { FrameworkSlot } from '../../src/db/types';
 import { Button, Chip, Tag } from '../../src/ui/Button';
 import { SwipeRow } from '../../src/ui/SwipeRow';
 import { ExercisePicker } from '../../src/ui/ExercisePicker';
+import { WorkoutViewer, type ViewerEntry } from '../../src/ui/WorkoutViewer';
 import { Drop, Pop, Rise } from '../../src/ui/motion';
 import { colors, patternColor, radius, shadow, slotColor, tint } from '../../src/ui/theme';
 
@@ -56,7 +57,20 @@ export default function Today() {
     const key = slotKey(blockId, slotId);
     setW({ ...w, items: w.items.map((i) => (slotKey(i.blockId, i.slotId) === key ? { ...i, locked: !i.locked } : i)) });
   };
-  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot; currentId?: string } | null>(null);
+  const [picker, setPicker] = useState<{ blockId: string; slotId: string; slot: FrameworkSlot } | null>(null);
+  const [view, setView] = useState<number | null>(null);
+  const fw = frameworks?.find((f) => f.id === fwId);
+  // the drills of this workout in play order (round 1), for the viewer
+  const entries: ViewerEntry[] = useMemo(() => {
+    if (!w || !fw) return [];
+    const out: ViewerEntry[] = [];
+    for (const b of fw.blocks.blocks) for (const s of b.slots) {
+      const it = w.items.find((i) => i.blockId === b.id && i.slotId === s.id && i.round === 1);
+      const ex = it ? byId.get(it.exerciseId) : undefined;
+      if (it && ex) out.push({ blockId: b.id, slotId: s.id, sectionName: b.name, exercise: ex, dosage: it.dosage, locked: it.locked });
+    }
+    return out;
+  }, [w, fw, byId]);
   const chooseFromLibrary = (blockId: string, slotId: string, exerciseId: string) => {
     if (!w || !ctx) return;
     const key = slotKey(blockId, slotId);
@@ -101,7 +115,6 @@ export default function Today() {
     else Alert.alert('Saved', 'It counts as history now. Start it from the list below any time.');
   };
 
-  const fw = frameworks?.find((f) => f.id === fwId);
   return (
     <View style={{ flex: 1 }}>
     <ScrollView contentContainerStyle={[styles.container, w ? { paddingBottom: 130 } : null]} contentInsetAdjustmentBehavior="automatic">
@@ -149,7 +162,7 @@ export default function Today() {
                   const it = its.find((i) => i.slotId === s.id);
                   const ex = it ? byId.get(it.exerciseId) : undefined;
                   const clip = clips.get(ex);
-                  const actions = () => { if (ex && it) setPicker({ blockId: b.id, slotId: s.id, slot: s, currentId: ex.id }); };
+                  const actions = () => { const i = entries.findIndex((en) => en.blockId === b.id && en.slotId === s.id); if (i >= 0) setView(i); };
                   return (
                     <Rise key={`${s.id}-${it?.exerciseId ?? 'none'}`} index={0}>
                     <SwipeRow
@@ -187,36 +200,43 @@ export default function Today() {
             );
           })}
           <View style={styles.rowBetween}>
-            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a drill to view it and browse others · swipe left for quick actions</Text>
+            <Text style={styles.small}>≈ {Math.round(w.totalSeconds / 60)} min total · tap a drill to watch it and step through the workout · swipe left for quick actions</Text>
           </View>
           <Pressable onPress={() => save(false)} style={{ alignSelf: 'center', paddingVertical: 6 }}><Text style={styles.link}>Save for later without starting</Text></Pressable>
         </View>
       )}
       {!w && (exercises?.length ?? 0) === 0 && <Text style={styles.small}>Your library is empty — capture a few reels first.</Text>}
-      {picker && w && (() => {
-        const it = w.items.find((i) => i.blockId === picker.blockId && i.slotId === picker.slotId && i.round === 1);
-        const inSectionIds = w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId);
-        const ex = picker.currentId ? byId.get(picker.currentId) : undefined;
-        const close = () => setPicker(null);
-        return (
-          <ExercisePicker
-            visible
-            title={`Choose a drill · ${picker.slot.tags.join(' / ')}`}
-            exercises={exercises ?? []}
-            preferTags={picker.slot.tags}
-            currentId={picker.currentId}
-            inSectionIds={inSectionIds}
-            onPick={(e) => chooseFromLibrary(picker.blockId, picker.slotId, e.id)}
-            onClose={close}
-            actions={ex && it ? [
-              { label: 'Surprise me', icon: 'shuffle-outline', onPress: () => { doSwap(picker.blockId, picker.slotId); close(); } },
-              { label: it.locked ? 'Unlock' : 'Lock', icon: it.locked ? 'lock-open-outline' : 'lock-closed-outline', onPress: () => { toggleLock(picker.blockId, picker.slotId); close(); } },
-              { label: 'Open card', icon: 'id-card-outline', onPress: () => { close(); router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }); } },
-              { label: 'Remove', icon: 'trash-outline', destructive: true, onPress: () => { removeItem(picker.blockId, picker.slotId); close(); } },
-            ] : []}
-          />
-        );
-      })()}
+      {picker && w && (
+        <ExercisePicker
+          visible
+          title={`Choose a drill · ${picker.slot.tags.join(' / ')}`}
+          exercises={exercises ?? []}
+          preferTags={picker.slot.tags}
+          inSectionIds={w.items.filter((i) => i.blockId === picker.blockId && i.slotId !== picker.slotId).map((i) => i.exerciseId)}
+          onPick={(e) => chooseFromLibrary(picker.blockId, picker.slotId, e.id)}
+          onClose={() => setPicker(null)}
+        />
+      )}
+      {view !== null && w && fw && (
+        <WorkoutViewer
+          visible
+          entries={entries}
+          index={Math.min(view, Math.max(0, entries.length - 1))}
+          onIndex={setView}
+          onClose={() => setView(null)}
+          clipOf={(e) => clips.get(e)}
+          actions={(en) => {
+            const slot = fw.blocks.blocks.find((b) => b.id === en.blockId)?.slots.find((s) => s.id === en.slotId);
+            return [
+              { label: 'Replace', icon: 'albums-outline', onPress: () => { setView(null); if (slot) setPicker({ blockId: en.blockId, slotId: en.slotId, slot }); } },
+              { label: 'Surprise me', icon: 'shuffle-outline', onPress: () => doSwap(en.blockId, en.slotId) },
+              { label: en.locked ? 'Unlock' : 'Lock', icon: en.locked ? 'lock-open-outline' : 'lock-closed-outline', onPress: () => toggleLock(en.blockId, en.slotId) },
+              { label: 'Card', icon: 'id-card-outline', onPress: () => { setView(null); router.push({ pathname: '/exercise/[id]', params: { id: en.exercise.id } }); } },
+              { label: 'Remove', icon: 'trash-outline', destructive: true, onPress: () => { setView(null); removeItem(en.blockId, en.slotId); } },
+            ];
+          }}
+        />
+      )}
       {recentList.length > 0 && (
         <View style={[styles.panel, shadow.card]}>
           <Text style={styles.label}>Recent workouts</Text>

@@ -55,6 +55,7 @@ export default function Review() {
   const [items, setItems] = useState<Item[]>([]);
   const [matEditor, setMatEditor] = useState(false);
   const [stats, setStats] = useState('');
+  const [preview, setPreview] = useState<Item | null>(null);
   const cropRef = useRef<NormRect | undefined>(params.crop ? JSON.parse(params.crop) : undefined);
   const W = Dimensions.get('window').width;
 
@@ -256,7 +257,7 @@ export default function Review() {
             <Drop key={it.id} index={idx} style={[styles.card, shadow.card, !it.include && { opacity: 0.55 }]}>
               <View style={styles.cardRow}>
                 <View style={{ borderRadius: radius.m, overflow: 'hidden' }}>
-                  <FigureCard clip={clip} width={cardW} height={Math.round(cardW * 1.2)} />
+                  <Pressable onPress={() => setPreview(it)} accessibilityLabel="Preview full screen"><FigureCard clip={clip} width={cardW} height={Math.round(cardW * 1.2)} /></Pressable>
                 </View>
                 <View style={{ flex: 1, gap: 6 }}>
                   <TextInput style={styles.name} value={it.name} onChangeText={(v) => update(it.id, { name: v })} placeholder="Name" />
@@ -304,6 +305,23 @@ export default function Review() {
         <View style={{ flex: 1 }}><Button title="Discard" onPress={discard} secondary /></View>
         <View style={{ flex: 2 }}><Button title={phase === 'saving' ? 'Saving…' : `Add ${items.filter((i) => i.include).length} to library`} onPress={save} disabled={phase === 'saving'} /></View>
       </View>
+      {preview && (() => {
+        const pclip = clipFromProcessed(preview.processed);
+        const PW = Dimensions.get('window').width - 24, PH = Math.round(Math.min(Dimensions.get('window').height * 0.7, PW * 1.3));
+        return (
+          <Modal visible animationType="fade" onRequestClose={() => setPreview(null)}>
+            <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 12 }}>
+              <View style={{ width: PW, height: PH, borderRadius: radius.xl, overflow: 'hidden' }}><FigureCard clip={pclip} width={PW} height={PH} /></View>
+              <Text style={{ color: colors.ink, fontSize: 20, fontWeight: '800' }}>{preview.name}</Text>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>{preview.processed.segment.t0.toFixed(1)}–{preview.processed.segment.t1.toFixed(1)} s · {preview.processed.loop ? 'one rep loop' : 'whole segment'}</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Button title="Close" onPress={() => setPreview(null)} secondary />
+                <Button title={preview.include ? 'Will be added' : 'Not added'} onPress={() => setItems((xs) => xs.map((x) => (x.id === preview.id ? { ...x, include: !x.include } : x)))} secondary={!preview.include} />
+              </View>
+            </View>
+          </Modal>
+        );
+      })()}
       {matEditor && <MatEditor uri={params.uri} crop={cropRef.current} initial={scene?.matQuad} onDone={(q) => { setScene((s) => (s ? { ...s, matQuad: q } : s)); setMatEditor(false); }} onCancel={() => setMatEditor(false)} />}
     </View>
   );

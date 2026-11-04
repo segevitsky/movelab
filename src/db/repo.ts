@@ -7,7 +7,8 @@ import type { Db } from './index';
 import { exercise, source, sourceExercise, type Exercise, type NewExercise } from './schema';
 import type { Equipment, Pattern, Slot } from './vocab';
 
-export const newId = (prefix = 'ex') => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+import { newId } from './exerciseRow';
+export { newId, exerciseFromProcessed } from './exerciseRow';
 
 export type ExerciseFilter = { pattern?: Pattern | null; slot?: Slot | null; equipment?: Equipment | null; text?: string; includeArchived?: boolean };
 
@@ -33,34 +34,6 @@ export function clipFromExercise(e: Pick<Exercise, 'figure' | 'scene'>): FigureC
   } catch {
     return null;
   }
-}
-
-/** Store a processed pipeline segment as a new exercise (15 fps figure, loop, poses). */
-export function exerciseFromProcessed(seg: ProcessedSegment, fields: Partial<NewExercise> & { name: string }): NewExercise {
-  const clip = downsampleClip(clipFromProcessed(seg), 15);
-  const now = Date.now();
-  const scene = { ...(fields.scene ?? { cameraStatic: false }), floor: { a: seg.floor.a, b: seg.floor.b } };
-  return {
-    scene,
-    id: newId(),
-    aliases: [],
-    slots: [],
-    equipment: [],
-    props: [],
-    primaryMuscles: [],
-    ...fields,
-    figure: toBase64(encodeClip(clip)),
-    figureFps: clip.fps,
-    figureFrames: clip.xy.length,
-    loopStart: clip.loop?.i0 ?? null,
-    loopEnd: clip.loop?.i1 ?? null,
-    repSeconds: seg.period?.periodic ? seg.period.period : null,
-    startPose: seg.features.startPose,
-    endPose: seg.features.endPose,
-    createdAt: now,
-    updatedAt: now,
-    archived: false,
-  };
 }
 
 export async function listExercises(db: Db): Promise<Exercise[]> {

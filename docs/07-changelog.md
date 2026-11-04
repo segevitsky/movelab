@@ -21,6 +21,11 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   metre (uncapped it drew heels 1.3 torso under the ground) and the renderer's ground margin went from 0.3 to
   0.1 torso. Eval: owner fixtures and lab reels in
   `docs/eval-phase13.json`; `scripts/preview.ts` renders a contact sheet of a processed track (no deps).
+- **The actual floating bug**: `exerciseFromProcessed` spread the caller's fields after the scene it built, so
+  Review's scene (crop / mat / camera flag) replaced the one carrying the fitted floor and the renderer fell
+  back to "lowest ankle + 1.1 torso" — every card saved through Review since the floor fit existed floated
+  in floor poses. Fixed in `src/db/exerciseRow.ts` (pure, tested). The contact / depth-term work above still
+  stands on the eval numbers. Review: tap a figure for a full-screen preview before adding.
 - **Build pipeline bug**: three Release builds today failed (new Swift file needed `pod install`) while a filtered
   log made them look installed, so the phone ran Sunday's JS until 15:11. Lesson in the status brief + memory:
   keep the full log, check "Build Succeeded" + "Installing", verify a new string inside main.jsbundle.

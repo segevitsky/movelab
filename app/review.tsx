@@ -203,7 +203,7 @@ export default function Review() {
     try {
       const ids: string[] = [];
       for (const it of chosen) {
-        const row = exerciseFromProcessed(it.processed, { name: it.name.trim() || 'Exercise', pattern: it.pattern, slots: it.slots, equipment: it.equipment, intensity: 'medium', dosageDefault: it.suggestion.dosage, scene: scene ?? undefined });
+        const row = exerciseFromProcessed(it.processed, { name: (it.name.trim() || 'Exercise') + (params.raw ? ' (re)' : ''), pattern: it.pattern, slots: it.slots, equipment: it.equipment, intensity: 'medium', dosageDefault: it.suggestion.dosage, scene: scene ?? undefined });
         await insertExercise(db, row);
         ids.push(row.id);
       }

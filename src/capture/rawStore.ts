@@ -30,6 +30,8 @@ export type RawCapture = {
   result: PoseResult;
   /** Apple Vision's output on the same frames (second opinion for evaluation; Phase 13 step 3) */
   resultVision?: PoseResult;
+  /** why an optional step did not run (Release builds have no console) */
+  errors?: Record<string, string>;
 };
 
 const dir = () => new Directory(Paths.document, 'captures');

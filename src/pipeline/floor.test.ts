@@ -58,7 +58,7 @@ describe('floor + root pinning on the fixtures', () => {
     });
   }
   it('mat quad near edge becomes the floor', () => {
-    const f = fitFloor([], { heelL: [], heelR: [], toeL: [], toeR: [], handL: [], handR: [] }, { matQuad: [[0, 0], [100, 0], [120, 50], [20, 60]] });
+    const f = fitFloor([], { heelL: [], heelR: [], toeL: [], toeR: [], kneeL: [], kneeR: [], handL: [], handR: [] }, { matQuad: [[0, 0], [100, 0], [120, 50], [20, 60]] });
     expect(f.source).toBe('mat');
     expect(f.a).toBeCloseTo(-0.1);
     expect(f.c).toBe(0);

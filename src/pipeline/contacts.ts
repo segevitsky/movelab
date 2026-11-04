@@ -11,9 +11,10 @@
 import { hypot2, median } from './math';
 import { LM, type Track, type XY } from './types';
 
-export type ContactPoint = 'heelL' | 'heelR' | 'toeL' | 'toeR' | 'handL' | 'handR';
+export type ContactPoint = 'heelL' | 'heelR' | 'toeL' | 'toeR' | 'kneeL' | 'kneeR' | 'handL' | 'handR';
 export type Contacts = Record<ContactPoint, boolean[]>;
-export const CONTACT_JOINT: Record<ContactPoint, number> = { heelL: LM.leftHeel, heelR: LM.rightHeel, toeL: LM.leftToe, toeR: LM.rightToe, handL: LM.leftWrist, handR: LM.rightWrist };
+/** Phase 13 (owner fixture DfC8LdUIjV4, kneeling on a mat): knees are ground points too. */
+export const CONTACT_JOINT: Record<ContactPoint, number> = { heelL: LM.leftHeel, heelR: LM.rightHeel, toeL: LM.leftToe, toeR: LM.rightToe, kneeL: LM.leftKnee, kneeR: LM.rightKnee, handL: LM.leftWrist, handR: LM.rightWrist };
 export const CONTACT_POINTS = Object.keys(CONTACT_JOINT) as ContactPoint[];
 
 export type ContactOptions = {
@@ -56,9 +57,10 @@ export function contactCandidates(xy: Track, fps: number, torso: number, opts: C
       speed[p][i] = c ? s / c : Infinity;
     }
   }
-  const FEET: ContactPoint[] = ['heelL', 'heelR', 'toeL', 'toeR'];
+  // ground points: feet and knees (kneeling); hands are gated separately
+  const FEET: ContactPoint[] = ['heelL', 'heelR', 'toeL', 'toeR', 'kneeL', 'kneeR'];
   const HANDS: ContactPoint[] = ['handL', 'handR'];
-  // pass 1: feet — within `margin` of the lowest foot point of the frame, and slow
+  // pass 1: ground points — within `margin` of the lowest ground point of the frame, and slow
   for (let i = 0; i < n; i++) {
     const ys = FEET.map((p) => xy[i][CONTACT_JOINT[p]][1]).filter((y) => !Number.isNaN(y));
     if (!ys.length) continue;
@@ -66,7 +68,18 @@ export function contactCandidates(xy: Track, fps: number, torso: number, opts: C
     for (const p of FEET) {
       const q = xy[i][CONTACT_JOINT[p]];
       if (Number.isNaN(q[0])) continue;
-      out[p][i] = lowest - q[1] <= margin * torso && speed[p][i] <= maxSpeed;
+      let ok = lowest - q[1] <= margin * torso && speed[p][i] <= maxSpeed;
+      if (ok && (p === 'kneeL' || p === 'kneeR')) {
+        // a knee rests on the floor only with a folded leg; a plank's knee hovers near the floor with a straight leg
+        const hip = xy[i][p === 'kneeL' ? LM.leftHip : LM.rightHip], ank = xy[i][p === 'kneeL' ? LM.leftAnkle : LM.rightAnkle];
+        if (Number.isNaN(hip[0]) || Number.isNaN(ank[0])) ok = false;
+        else {
+          const u = [hip[0] - q[0], hip[1] - q[1]], v = [ank[0] - q[0], ank[1] - q[1]];
+          const cos = (u[0] * v[0] + u[1] * v[1]) / (Math.hypot(u[0], u[1]) * Math.hypot(v[0], v[1]) + 1e-6);
+          ok = cos > -0.7; // knee angle < ~135°
+        }
+      }
+      out[p][i] = ok;
     }
   }
   // a provisional floor from the planted feet (robust line in image space)
@@ -80,11 +93,15 @@ export function contactCandidates(xy: Track, fps: number, torso: number, opts: C
     const ys = HANDS.map((p) => xy[i][CONTACT_JOINT[p]][1]).filter((y) => !Number.isNaN(y));
     if (!ys.length) continue;
     const lowest = Math.max(...ys);
+    // hands planted below every ground point (all fours, child's pose, no feet floor yet) are contacts too
+    const groundYs = FEET.map((p) => xy[i][CONTACT_JOINT[p]][1]).filter((y) => !Number.isNaN(y));
+    const lowestGround = groundYs.length ? Math.max(...groundYs) : -Infinity;
     for (const p of HANDS) {
       const q = xy[i][CONTACT_JOINT[p]];
       if (Number.isNaN(q[0])) continue;
       const nearFloor = floor ? Math.abs(q[1] - (floor.a * q[0] + floor.b)) <= handMargin : false;
-      out[p][i] = nearFloor && lowest - q[1] <= (opts.handMargin ?? 0.2) * torso && speed[p][i] <= maxSpeed;
+      const lowestOfAll = q[1] >= lowestGround - margin * torso;
+      out[p][i] = (nearFloor || lowestOfAll) && lowest - q[1] <= (opts.handMargin ?? 0.2) * torso && speed[p][i] <= maxSpeed;
     }
   }
   return out;

@@ -222,7 +222,10 @@ count off, slow or missed frames; latest case: the last drill of a reel was not 
    and relaxing it (tried: trust mid-visibility joints with plausible bones) cannot help. Since 2026-11-04 Review
    also runs Apple Vision and stores it in the raw capture (`resultVision`); next: measure on fixtures whether
    Vision's legs are plausible where MediaPipe's are flagged, then merge per joint (never invent, never clamp).
-4. Segment quality gating in Review (weak segments shown as such, re-record or skip rather than save a broken
+4. **Floor + contacts for floor work** ✅ 2026-11-04: knees (folded leg) and lowest-point hands as contacts;
+   depth term across frames; scale term; owner fixtures in the eval harness. Dev ▸ Raw captures ▸ Re-process
+   re-runs a past capture through the current pipeline.
+5. Segment quality gating in Review (weak segments shown as such, re-record or skip rather than save a broken
    card).
 Acceptance: every owner-reported bad reel is a fixture; its failure is reproduced by a test, then fixed;
 `npm test` green; the eval harness numbers (Phase 2.5) do not regress.

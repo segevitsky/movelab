@@ -1,0 +1,146 @@
+{
+ "label": "current",
+ "at": "2026-11-04T13:02:39.588Z",
+ "fixtures": {
+  "reel1_mobility": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 3.1333,
+    "metrics": {
+     "float": 0.020996392905035563,
+     "skate": 0.00508563383303779,
+     "boneJump": 0,
+     "flagged": 0.7894736842105263,
+     "depthFlips": 0.31610557926346877,
+     "frames": 95,
+     "contactFrames": 156
+    }
+   },
+   {
+    "label": "seg 2",
+    "t0": 3.2,
+    "t1": 12.9333,
+    "metrics": {
+     "float": 0.040210185011235966,
+     "skate": 0.007932506794824363,
+     "boneJump": 0,
+     "flagged": 0.3412969283276451,
+     "depthFlips": 0,
+     "frames": 293,
+     "contactFrames": 686
+    }
+   },
+   {
+    "label": "seg 3",
+    "t0": 13,
+    "t1": 27.8,
+    "metrics": {
+     "float": 0.07175453030401611,
+     "skate": 0.009036921174021917,
+     "boneJump": 0.4941860465116279,
+     "flagged": 5.280898876404494,
+     "depthFlips": 0.6748321355062816,
+     "frames": 445,
+     "contactFrames": 1114
+    }
+   }
+  ],
+  "reel2_staff": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 27.4667,
+    "metrics": {
+     "float": 0.04937258842276113,
+     "skate": 0.009434028386747272,
+     "boneJump": 0.593065693430657,
+     "flagged": 4.909090909090909,
+     "depthFlips": 0.5096005096005012,
+     "frames": 825,
+     "contactFrames": 1593
+    }
+   }
+  ],
+  "reel3_burpee": [
+   {
+    "label": "seg 1",
+    "t0": 0.6667,
+    "t1": 11.8667,
+    "metrics": {
+     "float": 0.03328500271398001,
+     "skate": 0.00896167154152075,
+     "boneJump": 0.33482142857142855,
+     "flagged": 3.5608308605341246,
+     "depthFlips": 0.7128790511579711,
+     "frames": 337,
+     "contactFrames": 553
+    }
+   }
+  ],
+  "reel4_phone_plank": [
+   {
+    "label": "seg 1",
+    "t0": 0.1917,
+    "t1": 10.7017,
+    "metrics": {
+     "float": 0.09637905179483953,
+     "skate": 0.016495931404611447,
+     "boneJump": 0,
+     "flagged": 5.990220048899755,
+     "depthFlips": 0,
+     "frames": 409,
+     "contactFrames": 568
+    }
+   }
+  ],
+  "owner_2026-11-01_DfGIOMWuPrs": [
+   {
+    "label": "seg 1",
+    "t0": 5.8183,
+    "t1": 12.7,
+    "metrics": {
+     "float": 0.08508636247136163,
+     "skate": 0.010556342400408918,
+     "boneJump": 0,
+     "flagged": 9.175084175084175,
+     "depthFlips": 0,
+     "frames": 297,
+     "contactFrames": 266
+    }
+   }
+  ],
+  "owner_2026-11-02_DfC8LdUIjV4": [
+   {
+    "label": "seg 1",
+    "t0": 3.8517,
+    "t1": 8.885,
+    "metrics": {
+     "float": 0.03883210707571724,
+     "skate": 0.011256765113966736,
+     "boneJump": 3.61328125,
+     "flagged": 11.753731343283581,
+     "depthFlips": 2.241047017166443,
+     "frames": 134,
+     "contactFrames": 163
+    }
+   }
+  ],
+  "owner_2026-11-04_DfC8LdUIjV4-float": [
+   {
+    "label": "seg 1",
+    "t0": 0,
+    "t1": 14.8667,
+    "metrics": {
+     "float": 0.16121224720021068,
+     "skate": 0.022864663133939967,
+     "boneJump": 0.5793226381461676,
+     "flagged": 4.98220640569395,
+     "depthFlips": 1.6030265140586015,
+     "frames": 562,
+     "contactFrames": 331
+    }
+   }
+  ]
+ }
+}

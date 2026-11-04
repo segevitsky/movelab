@@ -11,6 +11,14 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   off), so the rejection stands; a "trust plausible mid-visibility joints" rule was tried and dropped. Review now
   also runs Apple Vision and keeps its output (`resultVision`) in the raw capture for an offline comparison →
   per-joint merge if it is better (Phase 13 step 3).
+- **Floating figure** (fixture DfC8LdUIjV4-float, kneeling / hands on a mat): no contacts were found in the
+  hands-and-knees parts (only heels, toes and feet-gated hands counted), so pinning held a stale offset and the
+  figure hung 0.5–1 torso above the floor. Fixed: knees are ground points when the leg is folded (a plank's
+  straight leg is excluded), hands count when they are the lowest point, and the floor's depth term is now
+  fitted across frames from each contact's hip-relative depth (heels 0.5 m nearer sit 0.6 torso lower — one
+  straight relation) with the line re-centred at the torso's depth; a scale term (px/m from the tilt-corrected
+  torso) follows the figure's distance in frames without contacts. Eval: owner fixtures and lab reels in
+  `docs/eval-phase13.json`; `scripts/preview.ts` renders a contact sheet of a processed track (no deps).
 - Android: fresh release APK (`~/Desktop/MoveLab-android/MoveLab-0.0.1-evening.apk`, 2026-11-01 night).
   Capture stays iOS-only until the Kotlin ports (Phase 9 step 5).
 

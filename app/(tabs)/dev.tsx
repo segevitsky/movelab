@@ -147,6 +147,7 @@ export default function DevHome() {
         {raws.slice(0, 10).map((f) => (
           <View key={f.uri} style={[styles.row, { alignItems: 'center' }]}>
             <Text style={[styles.mono, { flex: 1 }]} numberOfLines={1}>{f.name.replace('capture-', '').replace('.json', '')} · {Math.round((f.size ?? 0) / 1024)} KB</Text>
+            <Button title="Re-process" icon="refresh-outline" secondary onPress={() => router.push({ pathname: '/review', params: { raw: f.uri, uri: '', title: f.name.replace('capture-', '').replace('.json', '') } })} />
             <Button title="Share" icon="share-outline" secondary onPress={() => Sharing.shareAsync(f.uri, { mimeType: 'application/json', dialogTitle: f.name }).catch((e) => Alert.alert('Share failed', `Also in Files ▸ On My iPhone ▸ MoveLab ▸ captures.\n${String(e)}`))} />
             <Button title="Delete" ghost onPress={() => { deleteRawCapture(f); refreshRaws(); }} />
           </View>

@@ -45,7 +45,7 @@ type Phase = 'scene' | 'pose' | 'pipeline' | 'review' | 'saving' | 'error';
  * exercise → confirm → saved to the library. The video is deleted after saving or discarding.
  */
 export default function Review() {
-  const params = useLocalSearchParams<{ uri: string; title?: string; code?: string; url?: string; username?: string; caption?: string; crop?: string; timeline?: string; recordingSeconds?: string }>();
+  const params = useLocalSearchParams<{ uri: string; title?: string; code?: string; url?: string; username?: string; caption?: string; crop?: string; timeline?: string; recordingSeconds?: string; /** Phase 13: re-process a raw capture (file uri of Documents/captures/*.json) instead of a video */ raw?: string }>();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('scene');
   const [progress, setProgress] = useState('Looking at the recording…');
@@ -65,6 +65,7 @@ export default function Review() {
   }, []);
 
   async function run() {
+    if (params.raw) return runFromRaw(params.raw);
     // 1. scene: auto-crop + mat
     const sc = await Pose.sceneAnalysis(params.uri);
     const crop: NormRect | undefined = cropRef.current ?? sc.cropRect;
@@ -80,7 +81,8 @@ export default function Review() {
     // Phase 13 step 3: Apple Vision as a second opinion, stored with the raw capture for offline comparison
     // (floor poses lose the legs in MediaPipe — owner fixture DfC8LdUIjV4); not drawn from yet
     let resVision: PoseResult | null = null;
-    try { setProgress('Second opinion (Vision)…'); resVision = await Pose.processVision(params.uri, { cropRect: crop, targetFps: 15 }); } catch (e) { console.warn('vision unavailable', e); }
+    const errors: Record<string, string> = {};
+    try { setProgress('Second opinion (Vision)…'); resVision = await Pose.processVision(params.uri, { cropRect: crop, targetFps: 15 }); } catch (e) { errors.vision = String(e); console.warn('vision unavailable', e); }
     setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}`);
     // 3. pipeline
     setPhase('pipeline');
@@ -104,7 +106,7 @@ export default function Review() {
       sceneDiff = sd.samples.map(([t, hist, pix]) => ({ t, hist, pix }));
       cutTimes = detectSceneCuts(sceneDiff).map((c) => c.t).filter((t) => t >= win.start && t <= win.end);
       if (cutTimes.length) setStats((st) => `${st} · ${cutTimes.length} scene cut${cutTimes.length > 1 ? 's' : ''}`);
-    } catch (e) { console.warn('sceneDiff unavailable', e); }
+    } catch (e) { errors.sceneDiff = String(e); console.warn('sceneDiff unavailable', e); }
     const segs = segment(rs, { cutTimes });
     const built = segs.map((sg, i) => makeItem(rs, { start: sg.start, end: sg.end }, fpsUsed, i));
     // the detector can mistake a uniform background for a mat: keep the quad only if it sits on the floor under the figure
@@ -117,9 +119,35 @@ export default function Review() {
     setPhase('review');
     // Phase 13: keep the raw pose output so this capture can be replayed as a fixture on the Mac
     try {
-      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res, timeline: params.timeline ? JSON.parse(params.timeline) : undefined, recordingSeconds: params.recordingSeconds ? Number(params.recordingSeconds) : undefined, sceneDiff: sceneDiff.length ? sceneDiff : undefined, cutTimes: cutTimes.length ? cutTimes : undefined, resultVision: resVision ?? undefined,
+      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res, timeline: params.timeline ? JSON.parse(params.timeline) : undefined, recordingSeconds: params.recordingSeconds ? Number(params.recordingSeconds) : undefined, sceneDiff: sceneDiff.length ? sceneDiff : undefined, cutTimes: cutTimes.length ? cutTimes : undefined, resultVision: resVision ?? undefined, errors: Object.keys(errors).length ? errors : undefined,
         segments: built.map((b) => ({ start: b.range.start, end: b.range.end, name: b.name, frames: b.processed.xy.length, detectedPct: Math.round((b.processed.xy.filter((fr) => Number.isFinite(fr[0][0])).length / Math.max(1, b.processed.xy.length)) * 100) })) });
     } catch (e) { console.warn('raw capture not saved', e); }
+  }
+
+  /** Phase 13: run the pipeline on a stored raw capture (numbers only) — fixes apply to past captures. */
+  async function runFromRaw(uri: string) {
+    setProgress('Reading the capture…');
+    const json = JSON.parse(await new File(uri).text()) as { crop?: NormRect | null; scene?: Scene | null; timeline?: { e: string; t: number; d: number; rec: number }[]; sceneDiff?: SceneDiffSample[]; result: PoseResult };
+    const res = json.result;
+    const crop = json.crop ?? undefined;
+    cropRef.current = crop;
+    const s: Scene = json.scene ?? { cropRect: crop, cameraStatic: false };
+    setScene(s);
+    setStats(`re-processed from the raw capture · ${res.stats.detected}/${res.stats.frames} frames with a person · ${res.width}×${res.height}`);
+    setPhase('pipeline');
+    setProgress('Splitting into exercises…');
+    const win = playbackWindow(json.timeline ?? []);
+    const raw = res.frames.filter((fr) => fr.t >= win.start && fr.t <= (Number.isFinite(win.end) ? win.end - 0.3 : Infinity));
+    const f0 = estimateFps(raw);
+    const rs = Math.abs(f0 - 30) > 1 ? resample(raw, 30) : raw;
+    const fpsUsed = Math.abs(f0 - 30) > 1 ? 30 : f0;
+    setFrames(rs);
+    setFps(fpsUsed);
+    const cutTimes = json.sceneDiff?.length ? detectSceneCuts(json.sceneDiff).map((c) => c.t).filter((t) => t >= win.start && t <= win.end) : [];
+    const segs = segment(rs, { cutTimes });
+    const built = segs.map((sg, i) => makeItem(rs, { start: sg.start, end: sg.end }, fpsUsed, i));
+    setItems(built);
+    setPhase('review');
   }
 
   function makeItem(fr: RawFrame[], range: Range, fpsUsed: number, index: number, prev?: Partial<Item>): Item {
@@ -166,7 +194,7 @@ export default function Review() {
     setItems((xs) => xs.map((x, i) => (i === idx ? makeItem(frames, r, fps, idx, x) : x)));
   };
 
-  const deleteVideo = () => { try { new File(params.uri).delete(); } catch {} };
+  const deleteVideo = () => { if (params.raw) return; try { new File(params.uri).delete(); } catch {} };
 
   const save = async () => {
     const chosen = items.filter((i) => i.include);

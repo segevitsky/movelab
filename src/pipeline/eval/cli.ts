@@ -1,4 +1,5 @@
 /** `npm run eval [--json out.json] [--label name]` — one table per fixture. */
+import { playbackWindow } from '../playback';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { evalFixture, type SegmentEval } from './run';
@@ -11,6 +12,8 @@ const FIXTURES: { name: string; load: () => RawFrame[] }[] = [
   { name: 'reel2_staff', load: () => JSON.parse(readFileSync(join(ROOT, 'reference/sample-data/reel2_staff_mp33.json'), 'utf8')) },
   { name: 'reel3_burpee', load: () => JSON.parse(readFileSync(join(ROOT, 'reference/sample-data/reel3_burpee_mp33.json'), 'utf8')) },
   { name: 'reel4_phone_plank', load: () => JSON.parse(readFileSync(join(ROOT, 'reference/sample-data/phone/reel4_plank_romove_mp33_phone.json'), 'utf8')).frames },
+  // owner captures (Phase 13 fixtures): raw MediaPipe frames inside the playback window
+  ...['capture-2026-11-01-DfGIOMWuPrs', 'capture-2026-11-02-DfC8LdUIjV4', 'capture-2026-11-04-DfC8LdUIjV4-float'].map((f) => ({ name: `owner_${f.slice(8, 18)}_${f.slice(19)}`, load: () => { const d = JSON.parse(readFileSync(join(ROOT, 'src/pipeline/__fixtures__/owner', `${f}.json`), 'utf8')); const w = playbackWindow(d.timeline ?? []); return d.result.frames.filter((fr: { t: number }) => fr.t >= w.start && fr.t <= w.end); } })),
 ];
 
 function table(name: string, rows: SegmentEval[]) {

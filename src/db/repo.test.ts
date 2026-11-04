@@ -50,9 +50,10 @@ describe('Phase 14 view selection', () => {
     expect(viewOf({ ...base, scene: { cameraStatic: false, facing: 1.1, view: '3d' } })).toBe('flat');
     expect(prefers3d({ ...base, scene: { cameraStatic: false, facing: 1.1 } })).toBe(false);
   });
-  it('picks the 3/4 view automatically for frontal reels and respects the owner override', () => {
+  it('stays flat unless the owner picked the 3/4 view on the card; frontal reels only get a hint', () => {
     const w = { ...base, figure3d: 'x' };
-    expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 1.1 } })).toBe('3d');
+    expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 1.1 } })).toBe('flat');
+    expect(prefers3d({ ...w, scene: { cameraStatic: false, facing: 1.1 } })).toBe(true);
     expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 0.4 } })).toBe('flat');
     expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 0.4, view: '3d' } })).toBe('3d');
     expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 1.1, view: 'flat' } })).toBe('flat');

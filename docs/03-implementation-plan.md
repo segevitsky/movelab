@@ -232,7 +232,7 @@ count off, slow or missed frames; latest case: the last drill of a reel was not 
 Acceptance: every owner-reported bad reel is a fixture; its failure is reproduced by a test, then fixed;
 `npm test` green; the eval harness numbers (Phase 2.5) do not regress.
 
-## Phase 14 — 3D view of the figure (approved 2026-11-04; built the same day, owner's device check pending)
+## Phase 14 — 3D view of the figure (approved 2026-11-04; built the same day; owner: opt-in per card only, not a default, "until we figure things out")
 Done: `figure3d` + `scene.facing` stored by `exerciseFromProcessed`; `src/figure/view3d.ts` (facing ratio,
 `clipFromView3d` yaw 35°); `clipForExercise` / `viewOf` in `src/db/repo.ts` choose the view everywhere; card
 chips override (`scene.view`). Not done: a 3D floor plane / shadow (the rotated view reuses the flat floor line

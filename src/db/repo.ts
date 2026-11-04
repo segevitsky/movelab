@@ -49,10 +49,14 @@ export function prefers3d(e: Pick<Exercise, 'figure3d' | 'scene'>): boolean {
 
 export type FigureView = 'flat' | '3d';
 
-/** The view this card is shown in: the owner's choice when set, else automatic; never 3D without a 3D track. */
+/**
+ * The view this card is shown in: flat (as filmed) unless the owner picked the 3/4 view on the card; never 3D
+ * without a 3D track. Owner, 2026-11-04: "lets not make it the default … until we figure things out" — the
+ * frontal-reel automatic choice (prefers3d) is only a hint on the card now.
+ */
 export function viewOf(e: Pick<Exercise, 'figure3d' | 'scene'>): FigureView {
   if (!e.figure3d) return 'flat';
-  return e.scene?.view ?? (prefers3d(e) ? '3d' : 'flat');
+  return e.scene?.view ?? 'flat';
 }
 
 /** The clip every screen draws: the flat (as filmed) figure or the three-quarter 3D view, per viewOf. */

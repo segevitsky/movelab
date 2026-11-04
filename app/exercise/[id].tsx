@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { db, schema } from '../../src/db';
-import { clipForExercise, deleteExercise, updateExercise, viewOf } from '../../src/db/repo';
+import { clipForExercise, deleteExercise, prefers3d, updateExercise, viewOf } from '../../src/db/repo';
 import { EQUIPMENT, INTENSITY, PATTERNS, SLOTS, type Equipment, type Intensity, type Pattern, type Slot } from '../../src/db/vocab';
 import { FigurePlayer } from '../../src/figure';
 import { Button, Chip } from '../../src/ui/Button';
@@ -54,8 +54,10 @@ export default function ExerciseDetail() {
           <Text style={styles.small}>View</Text>
           <Chip label="As filmed" on={view === 'flat'} onPress={() => save({ scene: { ...(e.scene ?? { cameraStatic: false }), view: 'flat' } })} />
           <Chip label="3/4 view" on={view === '3d'} onPress={() => save({ scene: { ...(e.scene ?? { cameraStatic: false }), view: '3d' } })} />
-          {e.scene?.view ? <Pressable onPress={() => { const { view: _v, ...rest } = e.scene!; save({ scene: rest }); }}><Text style={styles.link}>auto</Text></Pressable> : null}
         </View>
+      )}
+      {clip && e.figure3d && view === 'flat' && prefers3d(e) && (
+        <Text style={styles.small}>Filmed from the front — floor poses may read better in the 3/4 view.</Text>
       )}
       {clip && (
         <View style={styles.row}>

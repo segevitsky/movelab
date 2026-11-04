@@ -19,6 +19,12 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   leg lengths did not match. Fixed: `floorPlane`/`levelFloor` fit the 3D floor plane to the lowest joints of
   every frame and rotate the world level (one Rodrigues rotation, 3–4 passes because the lowest-joint set shifts),
   and the figure now rests on its own lowest joint (feet, knees or hands; ±0.25 s median). Owner to re-judge.
+- **3D view is no longer a default** (owner: a frontal *standing* drill was "really distorted" in the 3/4 view;
+  "lets not make it the default in the gallery until we figure things out"). Every card is flat unless its
+  "3/4 view" chip is set; frontal reels get a one-line hint instead. The distortion itself: a standing drill's
+  feet all sit at one depth, so the floor-plane fit had no depth information and rotated the body by a random
+  pitch (lab mobility reel: 9.5° of roll from 0.21 m of spread). A tilt is now only fitted along an axis the
+  contact points span by ≥ 0.35 m; otherwise that axis is left as filmed.
 - **Visual scene cuts** (Phase 13 step 2): native `SceneDiff.swift` reports per-sample picture change inside the
   crop; pure `sceneCuts.ts` turns spikes into cut times; Review feeds `segment({ cutTimes })` and stores the
   series in raw captures. Needs the owner's captures to calibrate.

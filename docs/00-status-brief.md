@@ -25,7 +25,7 @@ him. Specs: `docs/01-product-spec.md` (what/why), `docs/02-architecture.md` (how
 | UI design pass | **done** (2026-11-01): dark tokens, primitives, Library/Player/Today/saved-workout, share-as-GIF | `docs/06-design-direction.md` |
 | 9 — Android, player-first | **in progress** (2026-11-01): platform guards + library export/import done, JDK + SDK installed, first APK building; device pass pending | plan Phase 9 |
 | 13 — capture quality | **in progress** (2026-11-04): raw captures + fixtures, scene cuts + restart prefix, kneeling contacts + depth term, held limbs ≤ 2 s, full-screen preview | plan Phase 13 |
-| 14 — 3D view for frontal reels | **built** (2026-11-04): 3D track stored, 3/4 view auto for facing ≥ 0.8, card toggle; owner device check pending | plan Phase 14 |
+| 14 — 3D view for frontal reels | **built, opt-in** (2026-11-04): 3D track stored, floor levelled in 3D, "3/4 view" chip per card (never a default — owner found it distorted on a standing drill); legs on kneeling floor work still limited by MediaPipe | plan Phase 14 |
 | Owner's session notes | workout builder wizard + drag-to-reorder (next), bold design pass v2, balanced-workout standards (to discuss) | `docs/07-changelog.md` |
 
 ## What the app does today (2026-11-01)

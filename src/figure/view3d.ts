@@ -45,25 +45,36 @@ const GROUND = [LM.leftHeel, LM.rightHeel, LM.leftToe, LM.rightToe, LM.leftAnkle
  * least squares, and return the camera's pitch and roll (radians). NaN when there are too few points.
  */
 export type FloorPlane = { a: number; b: number; c: number; pitch: number; roll: number; points: number };
+/** a tilt is only fitted along an axis the contact points actually span (p10–p90 ≥ 0.35 m); a standing drill's
+ *  feet all sit at one depth, and fitting a pitch to them rotated the whole body by a random angle */
+const MIN_SPREAD = 0.35;
 export function floorPlane(world: World): FloorPlane {
-  let sxx = 0, sxz = 0, szz = 0, sx = 0, sz = 0, sxy = 0, szy = 0, sy = 0, m = 0;
+  const pts: [number, number, number][] = [];
   for (const f of world) {
     if (!f) continue;
     const ps = GROUND.map((j) => f[j]).filter((p) => p && Number.isFinite(p[1]));
     if (!ps.length) continue;
     const lo = Math.max(...ps.map((p) => p[1]));
-    for (const [x, y, z] of ps) if (lo - y < 0.05) { sxx += x * x; sxz += x * z; szz += z * z; sx += x; sz += z; sxy += x * y; szy += z * y; sy += y; m++; }
+    for (const p of ps) if (lo - p[1] < 0.05) pts.push(p);
   }
+  const m = pts.length;
   if (m < 20) return { a: NaN, b: NaN, c: NaN, pitch: NaN, roll: NaN, points: m };
-  // solve [sxx sxz sx; sxz szz sz; sx sz m]·[a b c] = [sxy szy sy] (Gaussian elimination)
-  const M = [[sxx, sxz, sx, sxy], [sxz, szz, sz, szy], [sx, sz, m, sy]];
-  for (let i = 0; i < 3; i++) {
-    let p = i; for (let r = i + 1; r < 3; r++) if (Math.abs(M[r][i]) > Math.abs(M[p][i])) p = r;
+  const spread = (k: 0 | 2) => { const s = pts.map((p) => p[k]).sort((u, v) => u - v); return s[Math.floor(m * 0.9)] - s[Math.floor(m * 0.1)]; };
+  const fitX = spread(0) >= MIN_SPREAD, fitZ = spread(2) >= MIN_SPREAD;
+  // least squares y = a·x + b·z + c over the fitted axes (normal equations)
+  const cols: number[][] = pts.map(([x, , z]) => [...(fitX ? [x] : []), ...(fitZ ? [z] : []), 1]);
+  const k = cols[0].length;
+  const M = Array.from({ length: k }, () => new Array(k + 1).fill(0));
+  pts.forEach(([, y], i) => { for (let r = 0; r < k; r++) { for (let c = 0; c < k; c++) M[r][c] += cols[i][r] * cols[i][c]; M[r][k] += cols[i][r] * y; } });
+  for (let i = 0; i < k; i++) {
+    let p = i; for (let r = i + 1; r < k; r++) if (Math.abs(M[r][i]) > Math.abs(M[p][i])) p = r;
     [M[i], M[p]] = [M[p], M[i]];
     if (Math.abs(M[i][i]) < 1e-9) return { a: NaN, b: NaN, c: NaN, pitch: NaN, roll: NaN, points: m };
-    for (let r = 0; r < 3; r++) { if (r === i) continue; const f = M[r][i] / M[i][i]; for (let c = i; c < 4; c++) M[r][c] -= f * M[i][c]; }
+    for (let r = 0; r < k; r++) { if (r === i) continue; const f = M[r][i] / M[i][i]; for (let c = i; c <= k; c++) M[r][c] -= f * M[i][c]; }
   }
-  const a = M[0][3] / M[0][0], b = M[1][3] / M[1][1], c = M[2][3] / M[2][2];
+  const sol = M.map((r, i) => r[k] / r[i]);
+  let q = 0;
+  const a = fitX ? sol[q++] : 0, b = fitZ ? sol[q++] : 0, c = sol[q];
   return { a, b, c, pitch: Math.atan(b), roll: Math.atan(a), points: m };
 }
 

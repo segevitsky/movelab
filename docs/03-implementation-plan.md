@@ -251,6 +251,24 @@ facing ratio, with a toggle on the card; (4) eval: the lab reels + owner fixture
 Risk: MediaPipe world coordinates are noisy (bone-length p95 13–30 %); the view must tolerate it (same
 rejection rules, no clamping). Est. 1–2 days.
 
+## Phase 15 — Other people's videos: own uploads, and PTs handing exercises to patients (candidate, owner 2026-11-04)
+Owner: "we need people also to start using it … uploading videos for them and parsing them is really important …
+for physical therapists so they could give their patients exercises."
+- **Step 1 — parse an uploaded video (small, ≈ 1 day).** The native module already takes any file URI
+  (`Pose.process(fileUri)`), so this is a picker (Photos / Files) that hands the file to the existing Review
+  screen; same cleaning, same raw-capture record, same rule: the video is deleted after processing, only the
+  skeleton + metadata are kept. Source becomes `platform: 'upload'` (no URL). Android gets this before Instagram
+  capture, since it needs no screen recorder.
+- **Step 2 — hand a workout to a person, no backend (≈ 1–2 days).** A workout package file (drills with figure
+  blobs + dosages + names/tags; `exportLibrary` already produces the shape) shared from the share sheet
+  (AirDrop / WhatsApp / mail); MoveLab opens the file type and imports into the receiver's library. A PT sends a
+  patient their programme as a file; the patient only ever holds stick figures, never the PT's video.
+- **Step 3 — accounts + the text-only backend** (parking lot "sharing workouts between users"): PT ↔ patient
+  link, programmes updated remotely, adherence feedback flowing back. Needs the privacy posture written down
+  first (patients' health data; the figure blobs are skeleton metadata, not video — confirm that reading of the
+  "text/metadata only" rule in the architecture doc before anything is uploaded).
+Decide first: who is the first outside user (a PT the owner knows?) and whether steps 1–2 are enough for them.
+
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
 Sync/accounts · ~~3D view of figure~~ (→ Phase 14 candidate) · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·

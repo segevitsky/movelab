@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, Sty
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { saveRawCapture } from '../src/capture/rawStore';
 import { playbackWindow } from '../src/pipeline/playback';
+import { detectSceneCuts, type SceneDiffSample } from '../src/pipeline/sceneCuts';
 import { Image } from 'react-native';
 import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,7 +92,16 @@ export default function Review() {
     const fpsUsed = Math.abs(f0 - 30) > 1 ? 30 : f0;
     setFrames(rs);
     setFps(fpsUsed);
-    const segs = segment(rs);
+    // Phase 13 step 2: visual scene cuts (edited transitions the pose cannot see) → external cut times
+    let sceneDiff: SceneDiffSample[] = [];
+    let cutTimes: number[] = [];
+    try {
+      const sd = await Pose.sceneDiff(params.uri, { cropRect: crop, sampleFps: 10 });
+      sceneDiff = sd.samples.map(([t, hist, pix]) => ({ t, hist, pix }));
+      cutTimes = detectSceneCuts(sceneDiff).map((c) => c.t).filter((t) => t >= win.start && t <= win.end);
+      if (cutTimes.length) setStats((st) => `${st} · ${cutTimes.length} scene cut${cutTimes.length > 1 ? 's' : ''}`);
+    } catch (e) { console.warn('sceneDiff unavailable', e); }
+    const segs = segment(rs, { cutTimes });
     const built = segs.map((sg, i) => makeItem(rs, { start: sg.start, end: sg.end }, fpsUsed, i));
     // the detector can mistake a uniform background for a mat: keep the quad only if it sits on the floor under the figure
     if (s.matQuad && built.length) {
@@ -103,7 +113,7 @@ export default function Review() {
     setPhase('review');
     // Phase 13: keep the raw pose output so this capture can be replayed as a fixture on the Mac
     try {
-      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res, timeline: params.timeline ? JSON.parse(params.timeline) : undefined, recordingSeconds: params.recordingSeconds ? Number(params.recordingSeconds) : undefined,
+      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res, timeline: params.timeline ? JSON.parse(params.timeline) : undefined, recordingSeconds: params.recordingSeconds ? Number(params.recordingSeconds) : undefined, sceneDiff: sceneDiff.length ? sceneDiff : undefined, cutTimes: cutTimes.length ? cutTimes : undefined,
         segments: built.map((b) => ({ start: b.range.start, end: b.range.end, name: b.name, frames: b.processed.xy.length, detectedPct: Math.round((b.processed.xy.filter((fr) => Number.isFinite(fr[0][0])).length / Math.max(1, b.processed.xy.length)) * 100) })) });
     } catch (e) { console.warn('raw capture not saved', e); }
   }

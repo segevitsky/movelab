@@ -56,6 +56,8 @@ declare class PoseNative extends NativeModule<PoseEvents> {
   /** Architecture §5a: auto-crop (normalised) + floor-mat quad (source px, TL TR BR BL) + camera-static flag. */
   sceneAnalysis(fileUri: string): Promise<{ width: number; height: number; cropRect?: NormRect; matQuad?: [number, number][]; cameraStatic: boolean; samples: number; ms: number }>;
   frameImage(fileUri: string, seconds: number, options: { cropRect?: NormRect; maxSide?: number }): Promise<{ uri: string; width: number; height: number }>;
+  /** Phase 13: per-sample picture change [t, hist 0..1, pix 0..255] inside the crop, ≈ sampleFps per second */
+  sceneDiff(fileUri: string, options: { cropRect?: NormRect; sampleFps?: number }): Promise<{ sampleFps: number; samples: [number, number, number][]; ms: number }>;
   process(fileUri: string, options: ProcessOptions): Promise<PoseResult>;
   processVision(fileUri: string, options: ProcessOptions): Promise<PoseResult>;
 }

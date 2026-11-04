@@ -49,6 +49,12 @@ public final class PoseModule: Module {
       return out
     }
 
+    /// Phase 13: per-sample picture change inside the crop (scene cuts are decided in TS).
+    AsyncFunction("sceneDiff") { (fileUri: URL, options: SceneDiffOptions) -> [String: Any] in
+      let r = try SceneDiff.compute(url: fileUri, crop: options.cropRect?.cgRect, sampleFps: options.sampleFps)
+      return ["sampleFps": r.sampleFps, "samples": r.samples, "ms": r.ms]
+    }
+
     AsyncFunction("process") { (fileUri: URL, options: ProcessOptions) -> [String: Any] in
       try self.runMediaPipe(url: fileUri, options: options)
     }

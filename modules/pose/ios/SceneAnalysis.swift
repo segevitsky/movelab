@@ -101,7 +101,7 @@ enum SceneAnalysis {
 
   // MARK: - helpers
 
-  private static func gray(_ cg: CGImage, w: Int, h: Int, ctx: CIContext) -> [Float]? {
+  static func gray(_ cg: CGImage, w: Int, h: Int, ctx: CIContext) -> [Float]? {
     guard let cs = CGColorSpace(name: CGColorSpace.linearGray) ?? CGColorSpace(name: CGColorSpace.genericGrayGamma2_2) else { return nil }
     var buf = [UInt8](repeating: 0, count: w * h)
     guard let bctx = CGContext(data: &buf, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w, space: cs, bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return nil }

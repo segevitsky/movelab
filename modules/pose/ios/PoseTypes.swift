@@ -32,6 +32,12 @@ struct FrameImageOptions: Record {
   @Field var maxSide: Double = 0
 }
 
+struct SceneDiffOptions: Record {
+  @Field var cropRect: NormRect? = nil
+  /// Kept frames per second (0 = every frame).
+  @Field var sampleFps: Double = 10
+}
+
 final class PoseException: GenericException<String>, @unchecked Sendable {
   override var reason: String { "Pose: \(param)" }
 }

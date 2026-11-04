@@ -1,8 +1,9 @@
 /**
  * Phase 13 — hold a hidden limb's last detected pose (owner's call, 2026-11-04: "keep the limbs, make them
  * visible"). When a limb's distal joints are unknown in the drawn track for a short run, the last known
- * configuration is carried along with the limb's root joint (the hip for a leg, the shoulder for an arm):
- * translated, never scaled or reshaped. Runs longer than `maxSeconds` stay hidden; runs at the start of a
+ * configuration is carried along with the limb's root joint (the hip for a leg, the shoulder for an arm) and,
+ * when both ends of the gap are known, blended linearly between them so nothing snaps: translated and
+ * interpolated between two detected poses, never scaled or invented. Runs longer than `maxSeconds` stay hidden; runs at the start of a
  * clip borrow the first known pose. The analysis track is untouched.
  */
 import { LM, type Track, type XY } from './types';
@@ -34,13 +35,20 @@ export function holdLimbs(xy: Track, fps: number, opts: { maxSeconds?: number } 
       let j = i;
       while (j < n && !isKnown(j)) j++;
       const run = j - i;
-      const src = i > 0 && isKnown(i - 1) ? i - 1 : j < n ? j : -1;
-      if (src >= 0 && run <= maxRun) {
+      const before = i > 0 && isKnown(i - 1) ? i - 1 : -1;
+      const after = j < n && isKnown(j) ? j : -1;
+      if ((before >= 0 || after >= 0) && run <= maxRun) {
+        // the limb's shape relative to its root, at both ends of the gap; blend between them (or hold one end)
+        const rel = (src: number, jt: number): XY | null => { const p = xy[src][jt], r = xy[src][limb.root]; return known(p) && known(r) ? [p[0] - r[0], p[1] - r[1]] : null; };
         for (let k = i; k < j; k++) {
-          const rootNow = xy[k][limb.root], rootSrc = xy[src][limb.root];
-          if (!known(rootNow) || !known(rootSrc)) continue;
-          const dx = rootNow[0] - rootSrc[0], dy = rootNow[1] - rootSrc[1];
-          for (const jt of limb.joints) { const p = xy[src][jt]; if (known(p)) out[k][jt] = [p[0] + dx, p[1] + dy]; }
+          const rootNow = xy[k][limb.root];
+          if (!known(rootNow)) continue;
+          const w = before >= 0 && after >= 0 ? (k - before) / (after - before) : before >= 0 ? 0 : 1;
+          for (const jt of limb.joints) {
+            const a = before >= 0 ? rel(before, jt) : null, b = after >= 0 ? rel(after, jt) : null;
+            const o = a && b ? [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w] : a ?? b;
+            if (o) out[k][jt] = [rootNow[0] + o[0], rootNow[1] + o[1]];
+          }
           held[names[li]]++;
         }
       }

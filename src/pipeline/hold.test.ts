@@ -18,7 +18,8 @@ describe('holdLimbs', () => {
     const xy: Track = [frame(0), hide(frame(10), legL), hide(frame(20), legL), frame(30)];
     const r = holdLimbs(xy, 30, { maxSeconds: 1 });
     expect(r.held.leftLeg).toBe(2);
-    expect(r.xy[1][LM.leftKnee]).toEqual([15, 150]); // knee of frame 0 (5,150) moved with the hip (+10)
+    // the leg shape is the same at both ends here, so the blend equals the hold: knee at hip + (5, 50)
+    expect(r.xy[1][LM.leftKnee]).toEqual([15, 150]);
     expect(r.xy[2][LM.leftAnkle]).toEqual([28, 200]);
     expect(r.xy[3][LM.leftKnee]).toEqual([35, 150]); // untouched known frame
     expect(r.held.rightLeg).toBe(0);
@@ -32,5 +33,17 @@ describe('holdLimbs', () => {
     const r = holdLimbs(start, 30, { maxSeconds: 1 });
     expect(r.held.rightLeg).toBe(2);
     expect(r.xy[0][LM.rightKnee]).toEqual([15, 150]); // frame 2's knee (25,150) moved back with the hip (−10)
+  });
+});
+
+describe('holdLimbs blends between the two ends of a gap', () => {
+  it('interpolates the leg shape relative to the hip', () => {
+    const legL = [LM.leftKnee, LM.leftAnkle, LM.leftHeel, LM.leftToe];
+    const a = frame(0); const b = frame(0); b[LM.leftKnee] = [25, 150]; b[LM.leftAnkle] = [28, 200]; // knee 20 px further right at the end
+    const xy: Track = [a, hide(frame(0), legL), hide(frame(0), legL), hide(frame(0), legL), b];
+    const r = holdLimbs(xy, 30, { maxSeconds: 1 });
+    expect(r.xy[2][LM.leftKnee][0]).toBeCloseTo(15); // halfway between 5 and 25
+    expect(r.xy[1][LM.leftKnee][0]).toBeCloseTo(10);
+    expect(r.xy[3][LM.leftKnee][0]).toBeCloseTo(20);
   });
 });

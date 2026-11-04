@@ -32,7 +32,9 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   detected pose carried with its root joint (`src/pipeline/hold.ts`, tested; CLAUDE.md amended). Review's
   quality line no longer suggests deleting over hidden limbs. Owner: "kind of better but the movement is
   distorted" → the hold now blends the limb's shape between the two ends of a gap (no snap): max leg jump per
-  frame 2.9 → 0.4 torso, jumps > 0.3 torso 55 → 11 of 2107 on the kneeling fixture.
+  frame 2.9 → 0.4 torso, jumps > 0.3 torso 55 → 11 of 2107 on the kneeling fixture. Root pinning damped too
+  (One-Euro 0.5 Hz + 0.03 torso/frame slew): pin step per frame 0.34 → 0.03 torso, hip jumps 0.31 → 0.09; float
+  +0.01–0.03 on three segments (eval-phase13.json).
 - **The actual floating bug**: `exerciseFromProcessed` spread the caller's fields after the scene it built, so
   Review's scene (crop / mat / camera flag) replaced the one carrying the fitted floor and the renderer fell
   back to "lowest ankle + 1.1 torso" — every card saved through Review since the floor fit existed floated

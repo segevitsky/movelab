@@ -172,7 +172,7 @@ export type PinResult = { xy: Track; offset: number[]; raw: number[] };
  * (positive = move down). Frames without contacts keep the previous offset (held), then the series is
  * One-Euro-smoothed and applied to every joint of every frame (vertical only).
  */
-export function pinToFloor(xy: Track, contacts: Contacts, floor: Pick<FloorLine, 'a' | 'b' | 'c'>, fps: number, opts: { maxOffsetTorso?: number; torso?: number; minCutoff?: number; beta?: number; world?: World } = {}): PinResult {
+export function pinToFloor(xy: Track, contacts: Contacts, floor: Pick<FloorLine, 'a' | 'b' | 'c'>, fps: number, opts: { maxOffsetTorso?: number; torso?: number; minCutoff?: number; beta?: number; /** max offset change per frame, torso lengths */ slewTorso?: number; world?: World } = {}): PinResult {
   const n = xy.length;
   const raw = new Array<number>(n).fill(NaN);
   const fl = floor as Pick<FloorLine, 'a' | 'b' | 'c'> & { d?: number; s0?: number };
@@ -211,7 +211,12 @@ export function pinToFloor(xy: Track, contacts: Contacts, floor: Pick<FloorLine,
   // limit how far a frame may be moved (a mis-detected contact must not yank the figure)
   const lim = (opts.maxOffsetTorso ?? 0.6) * (opts.torso ?? 100);
   const clamped = held.map((v) => Math.max(-lim, Math.min(lim, v)));
-  const offset = oneEuro(clamped, fps, { minCutoff: opts.minCutoff ?? 0.8, beta: opts.beta ?? 0.01 });
+  // smooth, then limit how fast the offset may change: a contact switch (hands → heels) must not step the
+  // whole figure (owner, 2026-11-04: "the figure moves weird"); residual float for a few frames is the lesser evil
+  const smoothed = oneEuro(clamped, fps, { minCutoff: opts.minCutoff ?? 0.5, beta: opts.beta ?? 0.01 });
+  const slew = (opts.slewTorso ?? 0.03) * (opts.torso ?? 100);
+  const offset = smoothed.slice();
+  for (let i = 1; i < n; i++) { const d = offset[i] - offset[i - 1]; if (d > slew) offset[i] = offset[i - 1] + slew; else if (d < -slew) offset[i] = offset[i - 1] - slew; }
   const out: Track = xy.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + offset[i]] as XY))));
   return { xy: out, offset, raw };
 }

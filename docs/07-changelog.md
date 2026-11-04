@@ -13,6 +13,12 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   filmed; the card has "As filmed / 3/4 view" chips (`scene.view` override, "auto" to clear). On the frontal
   kneeling fixture (facing 1.16) the 3/4 render shows the folded legs that the flat view loses
   (`scripts/dump3d.ts` + `scripts/preview.ts`). Older cards have no 3D track: re-process from Dev ▸ Raw captures.
+- **3D view, owner's first look: "floating sometimes, the legs look awkward"** (same evening). Two causes:
+  MediaPipe's world axes are the camera's and floor reels are filmed looking down (owner fixtures 17–22°, lab
+  burpee 12°), so the figure's "vertical" was tilted; and the hips were placed from the 2D height, which the 3D
+  leg lengths did not match. Fixed: `floorPlane`/`levelFloor` fit the 3D floor plane to the lowest joints of
+  every frame and rotate the world level (one Rodrigues rotation, 3–4 passes because the lowest-joint set shifts),
+  and the figure now rests on its own lowest joint (feet, knees or hands; ±0.25 s median). Owner to re-judge.
 - **Visual scene cuts** (Phase 13 step 2): native `SceneDiff.swift` reports per-sample picture change inside the
   crop; pure `sceneCuts.ts` turns spikes into cut times; Review feeds `segment({ cutTimes })` and stores the
   series in raw captures. Needs the owner's captures to calibrate.

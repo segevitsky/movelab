@@ -232,9 +232,19 @@ count off, slow or missed frames; latest case: the last drill of a reel was not 
 Acceptance: every owner-reported bad reel is a fixture; its failure is reproduced by a test, then fixed;
 `npm test` green; the eval harness numbers (Phase 2.5) do not regress.
 
+## Phase 14 — 3D view of the figure (candidate, 2026-11-04; owner to approve)
+Why: reels shot from the front (fixture DfC8LdUIjV4-restart: facing ratio 1.16, knees 0.22 m nearer than the
+hips) make a kneeling thigh a stub and hide the shin — a flat drawing cannot show it, and the owner wants
+these drills readable. What: (1) store the cleaned, smoothed 3D track (`figure3d`, computed since Phase 2.5,
+never stored) with the card; (2) renderer: project the 3D track with a virtual camera yawed ≈ 35° (and a
+3D floor plane + shadow), keep the 2D path for side-view reels; (3) pick the view automatically from the
+facing ratio, with a toggle on the card; (4) eval: the lab reels + owner fixtures render in both views.
+Risk: MediaPipe world coordinates are noisy (bone-length p95 13–30 %); the view must tolerate it (same
+rejection rules, no clamping). Est. 1–2 days.
+
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
-Sync/accounts · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·
+Sync/accounts · ~~3D view of figure~~ (→ Phase 14 candidate) · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·
 public profiles / **sharing workouts between users** (owner discussed a concept with web Claude on 2026-11-01 — keep as a reference; needs the text-only backend: a workout is items + dosages + exercise *names/tags*, never video; receiver maps names onto their own library or imports a figure blob) · **workout defaults** (owner to explain) ·  **creator handle as a link** (owner, 2026-11-01: exercises/workouts carry the creator's @tag in the name — render it as a link to the creator's Instagram page / the source reel, wherever the name is shown) · **save the warm-up / reuse a section** (owner, 2026-11-01: "lets save the warmup — and use a section perhaps": a block of drills saved by name and dropped into other workouts/frameworks; to be detailed) · coach partnerships ·
 an RTMW (whole-body) CoreML second model · Apple Vision 3D body pose · temporal 3D models (WHAM / GVHMR —
 note: SMPL licence is non-commercial).

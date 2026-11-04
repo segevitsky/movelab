@@ -35,6 +35,11 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   frame 2.9 → 0.4 torso, jumps > 0.3 torso 55 → 11 of 2107 on the kneeling fixture. Root pinning damped too
   (One-Euro 0.5 Hz + 0.03 torso/frame slew): pin step per frame 0.34 → 0.03 torso, hip jumps 0.31 → 0.09; float
   +0.01–0.03 on three segments (eval-phase13.json).
+- **Frontal floor poses** (same reel, full-screen preview 16:09): the camera faces the coach (facing ratio 1.16), the
+  knees are 0.22 m nearer than the hips, so a kneeling thigh collapses to a stub in a flat drawing and the shin
+  behind the thigh is guessed. Not fixable in 2D. Proposed next: **3D view** — store the cleaned 3D track
+  (`figure3d`, already computed, never stored) and render from a rotated virtual camera when the pose is
+  depth-ambiguous (plan parking lot → candidate Phase 14).
 - **The actual floating bug**: `exerciseFromProcessed` spread the caller's fields after the scene it built, so
   Review's scene (crop / mat / camera flag) replaced the one carrying the fitted floor and the renderer fell
   back to "lowest ankle + 1.1 torso" — every card saved through Review since the floor fit existed floated

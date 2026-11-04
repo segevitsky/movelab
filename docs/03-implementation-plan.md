@@ -238,6 +238,10 @@ Done: `figure3d` + `scene.facing` stored by `exerciseFromProcessed`; `src/figure
 chips override (`scene.view`). Not done: a 3D floor plane / shadow (the rotated view reuses the flat floor line
 at a fixed height), eval of all lab reels in both views (only the owner fixture was rendered). Acceptance: the
 owner re-processes the frontal kneeling capture and the legs read; side-view reels look unchanged.
+**Open for discussion (owner, 2026-11-04 evening: "keep the last subject, we'll discuss them soon")**: the 3/4 view
+is opt-in only; legs on kneeling floor work are still wrong because MediaPipe's 3D is noisy there — the candidate
+answer is a stronger whole-body detector (RTMW → CoreML, est. 1–2 days + an eval on the owner's captures, slower
+capture). Decide: keep polishing the view, try the detector, or accept flat-only for floor work.
 Why: reels shot from the front (fixture DfC8LdUIjV4-restart: facing ratio 1.16, knees 0.22 m nearer than the
 hips) make a kneeling thigh a stub and hide the shin — a flat drawing cannot show it, and the owner wants
 these drills readable. What: (1) store the cleaned, smoothed 3D track (`figure3d`, computed since Phase 2.5,

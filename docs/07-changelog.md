@@ -24,7 +24,7 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
 - **The actual floating bug**: `exerciseFromProcessed` spread the caller's fields after the scene it built, so
   Review's scene (crop / mat / camera flag) replaced the one carrying the fitted floor and the renderer fell
   back to "lowest ankle + 1.1 torso" — every card saved through Review since the floor fit existed floated
-  in floor poses. Fixed in `src/db/exerciseRow.ts` (pure, tested). The contact / depth-term work above still
+  in floor poses. Fixed in `src/db/exerciseRow.ts` (pure, tested); owner confirmed "now he is on the floor". The contact / depth-term work above still
   stands on the eval numbers. Review: tap a figure for a full-screen preview before adding.
 - **Build pipeline bug**: three Release builds today failed (new Swift file needed `pod install`) while a filtered
   log made them look installed, so the phone ran Sunday's JS until 15:11. Lesson in the status brief + memory:

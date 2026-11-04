@@ -3,6 +3,17 @@
 _What was done, when, and what is open. Newest first. Keep entries short; details live in the phase docs,
 `docs/06-design-direction.md` and the commit history (`git log --format='%ad %s' --date=short`)._
 
+## 2026-11-04 (Wednesday) — capture quality, round two
+- **Visual scene cuts** (Phase 13 step 2): native `SceneDiff.swift` reports per-sample picture change inside the
+  crop; pure `sceneCuts.ts` turns spikes into cut times; Review feeds `segment({ cutTimes })` and stores the
+  series in raw captures. Needs the owner's captures to calibrate.
+- **Floor pose, legs disappear** (fixture DfC8LdUIjV4): hidden frames are genuinely wrong in 2D (87–97 % > 25 %
+  off), so the rejection stands; a "trust plausible mid-visibility joints" rule was tried and dropped. Review now
+  also runs Apple Vision and keeps its output (`resultVision`) in the raw capture for an offline comparison →
+  per-joint merge if it is better (Phase 13 step 3).
+- Android: fresh release APK (`~/Desktop/MoveLab-android/MoveLab-0.0.1-evening.apk`, 2026-11-01 night).
+  Capture stays iOS-only until the Kotlin ports (Phase 9 step 5).
+
 ## 2026-11-01 (Sunday) — design pass, Android start, owner's session notes
 
 **Shipped (all on `main`, local commits)**

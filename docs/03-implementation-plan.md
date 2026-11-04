@@ -217,8 +217,13 @@ count off, slow or missed frames; latest case: the last drill of a reel was not 
 2. **Visual scene cuts from the native side** (frame-difference / histogram on the decoded video, before it is
    deleted) → `segment({ cutTimes })`, which already exists. Then re-check the fixture (`owner.test.ts` todo).
    Also: auto-stop too early (capture), person lost (tracking / multi-person), loop point.
-3. **Fixes with tests**; Vision fallback for flagged limbs; segment quality gating in Review (weak segments
-   shown as such, re-record or skip rather than save a broken card).
+3. **Vision second opinion.** Fixture DfC8LdUIjV4 (floor core drill): MediaPipe loses the legs — the 3D-flagged
+   frames (26 %) are wrong in the image too (87–97 % deviate > 25 % in 2D), so the Phase 2.5 rejection is right
+   and relaxing it (tried: trust mid-visibility joints with plausible bones) cannot help. Since 2026-11-04 Review
+   also runs Apple Vision and stores it in the raw capture (`resultVision`); next: measure on fixtures whether
+   Vision's legs are plausible where MediaPipe's are flagged, then merge per joint (never invent, never clamp).
+4. Segment quality gating in Review (weak segments shown as such, re-record or skip rather than save a broken
+   card).
 Acceptance: every owner-reported bad reel is a fixture; its failure is reproduced by a test, then fixed;
 `npm test` green; the eval harness numbers (Phase 2.5) do not regress.
 

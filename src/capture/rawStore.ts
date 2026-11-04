@@ -28,6 +28,8 @@ export type RawCapture = {
   segments?: { start: number; end: number; name: string; frames: number; detectedPct: number }[];
   /** the MediaPipe output: frames with xy / z / v / w per landmark */
   result: PoseResult;
+  /** Apple Vision's output on the same frames (second opinion for evaluation; Phase 13 step 3) */
+  resultVision?: PoseResult;
 };
 
 const dir = () => new Directory(Paths.document, 'captures');

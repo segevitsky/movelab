@@ -9,6 +9,8 @@ import { segment } from './segment';
 import { estimateFps, resample } from './resample';
 import { playbackWindow } from './playback';
 import type { RawFrame } from './types';
+import { processCapture } from './index';
+import { LM } from './types';
 
 type Capture = { timeline?: { e: string; t: number; d: number; rec: number }[]; result: { frames: RawFrame[] } };
 const load = (name: string): Capture => JSON.parse(readFileSync(join(__dirname, '__fixtures__', 'owner', name), 'utf8'));
@@ -35,4 +37,22 @@ describe('owner capture 2026-11-01: reel DfGIOMWuPrs (6.8 s, two drills, poster 
   // (soft-cut rule tried 2026-11-01 night: found this cut but split the staff flow). Needs visual scene cuts
   // from the native side (pipeline `cutTimes`) — plan Phase 13 step 2.
   it.todo('the two drills are split at the edited transition (≈ 9.6 s) via native scene cuts');
+});
+
+describe('owner capture 2026-11-02: reel DfC8LdUIjV4 (floor core drill — the legs disappear)', () => {
+  const cap = load('capture-2026-11-02-DfC8LdUIjV4.json');
+  const legs = [LM.leftKnee, LM.leftAnkle, LM.rightKnee, LM.rightAnkle];
+  const unknownShare = (xy: number[][][]) => { let u = 0, n = 0; for (const f of xy) for (const j of legs) { n++; if (!Number.isFinite(f[j][0])) u++; } return u / n; };
+
+  it('MediaPipe loses the legs on the floor: the 3D-flagged frames are wrong in the image too, so hiding them is right', () => {
+    const seg = processCapture({ frames: cap.result.frames })[0];
+    const flagged = seg.issues.filter((i) => i.kind === 'bone-length');
+    expect(flagged.length).toBeGreaterThan(20); // ≈ 26 % of frames
+    expect(unknownShare(seg.xy as number[][][])).toBeGreaterThan(0.4); // the drawn track hides them (with 0.1 s padding)
+    expect(unknownShare(seg.xyFull as number[][][])).toBeLessThan(0.05); // the analysis track bridges them
+  });
+
+  // What would fix it: a second model's legs where MediaPipe's are implausible (Apple Vision, stored in raw
+  // captures from 2026-11-04 on as `resultVision`), merged per joint — plan Phase 13 step 3.
+  it.todo('legs stay drawn in floor poses via the Vision second opinion');
 });

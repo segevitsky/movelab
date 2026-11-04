@@ -7,7 +7,7 @@ import { detectSceneCuts, type SceneDiffSample } from '../src/pipeline/sceneCuts
 import { Image } from 'react-native';
 import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
-import { Pose, type NormRect } from '../modules/pose';
+import { Pose, type NormRect, type PoseResult } from '../modules/pose';
 import { db } from '../src/db';
 import { exerciseFromProcessed, insertExercise, linkSource } from '../src/db/repo';
 import type { Scene } from '../src/db/types';
@@ -77,6 +77,10 @@ export default function Review() {
     // 2. pose
     setPhase('pose');
     const res = await Pose.process(params.uri, { cropRect: crop, delegate: 'gpu', targetFps: 30 });
+    // Phase 13 step 3: Apple Vision as a second opinion, stored with the raw capture for offline comparison
+    // (floor poses lose the legs in MediaPipe — owner fixture DfC8LdUIjV4); not drawn from yet
+    let resVision: PoseResult | null = null;
+    try { setProgress('Second opinion (Vision)…'); resVision = await Pose.processVision(params.uri, { cropRect: crop, targetFps: 15 }); } catch (e) { console.warn('vision unavailable', e); }
     setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}`);
     // 3. pipeline
     setPhase('pipeline');
@@ -113,7 +117,7 @@ export default function Review() {
     setPhase('review');
     // Phase 13: keep the raw pose output so this capture can be replayed as a fixture on the Mac
     try {
-      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res, timeline: params.timeline ? JSON.parse(params.timeline) : undefined, recordingSeconds: params.recordingSeconds ? Number(params.recordingSeconds) : undefined, sceneDiff: sceneDiff.length ? sceneDiff : undefined, cutTimes: cutTimes.length ? cutTimes : undefined,
+      saveRawCapture({ title: params.title ?? null, url: params.url ?? null, username: params.username ?? null, caption: params.caption ?? null, crop: crop ?? null, scene: s, result: res, timeline: params.timeline ? JSON.parse(params.timeline) : undefined, recordingSeconds: params.recordingSeconds ? Number(params.recordingSeconds) : undefined, sceneDiff: sceneDiff.length ? sceneDiff : undefined, cutTimes: cutTimes.length ? cutTimes : undefined, resultVision: resVision ?? undefined,
         segments: built.map((b) => ({ start: b.range.start, end: b.range.end, name: b.name, frames: b.processed.xy.length, detectedPct: Math.round((b.processed.xy.filter((fr) => Number.isFinite(fr[0][0])).length / Math.max(1, b.processed.xy.length)) * 100) })) });
     } catch (e) { console.warn('raw capture not saved', e); }
   }

@@ -28,6 +28,8 @@ Read `docs/01-product-spec.md`, `docs/02-architecture.md`, `docs/03-implementati
   looked rubbery). Rejecting physically impossible limb-frames (3D bone length jumping > 20 % and
   deviating > 25 %, Phase 2.5) and leaving them unknown is fine — that is rejection, not correction.
   Depth order comes from MediaPipe's 3D world z (with hysteresis), never from confidence.
+  **Owner amendment (2026-11-04):** a limb hidden for a short run (≤ 2 s) keeps its last detected pose, carried
+  along with its root joint (translated, never scaled) — `src/pipeline/hold.ts`. Longer gaps stay hidden.
 - Never trust a model's own confidence alone — run the sanity checks in Architecture §4.2.
 - LLM output that references exercises must be validated against library IDs.
 

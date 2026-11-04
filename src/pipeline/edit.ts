@@ -7,6 +7,7 @@ import { feet } from './feet';
 import { features } from './features';
 import { bestLoop, findPeriod } from './reps';
 import { hideImplausibleLimbs, sanityCheck } from './sanity';
+import { holdLimbs } from './hold';
 import { contacts as detectContacts } from './contacts';
 import { fitFloor, pinToFloor, type World } from './floor';
 import { cleanWorld, LIMB_DISTAL_JOINTS } from './bones3d';
@@ -36,7 +37,8 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
   const contacts = detectContacts(full, fps, torso);
   const floor = fitFloor(full, contacts, { world, matQuad: opts.matQuad });
   const pinned = pinToFloor(full, contacts, floor, fps, { torso, world });
-  const clPinned = cl.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
+  const clHeld = holdLimbs(cl, fps, { maxSeconds: 2 }).xy; // Phase 13: short limb dropouts keep the last pose
+  const clPinned = clHeld.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
   return {
     segment: seg,
     fps,

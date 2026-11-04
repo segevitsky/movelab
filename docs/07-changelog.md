@@ -28,6 +28,9 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
 - **Player restart as a visual cut**: the same capture (recorded from the reel log, mid-stream, no timeline
   events) was split in two by a strong picture change at 4.3 s — the reel restarting. `restartPrefix`: a strong
   cut within the first 6 s of a mid-stream recording drops the duplicate prefix instead of splitting.
+- **Hidden limbs are held** (owner: "keep the limbs, make them visible"): a limb hidden for ≤ 2 s keeps its last
+  detected pose carried with its root joint (`src/pipeline/hold.ts`, tested; CLAUDE.md amended). Review's
+  quality line no longer suggests deleting over hidden limbs.
 - **The actual floating bug**: `exerciseFromProcessed` spread the caller's fields after the scene it built, so
   Review's scene (crop / mat / camera flag) replaced the one carrying the fitted floor and the renderer fell
   back to "lowest ankle + 1.1 torso" — every card saved through Review since the floor fit existed floated

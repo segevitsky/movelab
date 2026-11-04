@@ -17,6 +17,7 @@ import { features, type Features } from './features';
 import { bestLoop, findPeriod } from './reps';
 import { estimateFps } from './resample';
 import { hideImplausibleLimbs, sanityCheck } from './sanity';
+import { holdLimbs } from './hold';
 import { contacts as detectContacts, type Contacts } from './contacts';
 import { fitFloor, pinToFloor, type FloorLine, type World } from './floor';
 import { cleanWorld, LIMB_DISTAL_JOINTS } from './bones3d';
@@ -66,7 +67,9 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
     const contacts = detectContacts(full, fps, torso);
     const floor = fitFloor(full, contacts, { world, matQuad: opts.matQuad });
     const pinned = pinToFloor(full, contacts, floor, fps, { torso, world });
-    const clPinned: Track = cl.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
+    // Phase 13: short dropouts of a limb keep its last detected pose, carried with its root joint (owner's call)
+    const clHeld = holdLimbs(cl, fps, { maxSeconds: 2 }).xy;
+    const clPinned: Track = clHeld.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
     return {
       segment: seg,
       fps,

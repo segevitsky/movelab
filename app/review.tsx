@@ -281,8 +281,8 @@ export default function Review() {
                   </View>
                   {(() => { const q = qualityScore(it.processed.xy, it.processed.issues); const pct = Math.round(q.score * 100); return (
                     <Text style={[styles.reason, pct < 70 && { color: colors.danger, fontStyle: 'normal', fontWeight: '700' }]}>
-                      {pct >= 90 ? 'tracking: good' : pct >= 70 ? `tracking: ok (${pct} %)` : pct >= 30 ? `tracking: poor (${pct} %) — consider trimming or deleting` : `tracking: unusable (${pct} %) — not added unless you tick it`}
-                      {q.unknownFrames ? ` · ${q.unknownFrames} frames with hidden limbs` : ''}
+                      {pct >= 90 ? 'tracking: good' : pct >= 70 ? `tracking: ok (${pct} %)` : pct >= 30 ? `tracking: partial (${pct} %) — check it full screen` : `tracking: unusable (${pct} %) — not added unless you tick it`}
+                      {q.unknownFrames ? ` · limbs hidden in ${q.unknownFrames} frames` : ''}
                     </Text>
                   ); })()}
                   <Text style={styles.reason} numberOfLines={2}>{it.suggestion.reasons.slice(0, 2).join(' · ')}</Text>

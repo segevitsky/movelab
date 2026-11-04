@@ -44,11 +44,12 @@ describe('owner capture 2026-11-02: reel DfC8LdUIjV4 (floor core drill — the l
   const legs = [LM.leftKnee, LM.leftAnkle, LM.rightKnee, LM.rightAnkle];
   const unknownShare = (xy: number[][][]) => { let u = 0, n = 0; for (const f of xy) for (const j of legs) { n++; if (!Number.isFinite(f[j][0])) u++; } return u / n; };
 
-  it('MediaPipe loses the legs on the floor: the 3D-flagged frames are wrong in the image too, so hiding them is right', () => {
+  it('MediaPipe loses the legs on the floor: the flagged frames are wrong in the image too; short gaps are held, not drawn raw', () => {
     const seg = processCapture({ frames: cap.result.frames })[0];
     const flagged = seg.issues.filter((i) => i.kind === 'bone-length');
     expect(flagged.length).toBeGreaterThan(20); // ≈ 26 % of frames
-    expect(unknownShare(seg.xy as number[][][])).toBeGreaterThan(0.4); // the drawn track hides them (with 0.1 s padding)
+    // the drawn track hid them (≈ 50 %); since the owner's 2026-11-04 call short gaps hold the last pose → few left
+    expect(unknownShare(seg.xy as number[][][])).toBeLessThan(0.15);
     expect(unknownShare(seg.xyFull as number[][][])).toBeLessThan(0.05); // the analysis track bridges them
   });
 

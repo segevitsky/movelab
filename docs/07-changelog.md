@@ -4,6 +4,15 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
 `docs/06-design-direction.md` and the commit history (`git log --format='%ad %s' --date=short`)._
 
 ## 2026-11-04 (Wednesday) — capture quality, round two
+- **Phase 14, 3D view (approved: "go with ur recommendations")**: every new card stores the cleaned 3D track
+  (`figure3d`, 'ML3D' int16 mm, 15 fps, frame-aligned with the figure) and the camera's facing ratio
+  (`scene.facing`: image shoulder width over 3D shoulder width, ≈ 1 frontal, ≈ 0 side). `view3d.ts` turns the
+  3D track into a 2D clip seen from a camera yawed 35° (hips placed above the fitted floor from the pinned 2D
+  track; orthographic; depth flags and feet from the rotated joints). `clipForExercise` picks the view for every
+  screen (Library tiles, viewer, player, GIF): the 3/4 view automatically when facing ≥ 0.8, otherwise as
+  filmed; the card has "As filmed / 3/4 view" chips (`scene.view` override, "auto" to clear). On the frontal
+  kneeling fixture (facing 1.16) the 3/4 render shows the folded legs that the flat view loses
+  (`scripts/dump3d.ts` + `scripts/preview.ts`). Older cards have no 3D track: re-process from Dev ▸ Raw captures.
 - **Visual scene cuts** (Phase 13 step 2): native `SceneDiff.swift` reports per-sample picture change inside the
   crop; pure `sceneCuts.ts` turns spikes into cut times; Review feeds `segment({ cutTimes })` and stores the
   series in raw captures. Needs the owner's captures to calibrate.

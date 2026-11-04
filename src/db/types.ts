@@ -59,4 +59,8 @@ export type Scene = {
   cameraStatic: boolean;
   /** Phase 2.5 fitted floor in figure pixel space: y = a·x + b */
   floor?: { a: number; b: number };
+  /** Phase 14: how frontal the camera is (≈ 1 facing the camera, ≈ 0 side view) */
+  facing?: number;
+  /** Phase 14: the owner's choice of view on the card; absent = automatic (3/4 view for frontal reels) */
+  view?: 'flat' | '3d';
 };

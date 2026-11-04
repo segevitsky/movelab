@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterExercises } from './repo';
+import { filterExercises, prefers3d, viewOf } from './repo';
 import { PRESET_FRAMEWORKS, SEED_GOALS } from './seed';
 import type { Exercise } from './schema';
 import { SLOTS } from './vocab';
@@ -41,5 +41,20 @@ describe('seed data', () => {
     expect(SEED_GOALS.map((g) => g.name)).toEqual(['Pull-ups', 'Muscle-up', 'L-sit', 'Front splits', 'Knee strength', 'Crawls']);
     for (const g of SEED_GOALS) expect(g.stages.length).toBeGreaterThanOrEqual(5);
     expect(new Set(SEED_GOALS.map((g) => g.id)).size).toBe(6);
+  });
+});
+
+describe('Phase 14 view selection', () => {
+  const base = { figure: null, figure3d: null, scene: null } as Pick<Exercise, 'figure' | 'figure3d' | 'scene'>;
+  it('is flat without a 3D track, whatever the scene says', () => {
+    expect(viewOf({ ...base, scene: { cameraStatic: false, facing: 1.1, view: '3d' } })).toBe('flat');
+    expect(prefers3d({ ...base, scene: { cameraStatic: false, facing: 1.1 } })).toBe(false);
+  });
+  it('picks the 3/4 view automatically for frontal reels and respects the owner override', () => {
+    const w = { ...base, figure3d: 'x' };
+    expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 1.1 } })).toBe('3d');
+    expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 0.4 } })).toBe('flat');
+    expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 0.4, view: '3d' } })).toBe('3d');
+    expect(viewOf({ ...w, scene: { cameraStatic: false, facing: 1.1, view: 'flat' } })).toBe('flat');
   });
 });

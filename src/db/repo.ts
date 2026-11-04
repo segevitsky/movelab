@@ -1,5 +1,8 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { decodeClip, downsampleClip, encodeClip, fromBase64, toBase64 } from '../figure/codec';
+import { decodeWorld } from '../figure/codec3d';
+import { clipFromView3d } from '../figure/view3d';
+import type { World } from '../pipeline/floor';
 import { clipFromProcessed } from '../figure/fromPipeline';
 import type { FigureClip } from '../figure/prepare';
 import type { ProcessedSegment } from '../pipeline';
@@ -23,6 +26,39 @@ export function filterExercises(rows: Exercise[], f: ExerciseFilter): Exercise[]
     if (q && !(e.name.toLowerCase().includes(q) || e.aliases.some((a) => a.toLowerCase().includes(q)))) return false;
     return true;
   });
+}
+
+/** The stored 3D track (Phase 14), frame-aligned with the figure; null when the card has none. */
+export function worldFromExercise(e: Pick<Exercise, 'figure3d'>): World | null {
+  if (!e.figure3d) return null;
+  try { return decodeWorld(fromBase64(e.figure3d)).world; } catch { return null; }
+}
+
+/** The figure seen from a rotated camera (three-quarter by default); null without a 3D track. */
+export function clipFromExercise3d(e: Pick<Exercise, 'figure' | 'figure3d' | 'scene'>, yawDeg = 35): FigureClip | null {
+  const clip = clipFromExercise(e);
+  const world = worldFromExercise(e);
+  if (!clip || !world) return null;
+  return clipFromView3d(clip, world, { yawDeg });
+}
+
+/** Should this card default to the 3D view? Frontal reels (facing ≳ 0.8) with a stored 3D track. */
+export function prefers3d(e: Pick<Exercise, 'figure3d' | 'scene'>): boolean {
+  return !!e.figure3d && (e.scene?.facing ?? 0) >= 0.8;
+}
+
+export type FigureView = 'flat' | '3d';
+
+/** The view this card is shown in: the owner's choice when set, else automatic; never 3D without a 3D track. */
+export function viewOf(e: Pick<Exercise, 'figure3d' | 'scene'>): FigureView {
+  if (!e.figure3d) return 'flat';
+  return e.scene?.view ?? (prefers3d(e) ? '3d' : 'flat');
+}
+
+/** The clip every screen draws: the flat (as filmed) figure or the three-quarter 3D view, per viewOf. */
+export function clipForExercise(e: Pick<Exercise, 'figure' | 'figure3d' | 'scene'>): FigureClip | null {
+  if (viewOf(e) === '3d') { const c = clipFromExercise3d(e); if (c) return c; }
+  return clipFromExercise(e);
 }
 
 export function clipFromExercise(e: Pick<Exercise, 'figure' | 'scene'>): FigureClip | null {

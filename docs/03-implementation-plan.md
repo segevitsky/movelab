@@ -232,7 +232,12 @@ count off, slow or missed frames; latest case: the last drill of a reel was not 
 Acceptance: every owner-reported bad reel is a fixture; its failure is reproduced by a test, then fixed;
 `npm test` green; the eval harness numbers (Phase 2.5) do not regress.
 
-## Phase 14 — 3D view of the figure (candidate, 2026-11-04; owner to approve)
+## Phase 14 — 3D view of the figure (approved 2026-11-04; built the same day, owner's device check pending)
+Done: `figure3d` + `scene.facing` stored by `exerciseFromProcessed`; `src/figure/view3d.ts` (facing ratio,
+`clipFromView3d` yaw 35°); `clipForExercise` / `viewOf` in `src/db/repo.ts` choose the view everywhere; card
+chips override (`scene.view`). Not done: a 3D floor plane / shadow (the rotated view reuses the flat floor line
+at a fixed height), eval of all lab reels in both views (only the owner fixture was rendered). Acceptance: the
+owner re-processes the frontal kneeling capture and the legs read; side-view reels look unchanged.
 Why: reels shot from the front (fixture DfC8LdUIjV4-restart: facing ratio 1.16, knees 0.22 m nearer than the
 hips) make a kneeling thigh a stub and hide the shin — a flat drawing cannot show it, and the owner wants
 these drills readable. What: (1) store the cleaned, smoothed 3D track (`figure3d`, computed since Phase 2.5,

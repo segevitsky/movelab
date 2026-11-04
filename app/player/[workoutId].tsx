@@ -7,7 +7,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '../../src/db';
-import { clipFromExercise } from '../../src/db/repo';
+import { clipForExercise } from '../../src/db/repo';
 import { endSession, getWorkout, startSession, updateWorkoutItems, workoutBlocks } from '../../src/db/workoutRepo';
 import { ExercisePicker } from '../../src/ui/ExercisePicker';
 import type { FrameworkBlocks } from '../../src/db/types';
@@ -142,7 +142,7 @@ export default function Player() {
   const exId = !step ? null : step.kind === 'work' ? step.exerciseId : step.kind === 'done' ? null : step.nextExerciseId;
   const ex = exId ? exById.get(exId) : undefined;
   // hooks must run on every render — keep this above the early return
-  const clip = useMemo(() => (ex ? clipFromExercise(ex) : null), [ex?.id]);
+  const clip = useMemo(() => (ex ? clipForExercise(ex) : null), [ex?.id]);
   if (!state || !step) return <View style={styles.center}><Text style={styles.doneMeta}>Loading…</Text></View>;
   const W = Dimensions.get('window').width;
   const H = Dimensions.get('window').height;

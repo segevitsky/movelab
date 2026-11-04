@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { db, schema } from '../../src/db';
-import { clipFromExercise, deleteExercise, updateExercise } from '../../src/db/repo';
+import { clipForExercise, deleteExercise, updateExercise, viewOf } from '../../src/db/repo';
 import { EQUIPMENT, INTENSITY, PATTERNS, SLOTS, type Equipment, type Intensity, type Pattern, type Slot } from '../../src/db/vocab';
 import { FigurePlayer } from '../../src/figure';
 import { Button, Chip } from '../../src/ui/Button';
@@ -27,7 +27,8 @@ export default function ExerciseDetail() {
     return allRows.filter((o) => o.id !== e.id && !o.archived && o.figure).map((o) => { const f = fingerprintOf(o); return { id: o.id, name: o.name, score: f ? similarity(fp, f) : 0 }; }).filter((x) => x.score >= 0.6).sort((a, b) => b.score - a.score).slice(0, 5);
   }, [e?.id, e?.updatedAt, allRows]);
   const src = useMemo(() => srcRows?.find((s) => s.id === e?.sourceId), [srcRows, e?.sourceId]);
-  const clip = useMemo(() => (e ? clipFromExercise(e) : null), [e?.figure]);
+  const view = e ? viewOf(e) : 'flat';
+  const clip = useMemo(() => (e ? clipForExercise(e) : null), [e?.figure, e?.figure3d, view]);
   const [speed, setSpeed] = useState(1);
   const [mirror, setMirror] = useState(false);
   const [hud, setHud] = useState(false);
@@ -47,6 +48,14 @@ export default function ExerciseDetail() {
         <FigurePlayer clip={clip} width={W} height={Math.round(W * 1.1)} speed={speed} mirror={mirror} hud={hud} style={styles.player} />
       ) : (
         <View style={[styles.noFigure, { width: W, height: Math.round(W * 0.5) }]}><Text style={{ color: '#999' }}>No figure (manual exercise). Add a video in Phase 4.</Text></View>
+      )}
+      {clip && e.figure3d && (
+        <View style={styles.row}>
+          <Text style={styles.small}>View</Text>
+          <Chip label="As filmed" on={view === 'flat'} onPress={() => save({ scene: { ...(e.scene ?? { cameraStatic: false }), view: 'flat' } })} />
+          <Chip label="3/4 view" on={view === '3d'} onPress={() => save({ scene: { ...(e.scene ?? { cameraStatic: false }), view: '3d' } })} />
+          {e.scene?.view ? <Pressable onPress={() => { const { view: _v, ...rest } = e.scene!; save({ scene: rest }); }}><Text style={styles.link}>auto</Text></Pressable> : null}
+        </View>
       )}
       {clip && (
         <View style={styles.row}>
@@ -111,6 +120,7 @@ export default function ExerciseDetail() {
       )}
       <Text style={styles.small}>
         {e.figureFrames ? `${e.figureFrames} frames @ ${e.figureFps?.toFixed(1)} fps · loop ${e.loopStart}–${e.loopEnd} · ` : ''}
+        {e.figure3d ? `3D track · facing ${(e.scene?.facing ?? 0).toFixed(2)} · ` : ''}
         created {new Date(e.createdAt).toLocaleDateString()}
       </Text>
 

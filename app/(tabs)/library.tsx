@@ -5,7 +5,7 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { desc } from 'drizzle-orm';
 import { Ionicons } from '@expo/vector-icons';
 import { db, schema } from '../../src/db';
-import { clipFromExercise, filterExercises } from '../../src/db/repo';
+import { clipForExercise, filterExercises } from '../../src/db/repo';
 import { EQUIPMENT, PATTERNS, SLOTS, type Equipment, type Pattern, type Slot } from '../../src/db/vocab';
 import { useFilters } from '../../src/state/filters';
 import { FigureCard, FigureStill } from '../../src/figure';
@@ -78,7 +78,7 @@ export default function Library() {
         gap={6}
         onReorder={(f, t) => setSelected((sel) => { const l = [...(sel ?? [])]; const [m] = l.splice(f, 1); l.splice(t, 0, m); return l; })}
         render={(e, _i, dragging, lift) => {
-          const clip = clipFromExercise(e);
+          const clip = clipForExercise(e);
           return (
             <Pressable onLongPress={lift} onPress={() => toggleSelect(e.id)} delayLongPress={180} style={[styles.trayThumb, dragging && { borderColor: colors.accent }]}>
               {clip ? <FigureStill clip={clip} width={56} height={56} /> : <Ionicons name="body-outline" size={20} color={colors.muted} />}
@@ -161,7 +161,7 @@ export function tileTags(e: Pick<Exercise, 'pattern' | 'slots'>) {
 
 /** The card is the figure: paper stage with a 3 pt pattern stripe on the start edge, one name line, one tag. */
 const ExerciseTile = React.memo(function ExerciseTile({ e, width, live, onPress, onLongPress, selected }: { e: Exercise; width: number; live: boolean; onPress: () => void; onLongPress?: () => void; /** null = not in select mode */ selected: boolean | null }) {
-  const clip = useMemo(() => clipFromExercise(e), [e.figure, e.scene]);
+  const clip = useMemo(() => clipForExercise(e), [e.figure, e.figure3d, e.scene]);
   const h = Math.round(width * 1.1);
   const stripe = e.pattern ? patternColor[e.pattern] : colors.line;
   const tags = tileTags(e);

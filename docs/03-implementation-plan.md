@@ -222,6 +222,8 @@ count off, slow or missed frames; latest case: the last drill of a reel was not 
    and relaxing it (tried: trust mid-visibility joints with plausible bones) cannot help. Since 2026-11-04 Review
    also runs Apple Vision and stores it in the raw capture (`resultVision`); next: measure on fixtures whether
    Vision's legs are plausible where MediaPipe's are flagged, then merge per joint (never invent, never clamp).
+   **Measured 2026-11-04: Vision does not recover them (3–20 of ~150 frames). Dropped.** Next option: a stronger
+   whole-body model (RTMW CoreML, parking lot) — a separate phase.
 4. **Floor + contacts for floor work** ✅ 2026-11-04: knees (folded leg) and lowest-point hands as contacts;
    depth term across frames; scale term; owner fixtures in the eval harness. Dev ▸ Raw captures ▸ Re-process
    re-runs a past capture through the current pipeline.

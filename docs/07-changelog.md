@@ -21,6 +21,13 @@ _What was done, when, and what is open. Newest first. Keep entries short; detail
   metre (uncapped it drew heels 1.3 torso under the ground) and the renderer's ground margin went from 0.3 to
   0.1 torso. Eval: owner fixtures and lab reels in
   `docs/eval-phase13.json`; `scripts/preview.ts` renders a contact sheet of a processed track (no deps).
+- **Vision second opinion: negative result.** On a fresh capture of the kneeling reel (fixture DfC8LdUIjV4-restart,
+  both models stored) Vision's legs are plausible and confident in only 3–20 of ~150 frames where MediaPipe's
+  are not; its leg confidence is lower overall. Per-joint merge dropped. Legs folded under a kneeling body
+  need a stronger whole-body model (parking lot: RTMW CoreML).
+- **Player restart as a visual cut**: the same capture (recorded from the reel log, mid-stream, no timeline
+  events) was split in two by a strong picture change at 4.3 s — the reel restarting. `restartPrefix`: a strong
+  cut within the first 6 s of a mid-stream recording drops the duplicate prefix instead of splitting.
 - **The actual floating bug**: `exerciseFromProcessed` spread the caller's fields after the scene it built, so
   Review's scene (crop / mat / camera flag) replaced the one carrying the fitted floor and the renderer fell
   back to "lowest ankle + 1.1 torso" — every card saved through Review since the floor fit existed floated

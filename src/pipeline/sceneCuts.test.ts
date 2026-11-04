@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { detectSceneCuts, type SceneDiffSample } from './sceneCuts';
+import { detectSceneCuts, restartPrefix, type SceneDiffSample } from './sceneCuts';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const series = (n: number, fps = 10, base = { hist: 0.04, pix: 4 }): SceneDiffSample[] => Array.from({ length: n }, (_, i) => ({ t: i / fps, ...base }));
 
@@ -30,5 +32,20 @@ describe('visual scene cuts', () => {
     const cuts = detectSceneCuts(s);
     expect(cuts).toHaveLength(1);
     expect(cuts[0].t).toBe(4.7);
+  });
+});
+
+describe('player restart prefix', () => {
+  it('a strong early cut in a mid-stream recording moves the playback start', () => {
+    expect(restartPrefix([{ t: 0.16, hist: 0.37 }, { t: 4.31, hist: 0.58 }], false)).toBeCloseTo(4.31);
+    expect(restartPrefix([{ t: 4.31, hist: 0.58 }], true)).toBeNull(); // the timeline knows better
+    expect(restartPrefix([{ t: 9.0, hist: 0.6 }], false)).toBeNull(); // too late to be a prefix
+    expect(restartPrefix([{ t: 2.0, hist: 0.2 }], false)).toBeNull(); // weak
+  });
+  it('owner fixture DfC8LdUIjV4-restart: the restart at 4.3 s is found from the stored scene scan', () => {
+    const cap = JSON.parse(readFileSync(join(__dirname, '__fixtures__', 'owner', 'capture-2026-11-04-DfC8LdUIjV4-restart.json'), 'utf8'));
+    const cuts = detectSceneCuts(cap.sceneDiff);
+    expect(cuts.map((c) => +c.t.toFixed(1))).toEqual([0.2, 4.3]);
+    expect(restartPrefix(cuts, (cap.timeline ?? []).some((e: { e: string }) => e.e === 'play'))).toBeCloseTo(4.3, 1);
   });
 });

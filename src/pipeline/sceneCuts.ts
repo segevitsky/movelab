@@ -34,3 +34,16 @@ export function detectSceneCuts(samples: SceneDiffSample[], opts: SceneCutOption
   }
   return out;
 }
+
+/**
+ * The reel player often plays a few seconds, jumps back and starts over (owner, 2026-11-01). When the
+ * recording began mid-stream (no `play` event in the timeline) and a strong visual cut lands within the
+ * first `maxPrefixSeconds`, the frames before it are a tail fragment of the previous loop, not an exercise:
+ * return the cut time as the new playback start. Fixture: DfC8LdUIjV4-restart (cut at 4.3 s split one drill in two).
+ */
+export function restartPrefix(cuts: { t: number; hist: number }[], hasPlayEvent: boolean, maxPrefixSeconds = 6, minHist = 0.3): number | null {
+  if (hasPlayEvent) return null;
+  const early = cuts.filter((c) => c.t > 0.5 && c.t <= maxPrefixSeconds && c.hist >= minHist);
+  if (!early.length) return null;
+  return Math.max(...early.map((c) => c.t));
+}

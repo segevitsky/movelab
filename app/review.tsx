@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, Sty
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { saveRawCapture } from '../src/capture/rawStore';
 import { playbackWindow } from '../src/pipeline/playback';
-import { detectSceneCuts, type SceneDiffSample } from '../src/pipeline/sceneCuts';
+import { detectSceneCuts, restartPrefix, type SceneDiffSample } from '../src/pipeline/sceneCuts';
 import { Image } from 'react-native';
 import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,7 +91,7 @@ export default function Review() {
     // Phase 13: the owner records until the reel starts over — cut the recording at the loop point the
     // player reported, so the repeated beginning never reaches the splitter (it merges with the last drill)
     const timeline: { e: string; t: number; d: number; rec: number }[] = params.timeline ? JSON.parse(params.timeline) : [];
-    const win = playbackWindow(timeline);
+    const win = { ...playbackWindow(timeline) };
     const raw = res.frames.filter((fr) => fr.t >= win.start && fr.t <= (Number.isFinite(win.end) ? win.end - 0.3 : Infinity));
     if (raw.length < res.frames.length) setStats((st) => `${st} · playback ${win.start.toFixed(1)}–${Number.isFinite(win.end) ? win.end.toFixed(1) : '…'} s`);
     const f0 = estimateFps(raw);
@@ -105,11 +105,17 @@ export default function Review() {
     try {
       const sd = await Pose.sceneDiff(params.uri, { cropRect: crop, sampleFps: 10 });
       sceneDiff = sd.samples.map(([t, hist, pix]) => ({ t, hist, pix }));
-      cutTimes = detectSceneCuts(sceneDiff).map((c) => c.t).filter((t) => t >= win.start && t <= win.end);
+      const cuts = detectSceneCuts(sceneDiff);
+      // a player restart in the first seconds of a mid-stream recording: drop the duplicate prefix
+      const restart = restartPrefix(cuts, timeline.some((ev) => ev.e === 'play'));
+      if (restart !== null && restart > win.start) { win.start = restart + 0.1; setStats((st) => `${st} · restart at ${restart.toFixed(1)} s, prefix dropped`); }
+      cutTimes = cuts.map((c) => c.t).filter((t) => t > win.start && t <= win.end);
       if (cutTimes.length) setStats((st) => `${st} · ${cutTimes.length} scene cut${cutTimes.length > 1 ? 's' : ''}`);
     } catch (e) { errors.sceneDiff = String(e); console.warn('sceneDiff unavailable', e); }
-    const segs = segment(rs, { cutTimes });
-    const built = segs.map((sg, i) => makeItem(rs, { start: sg.start, end: sg.end }, fpsUsed, i));
+    const rsWin = rs.filter((fr) => fr.t >= win.start);
+    if (rsWin.length !== rs.length) { setFrames(rsWin); }
+    const segs = segment(rsWin, { cutTimes });
+    const built = segs.map((sg, i) => makeItem(rsWin, { start: sg.start, end: sg.end }, fpsUsed, i));
     // the detector can mistake a uniform background for a mat: keep the quad only if it sits on the floor under the figure
     if (s.matQuad && built.length) {
       const ok = validateMatQuad(s.matQuad, built.reduce((a, b) => (b.processed.xy.length > a.processed.xy.length ? b : a)).processed.xyFull);
@@ -144,9 +150,15 @@ export default function Review() {
     const fpsUsed = Math.abs(f0 - 30) > 1 ? 30 : f0;
     setFrames(rs);
     setFps(fpsUsed);
-    const cutTimes = json.sceneDiff?.length ? detectSceneCuts(json.sceneDiff).map((c) => c.t).filter((t) => t >= win.start && t <= win.end) : [];
-    const segs = segment(rs, { cutTimes });
-    const built = segs.map((sg, i) => makeItem(rs, { start: sg.start, end: sg.end }, fpsUsed, i));
+    const cuts = json.sceneDiff?.length ? detectSceneCuts(json.sceneDiff) : [];
+    const restart = restartPrefix(cuts, (json.timeline ?? []).some((ev) => ev.e === 'play'));
+    const start = restart !== null && restart > win.start ? restart + 0.1 : win.start;
+    if (restart !== null) setStats((st) => `${st} · restart at ${restart.toFixed(1)} s, prefix dropped`);
+    const rsWin = rs.filter((fr) => fr.t >= start);
+    setFrames(rsWin);
+    const cutTimes = cuts.map((c) => c.t).filter((t) => t > start && t <= win.end);
+    const segs = segment(rsWin, { cutTimes });
+    const built = segs.map((sg, i) => makeItem(rsWin, { start: sg.start, end: sg.end }, fpsUsed, i));
     setItems(built);
     setPhase('review');
   }

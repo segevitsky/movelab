@@ -131,7 +131,9 @@ export function fitDepthTerm(xy: Track, contacts: Contacts, world: World | undef
   if (spread < 0.15) return 0;
   // robust slope of residual vs z over pairs at least 0.15 m apart (a median of per-point ratios is pulled
   // towards 0 by the many points near the reference depth)
-  const cap = torsoPx ? 4 * torsoPx : 600;
+  // cap: 1.2 torso of image shift per metre of depth — enough for a side view, and MediaPipe's world z is too
+  // noisy to trust more (an uncapped fit on the owner's kneeling reel drew heels 1.3 torso under the ground)
+  const cap = torsoPx ? 1.2 * torsoPx : 200;
   const ts = theilSen(rows as XY[], 4000, { minDx: 0.15, clampSlope: cap });
   if (!ts) return 0;
   return Math.max(-cap, Math.min(0, ts.a));

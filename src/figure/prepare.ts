@@ -87,7 +87,7 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
   // ground: the fitted floor (Phase 2.5) evaluated at the figure's mean x; else the 97th percentile of the lower ankle
   const fl = clip.scene?.floor;
   const meanX = median(xy.map((f) => (f[LM.leftHip][0] + f[LM.rightHip][0]) / 2));
-  const ground = fl ? fl.a * meanX + fl.b + th * 0.3 : percentile(xy.map((f) => Math.max(f[LM.leftAnkle][1], f[LM.rightAnkle][1])), 97) + th * 1.1;
+  const ground = fl ? fl.a * meanX + fl.b + th * 0.1 : percentile(xy.map((f) => Math.max(f[LM.leftAnkle][1], f[LM.rightAnkle][1])), 97) + th * 1.1;
 
   // extents per frame (joints + head + feet) for the camera
   const pts: XY[][] = xy.map((f, i) => {

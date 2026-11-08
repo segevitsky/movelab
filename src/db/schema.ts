@@ -81,6 +81,12 @@ export const framework = sqliteTable('framework', {
   createdAt: integer('created_at').notNull(),
 });
 
+/** Small key/value settings (the sender name on shared workouts, …). */
+export const setting = sqliteTable('setting', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
+
 export const goal = sqliteTable('goal', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),

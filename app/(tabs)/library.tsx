@@ -17,6 +17,10 @@ import { Button, IconButton } from '../../src/ui/Button';
 import { colors, hit, patternColor, radius, slotColor, space, type } from '../../src/ui/theme';
 import { Rise } from '../../src/ui/motion';
 import type { Exercise } from '../../src/db/schema';
+import { AddSheet } from '../../src/ui/AddSheet';
+import { deleteExercise, updateExercise } from '../../src/db/repo';
+import { shareExerciseGif } from '../../src/export/exerciseGif';
+import { Alert } from 'react-native';
 
 const COLS = 2;
 /** Phase 2 budget: at most this many figures loop at once; the rest show their loop-start frame. */
@@ -40,6 +44,9 @@ export default function Library() {
   const cardW = Math.floor((W - space.l * 2 - space.m * (COLS - 1)) / COLS);
   const active = !!(f.pattern || f.slot || f.equipment || f.text);
   const [sheet, setSheet] = useState<SheetKind>(null);
+  const [add, setAdd] = useState(false);
+  // long-press a card → its menu (owner, 2026-11-08: more than select mode)
+  const [menu, setMenu] = useState<Exercise | null>(null);
   // select mode: long-press a card → tick cards → Build workout (order = the tray, drag to reorder)
   const [selected, setSelected] = useState<string[] | null>(null);
   const toggleSelect = (id: string) => setSelected((sel) => { const cur = sel ?? []; return cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]; });
@@ -119,7 +126,7 @@ export default function Library() {
         onViewableItemsChanged={onViewableItemsChanged}
         renderItem={({ item, index }) => (
           <Rise index={index}>
-            <ExerciseTile e={item} width={cardW} live={live.has(item.id)} selected={selected ? selected.includes(item.id) : null} onLongPress={() => { if (!selected) setSelected([item.id]); }} onPress={() => (selected ? toggleSelect(item.id) : router.push({ pathname: '/exercise/[id]', params: { id: item.id } }))} />
+            <ExerciseTile e={item} width={cardW} live={live.has(item.id)} selected={selected ? selected.includes(item.id) : null} onLongPress={() => { if (!selected) setMenu(item); }} onPress={() => (selected ? toggleSelect(item.id) : router.push({ pathname: '/exercise/[id]', params: { id: item.id } }))} />
           </Rise>
         )}
         ListEmptyComponent={
@@ -130,11 +137,19 @@ export default function Library() {
         keyboardDismissMode="on-drag"
       />
       {!selected && (
-        <Pressable style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85, transform: [{ scale: 0.94 }] }]} onPress={() => router.push('/exercise/new')} accessibilityLabel="Add exercise">
+        <Pressable style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85, transform: [{ scale: 0.94 }] }]} onPress={() => setAdd(true)} accessibilityLabel="Add exercise">
           <Ionicons name="add" size={28} color={colors.onAccent} />
         </Pressable>
       )}
 
+      <AddSheet visible={add} onClose={() => setAdd(false)} />
+      <Sheet visible={!!menu} onClose={() => setMenu(null)} title={menu?.name ?? ''}>
+        <OptionRow icon="hammer-outline" label="Add to a workout" caption="Pick more cards, then build" onPress={() => { setSelected([menu!.id]); setMenu(null); }} />
+        <OptionRow icon="open-outline" label="Open" onPress={() => { const id = menu!.id; setMenu(null); router.push({ pathname: '/exercise/[id]', params: { id } }); }} />
+        <OptionRow icon="share-outline" label="Share as GIF" onPress={() => { const e = menu!; setMenu(null); const clip = clipForExercise(e); if (!clip) { Alert.alert('No figure', 'This card has no figure to share.'); return; } shareExerciseGif(e.name, clip).catch((err) => Alert.alert('Could not share', String(err))); }} />
+        <OptionRow icon={menu?.archived ? 'arrow-undo-outline' : 'archive-outline'} label={menu?.archived ? 'Unarchive' : 'Archive'} caption="Hidden from the library and the generator" onPress={() => { const e = menu!; setMenu(null); updateExercise(db, e.id, { archived: !e.archived }).catch((err) => Alert.alert('Save failed', String(err))); }} />
+        <OptionRow icon="trash-outline" label="Delete" onPress={() => { const e = menu!; setMenu(null); Alert.alert('Delete exercise?', e.name, [{ text: 'Cancel' }, { text: 'Delete', style: 'destructive', onPress: () => deleteExercise(db, e.id).catch((err) => Alert.alert('Delete failed', String(err))) }]); }} />
+      </Sheet>
       <Sheet visible={sheet === 'pattern'} onClose={() => setSheet(null)} title="Movement pattern">
         <OptionRow label="Any" selected={!f.pattern} onPress={() => { f.set({ pattern: null }); setSheet(null); }} />
         {PATTERNS.map((p: Pattern) => <OptionRow key={p} label={p} color={patternColor[p]} selected={f.pattern === p} onPress={() => { f.set({ pattern: p }); setSheet(null); }} />)}

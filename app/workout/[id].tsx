@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { exportWorkoutPackage } from '../../src/db/workoutTransfer';
+import { shareWorkoutFile } from '../../src/export/workoutFile';
+import { getSetting, SETTING_SENDER_NAME, setSetting } from '../../src/db/settings';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
@@ -49,6 +52,8 @@ export default function WorkoutScreen() {
   const [breakSheet, setBreakSheet] = useState<string | null>(null);
   const [restSheet, setRestSheet] = useState<'drills' | 'sections' | null>(null);
   const [saveFor, setSaveFor] = useState<string | null>(null); // blockId being saved as a section
+  const [shareName, setShareName] = useState<{ initial: string } | null>(null); // sender name prompt before sharing
+  const [sharing, setSharing] = useState(false);
   const [bankFor, setBankFor] = useState<string | null>(null); // blockId being replaced from the bank
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
@@ -89,6 +94,15 @@ export default function WorkoutScreen() {
   const tags: WorkoutTag[] = w.tags ?? [];
   const suggested = suggestWorkoutTags(w.items, byId).filter((t) => !tags.includes(t));
   const toggleTag = (t: WorkoutTag) => meta({ tags: tags.includes(t) ? tags.filter((x) => x !== t) : [...tags, t] });
+  /** Share as a .movelab file: the drills, dosages and stick figures — never video. Asks the sender's name once. */
+  const share = async (sender: string) => {
+    setSharing(true);
+    try {
+      if (sender.trim()) await setSetting(db, SETTING_SENDER_NAME, sender.trim());
+      await shareWorkoutFile(await exportWorkoutPackage(db, w.id, sender.trim() || null));
+    } catch (e) { Alert.alert('Could not share', String(e)); } finally { setSharing(false); }
+  };
+  const askShare = async () => { const saved = await getSetting(db, SETTING_SENDER_NAME); if (saved) share(saved); else setShareName({ initial: '' }); };
   const ov = (blockId: string) => w.inputs.blockOverrides?.[blockId] ?? {};
   const setOv = (blockId: string, patch: { skipped?: boolean; rounds?: number }) => save(w.items, { ...w.inputs, blockOverrides: { ...(w.inputs.blockOverrides ?? {}), [blockId]: { ...ov(blockId), ...patch } } });
   const addExtra = (blockId: string, ex: Exercise) => {
@@ -111,15 +125,20 @@ export default function WorkoutScreen() {
 
   return (
     <Screen scroll contentStyle={{ gap: space.m }} footer={<Button title={`Start · ${Math.round(total / 60)} min`} size="l" icon="play" onPress={() => router.push({ pathname: '/player/[workoutId]', params: { workoutId: w.id } })} />}>
-      <TextInput
-        style={styles.h1Input}
-        value={name}
-        onChangeText={setName}
-        placeholder={fw.name}
-        placeholderTextColor={colors.muted}
-        onBlur={() => (name.trim() || null) !== (w.name ?? null) && meta({ name: name.trim() || null })}
-        returnKeyType="done"
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
+        <TextInput
+          style={[styles.h1Input, { flex: 1 }]}
+          value={name}
+          onChangeText={setName}
+          placeholder={fw.name}
+          placeholderTextColor={colors.muted}
+          onBlur={() => (name.trim() || null) !== (w.name ?? null) && meta({ name: name.trim() || null })}
+          returnKeyType="done"
+        />
+        <IconButton icon="share-outline" size={40} onPress={askShare} disabled={sharing} />
+        <IconButton icon="person-outline" size={40} onPress={async () => setShareName({ initial: (await getSetting(db, SETTING_SENDER_NAME)) ?? '' })} />
+      </View>
+      <PromptSheet visible={!!shareName} title="Your name on shared workouts" placeholder="e.g. Dana, physio" initial={shareName?.initial ?? ''} confirm="Share" onConfirm={(t) => { setShareName(null); share(t); }} onClose={() => setShareName(null)} />
       <TextInput
         style={styles.descInput}
         value={desc}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, AppState, I18nManager, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, I18nManager, Linking, Text, View } from 'react-native';
+import { isWorkoutFileUrl } from '../src/db/workoutPackage';
 
 // The UI is English/LTR; on Hebrew devices iOS would mirror rows (close buttons end up on the far edge).
 if (I18nManager.isRTL) { I18nManager.allowRTL(false); I18nManager.forceRTL(false); }
@@ -40,11 +41,24 @@ function useSharedPayloads(enabled: boolean) {
   }, [enabled]);
 }
 
+/** A .movelab workout file opened with the app (Files, WhatsApp, AirDrop, mail) → the import screen. */
+function useWorkoutFiles(enabled: boolean) {
+  const router = useRouter();
+  useEffect(() => {
+    if (!enabled) return;
+    const open = (url: string | null | undefined) => { if (isWorkoutFileUrl(url) || (url?.startsWith('content://') ?? false)) router.push({ pathname: '/import', params: { uri: url! } }); };
+    Linking.getInitialURL().then(open).catch(() => {});
+    const sub = Linking.addEventListener('url', (e) => open(e.url));
+    return () => sub.remove();
+  }, [enabled]);
+}
+
 export default function Layout() {
   const router = useRouter();
   const { success, error } = useDbMigrations();
   const [seeded, setSeeded] = useState(false);
   useSharedPayloads(!!success && seeded);
+  useWorkoutFiles(!!success && seeded);
   useEffect(() => {
     if (error) console.error('db: migration error', error);
     if (success) {
@@ -96,6 +110,7 @@ export default function Layout() {
       <Stack.Screen name="player/[workoutId]" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="workout/[id]" options={{ title: 'Workout' }} />
       <Stack.Screen name="build" options={{ title: 'Build a workout', presentation: 'modal' }} />
+      <Stack.Screen name="import" options={{ title: 'Shared workout', presentation: 'modal' }} />
       <Stack.Screen name="similar" options={{ title: 'Alike drills (calibration)' }} />
       <Stack.Screen name="debug" options={{ title: 'Pose debug' }} />
       <Stack.Screen name="login" options={{ title: 'Instagram login (your session)' }} />

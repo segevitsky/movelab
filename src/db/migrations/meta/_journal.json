@@ -29,6 +29,13 @@
       "when": 1793537756079,
       "tag": "0003_workout_blocks",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794144288753,
+      "tag": "0004_settings",
+      "breakpoints": true
     }
   ]
 }

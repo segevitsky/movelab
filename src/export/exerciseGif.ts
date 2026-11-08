@@ -57,7 +57,7 @@ export async function exerciseGifFile(name: string, clip: FigureClip, opts: GifO
   const safe = name.replace(/[^\w֐-׿-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'exercise';
   const file = new File(Paths.cache, `${safe}.gif`);
   if (file.exists) file.delete();
-  file.write(bytes);
+  await file.write(bytes);
   opts.onProgress?.(1);
   return file;
 }

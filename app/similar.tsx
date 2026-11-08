@@ -38,7 +38,7 @@ export default function SimilarPairs() {
       if (legacy.exists) { const j = JSON.parse(legacy.textSync()); const v = j.verdicts ?? j; if (v && typeof v === 'object' && !Array.isArray(v)) { setVerdicts(v); f.write(JSON.stringify(v)); } }
     } catch {}
   }, []);
-  const save = (v: Record<string, Verdict>) => { setVerdicts(v); try { const f = FILE(); if (f.exists) f.delete(); f.write(JSON.stringify(v)); } catch (e) { Alert.alert('Could not save', String(e)); } };
+  const save = (v: Record<string, Verdict>) => { setVerdicts(v); try { const f = FILE(); if (f.exists) f.delete(); f.writeSync(JSON.stringify(v)); } catch (e) { Alert.alert('Could not save', String(e)); } };
 
   const pairs = useMemo(() => {
     const rows = (exercises ?? []).filter((e) => !e.archived && e.figure);
@@ -71,7 +71,7 @@ export default function SimilarPairs() {
     };
     const out = new File(Paths.document, 'similar-verdicts.json');
     if (out.exists) out.delete();
-    out.write(JSON.stringify(payload));
+    await out.write(JSON.stringify(payload));
     try {
       await Sharing.shareAsync(out.uri, { mimeType: 'application/json', dialogTitle: 'Similar-pairs verdicts' });
     } catch (e) {

@@ -19,6 +19,12 @@ get new workouts from me or from every other creator" — for a physical therapi
   "Not on Android yet" (pose is iOS-only until the Kotlin port).
 - **Long-press a card** in the Library: add to a workout (the old select mode), open, share as GIF, archive,
   delete.
+- **Share failed with "You don't have access to the provided file"** (owner, first try): `File.write()` is async
+  in this SDK and the call was not awaited, so expo-sharing checked a file that did not exist yet (simulator log:
+  `exists=false size=0` right after the write). The React Native Share fallback tried in between presented a
+  sheet that vanished and froze the app — removed. Fixed by awaiting `write()` (or `writeSync()`) before every
+  share: workout file, GIF, library export, verdicts export, raw captures. Verified on the simulator
+  (`Documents/autoroute.txt` dev hook opens a route on launch).
 - **Re-signing** (2026-11-04 night): "MoveLab is not available" — the free profile expires 7 days after it is
   *created*, not installed; fixed by deleting the expired profiles and building with
   `xcodebuild -allowProvisioningUpdates` (expo run:ios cannot create profiles). Recipe in memory.

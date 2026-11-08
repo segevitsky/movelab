@@ -67,7 +67,7 @@ export default function DevHome() {
       const text = JSON.stringify(t);
       const file = new File(Paths.document, `movelab-library-${new Date().toISOString().slice(0, 10)}.json`);
       if (file.exists) file.delete();
-      file.write(text);
+      await file.write(text);
       if (!file.exists || !file.size) throw new Error(`file not written (${text.length} chars)`);
       try {
         await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'MoveLab library' });

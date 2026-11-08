@@ -42,7 +42,7 @@ export function saveRawCapture(c: Omit<RawCapture, 'version' | 'savedAt'>): stri
   const name = `capture-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`;
   const f = new File(d, name);
   if (f.exists) f.delete();
-  f.write(JSON.stringify({ version: 1, savedAt: Date.now(), ...c } satisfies RawCapture));
+  f.writeSync(JSON.stringify({ version: 1, savedAt: Date.now(), ...c } satisfies RawCapture));
   prune();
   return f.uri;
 }

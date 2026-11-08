@@ -73,6 +73,9 @@ export default function Layout() {
             // drop a video at Documents/autoreview.mp4 (xcrun simctl … container) to open Review on launch
             const auto = new File(Paths.document, 'autoreview.mp4');
             if (auto.exists) setTimeout(() => router.push({ pathname: '/review', params: { uri: auto.uri, title: 'autoreview.mp4' } }), 800);
+            // drop a route name in Documents/autoroute.txt (e.g. "devshare") to open that screen on launch
+            const route = new File(Paths.document, 'autoroute.txt');
+            if (route.exists) { const r = (await route.text()).trim(); if (r) setTimeout(() => router.push(`/${r}` as never), 800); }
           }
           setSeeded(true);
         })

@@ -25,9 +25,9 @@ export const COLORS = {
   accent: '#2f6b8f',
 } as const;
 
-type Side = { sh: number; el: number; wr: number; hp: number; kn: number; an: number; idx: 0 | 1 };
-const LEFT: Side = { sh: LM.leftShoulder, el: LM.leftElbow, wr: LM.leftWrist, hp: LM.leftHip, kn: LM.leftKnee, an: LM.leftAnkle, idx: 0 };
-const RIGHT: Side = { sh: LM.rightShoulder, el: LM.rightElbow, wr: LM.rightWrist, hp: LM.rightHip, kn: LM.rightKnee, an: LM.rightAnkle, idx: 1 };
+type Side = { sh: number; el: number; wr: number; hp: number; kn: number; an: number; ix: number; pk: number; th: number; idx: 0 | 1 };
+const LEFT: Side = { sh: LM.leftShoulder, el: LM.leftElbow, wr: LM.leftWrist, hp: LM.leftHip, kn: LM.leftKnee, an: LM.leftAnkle, ix: LM.leftIndex, pk: LM.leftPinky, th: LM.leftThumb, idx: 0 };
+const RIGHT: Side = { sh: LM.rightShoulder, el: LM.rightElbow, wr: LM.rightWrist, hp: LM.rightHip, kn: LM.rightKnee, an: LM.rightAnkle, ix: LM.rightIndex, pk: LM.rightPinky, th: LM.rightThumb, idx: 1 };
 
 const paintCache = new Map<string, SkPaint>();
 function fill(color: string): SkPaint {
@@ -172,6 +172,17 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
       taper(P[s.sh], P[s.el], color, tt * 1.0 + g, tt * 0.95 + g);
       taper(P[s.el], P[s.wr], color, tt * 0.95 + g, tt * 0.85 + g);
       dot(P[s.wr], tt * 0.6 + g / 2, color);
+      // hand (owner, 2026-11-08: "we don't have hands"): MediaPipe's index / pinky / thumb bases, drawn only
+      // when detected — a palm wedge wrist → index → pinky, and the thumb as a short taper. Nothing invented.
+      const ix = P[s.ix], pk = P[s.pk], th = P[s.th];
+      if (ok(P[s.wr]) && ok(ix) && ok(pk)) {
+        const W0 = T(P[s.wr]), I = T(ix), K = T(pk);
+        canvas.drawPath(Skia.Path.Polygon([{ x: W0[0], y: W0[1] }, { x: I[0], y: I[1] }, { x: K[0], y: K[1] }], true), fill(color));
+        capsule(ix, pk, color, tt * 0.5 + g);
+        taper(P[s.wr], ix, color, tt * 0.7 + g, tt * 0.45 + g);
+        taper(P[s.wr], pk, color, tt * 0.7 + g, tt * 0.45 + g);
+      }
+      if (ok(P[s.wr]) && ok(th)) taper(P[s.wr], th, color, tt * 0.55 + g, tt * 0.35 + g);
     }
     if (which === 'arm') return;
     taper(P[s.hp], P[s.kn], color, tt * 1.1 + g, tt * 1.0 + g);

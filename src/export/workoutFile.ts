@@ -30,8 +30,12 @@ export async function readWorkoutFile(uri: string): Promise<WorkoutPackage> {
   if (uri.startsWith('file://')) {
     text = await new File(uri).text();
   } else {
-    // Android content:// (WhatsApp, Gmail, Files): only the legacy API reads provider URIs
-    text = await FileSystemLegacy.readAsStringAsync(uri);
+    // Android content:// (WhatsApp, Gmail, Files): reading a provider URI as a string is unsupported
+    // ("Unsupported scheme", 2026-11-08), but copying it into our cache works; read the copy.
+    const dest = new File(Paths.cache, `incoming-${Date.now()}.movelab`);
+    if (dest.exists) dest.delete();
+    await FileSystemLegacy.copyAsync({ from: uri, to: dest.uri });
+    try { text = await dest.text(); } finally { try { dest.delete(); } catch {} }
   }
   return parseWorkoutPackage(text);
 }

@@ -99,7 +99,7 @@ export default function WorkoutScreen() {
     setSharing(true);
     try {
       if (sender.trim()) await setSetting(db, SETTING_SENDER_NAME, sender.trim());
-      await shareWorkoutFile(await exportWorkoutPackage(db, w.id, sender.trim() || null));
+      await shareWorkoutFile(await exportWorkoutPackage(db, w.id, sender.trim() || null), w.name?.trim() || fw.name);
     } catch (e) { Alert.alert('Could not share', String(e)); } finally { setSharing(false); }
   };
   const askShare = async () => { const saved = await getSetting(db, SETTING_SENDER_NAME); if (saved) share(saved); else setShareName({ initial: '' }); };

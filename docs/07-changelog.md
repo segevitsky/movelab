@@ -19,6 +19,9 @@ get new workouts from me or from every other creator" — for a physical therapi
   "Not on Android yet" (pose is iOS-only until the Kotlin port).
 - **Long-press a card** in the Library: add to a workout (the old select mode), open, share as GIF, archive,
   delete.
+- **Verified end to end** (evening): iPhone → WhatsApp → wife's Android, workout imported ("amazing … it works").
+  Android needed one more fix: a WhatsApp `content://` URI cannot be read as a string; it is copied into the cache
+  first (`copyAsync`) and read from there.
 - **Share failed with "You don't have access to the provided file"** (owner, first try): `File.write()` is async
   in this SDK and the call was not awaited, so expo-sharing checked a file that did not exist yet (simulator log:
   `exists=false size=0` right after the write). The React Native Share fallback tried in between presented a

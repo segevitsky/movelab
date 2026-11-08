@@ -269,7 +269,7 @@ for physical therapists so they could give their patients exercises."
   "text/metadata only" rule in the architecture doc before anything is uploaded).
 Decide first: who is the first outside user (a PT the owner knows?) and whether steps 1–2 are enough for them.
 
-## Phase 16 — Hands and props (candidate, owner 2026-11-08)
+## Phase 16 — Hands and props (owner 2026-11-08; hands step 1 + staff tracker/renderer built the same night; staff *detector* and object detector open)
 Owner: "we don't have hands and we do have feet, this limits our movement recognition … hands have joints … I also
 want to recognise props like sticks and kettlebells … physicians will use bands, walls, objects … we have props
 and a framework so we need to do this also."

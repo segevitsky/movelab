@@ -17,6 +17,7 @@ export function clipFromProcessed(seg: ProcessedSegment): FigureClip {
     hud,
     scene: { floor: { a: seg.floor.a, b: seg.floor.b } },
     depth: seg.depth,
+    props: seg.props,
     debug: { contacts: seg.contacts, flagged: seg.issues.filter((i) => i.kind === 'bone-length').map((i) => ({ frame: i.frame, limbs: i.limbs })) },
   };
 }

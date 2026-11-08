@@ -1,11 +1,12 @@
 import { processCapture, type RawFrame } from '../pipeline';
+import type { StaffLine } from '../pipeline/props/staff';
 import type { Db } from './index';
 import { exerciseFromProcessed, insertExercise, linkSource } from './repo';
 import type { Equipment, Pattern, Slot } from './vocab';
 
 /** Dev-only: turn the 3 lab reels into library exercises (with figures) so the grid can be tested. */
 export async function importLabReels(db: Db) {
-  const reels: { name: string; url: string; coach: string; frames: RawFrame[]; segs: { name: string; pattern: Pattern; slots: Slot[]; equipment: Equipment[] }[] }[] = [
+  const reels: { name: string; url: string; coach: string; frames: RawFrame[]; staffLines?: StaffLine[]; segs: { name: string; pattern: Pattern; slots: Slot[]; equipment: Equipment[] }[] }[] = [
     {
       name: 'mobility', url: 'https://www.instagram.com/reel/lab-reel-1/', coach: 'lab.mobility',
       frames: require('../../reference/sample-data/reel1_mobility_mp33.json'),
@@ -18,6 +19,7 @@ export async function importLabReels(db: Db) {
     {
       name: 'staff', url: 'https://www.instagram.com/reel/lab-reel-2/', coach: 'lab.staff',
       frames: require('../../reference/sample-data/reel2_staff_mp33.json'),
+      staffLines: require('../../reference/sample-data/reel2_staff_lines.json'),
       segs: [{ name: 'Staff flow', pattern: 'skill', slots: ['skill', 'warmup'], equipment: ['staff'] }],
     },
     {
@@ -28,7 +30,7 @@ export async function importLabReels(db: Db) {
   ];
   let count = 0;
   for (const r of reels) {
-    const processed = processCapture({ frames: r.frames });
+    const processed = processCapture({ frames: r.frames }, { staffLines: r.staffLines });
     const ids: string[] = [];
     processed.forEach((seg, i) => {
       const meta = r.segs[Math.min(i, r.segs.length - 1)];

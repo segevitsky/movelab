@@ -51,3 +51,19 @@ describe('figure codec', () => {
     }
   });
 });
+
+describe('codec: staff prop (Phase 16)', () => {
+  it('round-trips the rod ends and the behind flag, and survives downsampling', async () => {
+    const { encodeClip, decodeClip, downsampleClip } = await import('./codec');
+    const n = 6;
+    const xy = Array.from({ length: n }, () => Array.from({ length: 33 }, () => [10, 20] as [number, number]));
+    const clip = { fps: 30, xy, loop: { i0: 0, i1: n - 1 }, props: { staff: { a: xy.map((_, i) => (i === 2 ? null : [i * 10, 5] as [number, number])), b: xy.map((_, i) => (i === 2 ? null : [i * 10 + 100, 50] as [number, number])), behind: xy.map((_, i) => i % 2 === 0) } } };
+    const back = decodeClip(encodeClip(clip as any));
+    expect(back.props?.staff?.a[1]).toEqual([10, 5]);
+    expect(back.props?.staff?.a[2]).toBeNull();
+    expect(back.props?.staff?.behind).toEqual([true, false, true, false, true, false]);
+    const half = downsampleClip(clip as any, 15);
+    expect(half.props?.staff?.a.length).toBe(3);
+    expect(half.props?.staff?.a[1]).toBeNull();
+  });
+});

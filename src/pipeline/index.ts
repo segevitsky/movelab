@@ -24,6 +24,8 @@ import { cleanWorld, LIMB_DISTAL_JOINTS } from './bones3d';
 import { depthOrder, type DepthOrder } from './depth';
 import { median } from './math';
 import { segment, sliceSegment, type SegmentOptions } from './segment';
+import { trackStaff, type StaffLine, type StaffTrack } from './props/staff';
+export { trackStaff, type StaffLine, type StaffTrack } from './props/staff';
 import type { FootTrack, LoopResult, PeriodResult, RawPose, SanityIssue, Segment, Track } from './types';
 
 export type ProcessedSegment = {
@@ -46,10 +48,12 @@ export type ProcessedSegment = {
   toes: FootTrack;
   heels: FootTrack;
   features: Features;
+  /** Phase 16 props: a staff tracked as a rigid rod (only when the capture had line detections) */
+  props?: { staff?: { a: StaffTrack['a']; b: StaffTrack['b']; behind: boolean[] } };
 };
 
 /** Whole pipeline for one capture: segment → clean → sanity → reps/loop → feet → features. */
-export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; matQuad?: [number, number][] } = {}): ProcessedSegment[] {
+export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; matQuad?: [number, number][]; /** Phase 16: per-frame staff line detections (raw px, capture times) */ staffLines?: StaffLine[] } = {}): ProcessedSegment[] {
   const fps = raw.fps && raw.fps > 0 ? raw.fps : estimateFps(raw.frames);
   return segment(raw.frames, opts.segment).map((seg) => {
     const frames = sliceSegment(raw.frames, seg);
@@ -70,7 +74,13 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
     // Phase 13: short dropouts of a limb keep its last detected pose, carried with its root joint (owner's call)
     const clHeld = holdLimbs(cl, fps, { maxSeconds: 2 }).xy;
     const clPinned: Track = clHeld.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
+    let props: ProcessedSegment['props'];
+    if (opts.staffLines?.length) {
+      const st = trackStaff(opts.staffLines, clPinned, frames.map((f) => f.t), fps, torso, { pinOffset: pinned.offset });
+      if (st.L > 0) props = { staff: { a: st.a, b: st.b, behind: st.behind } };
+    }
     return {
+      props,
       segment: seg,
       fps,
       xy: clPinned,

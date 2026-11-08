@@ -15,6 +15,8 @@ export const COLORS = {
   nearBehind: '#3b4254', // right side when it is the far limb (slightly lighter)
   farBehind: '#9aa0ad', // left side when it is the far limb
   torso: '#2b3142',
+  staff: '#8a6a48', // Phase 16 props: wood
+  staffEdge: '#5e462e',
   floor: '#e9e4db',
   floorLine: '#dad3c7',
   horizon: '#ded8ce',
@@ -204,6 +206,16 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     }
   };
 
+  // props (Phase 16): a staff drawn as a rigid rod — behind the body when the tracker says so, else in front
+  const rod = () => {
+    const s = fr.staff;
+    if (!s) return;
+    const A = T(s.a), B = T(s.b);
+    canvas.drawLine(A[0], A[1], B[0], B[1], stroke(COLORS.staffEdge, t * 0.5));
+    canvas.drawLine(A[0], A[1], B[0], B[1], stroke(COLORS.staff, t * 0.34));
+  };
+  if (fr.staff?.behind) rod();
+
   // far limbs first (Phase 2.5 depth order from 3D: per pair, the side that is farther from the camera),
   // at 85 % width and slightly lighter. Colours stay fixed per side.
   const legsNear = fr.legsRightNear ? RIGHT : LEFT, legsFar = fr.legsRightNear ? LEFT : RIGHT;
@@ -234,6 +246,7 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
   limbSet(armsNear, COLORS.bg, t * 0.55, 'arm');
   limbSet(legsNear, colorOf(legsNear, false), 0, 'leg');
   limbSet(armsNear, colorOf(armsNear, false), 0, 'arm');
+  if (fr.staff && !fr.staff.behind) rod();
 
   // --- debug overlays
   if (opts.showFloorLine && prep.floor) {

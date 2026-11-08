@@ -21,7 +21,11 @@ export type FigureClip = {
   debug?: { contacts?: Record<string, boolean[]>; flagged?: { frame: number; limbs: string[] }[] };
   /** Phase 2.5 step 5: per frame, is the right side nearer the camera (legs / arms)? default true */
   depth?: { legsRightNear: boolean[]; armsRightNear: boolean[] };
+  /** Phase 16 props: a staff / stick as a rigid rod (ends per frame, same px space as xy; null = not this frame) */
+  props?: { staff?: StaffProp };
 };
+
+export type StaffProp = { a: (XY | null)[]; b: (XY | null)[]; behind: boolean[] };
 
 export type PreparedFrame = {
   /** 33 joints + head centre at index 33, px (source space) */
@@ -31,6 +35,8 @@ export type PreparedFrame = {
   armsRightNear: boolean;
   toe: (XY | null)[]; // [left, right]
   heel: (XY | null)[];
+  /** the staff's two ends this frame, if tracked */
+  staff: { a: XY; b: XY; behind: boolean } | null;
   cam: { x0: number; y0: number; scale: number };
 };
 
@@ -96,6 +102,8 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
       if (!ft) continue;
       for (const p of ft.xy[i]) if (p) arr.push(p);
     }
+    const st = clip.props?.staff;
+    if (st) { const a = st.a[i], b = st.b[i]; if (a) arr.push(a); if (b) arr.push(b); }
     return arr;
   });
   const fin = (a: XY[]) => a.filter((p) => !Number.isNaN(p[0]) && !Number.isNaN(p[1]));
@@ -114,6 +122,7 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
     armsRightNear: clip.depth?.armsRightNear[i] ?? true,
     toe: clip.toes ? clip.toes.xy[i].map((p) => (p ? ([p[0], p[1]] as XY) : null)) : [null, null],
     heel: clip.heels ? clip.heels.xy[i].map((p) => (p ? ([p[0], p[1]] as XY) : null)) : [null, null],
+    staff: clip.props?.staff && clip.props.staff.a[i] && clip.props.staff.b[i] ? { a: [...clip.props.staff.a[i]!] as XY, b: [...clip.props.staff.b[i]!] as XY, behind: !!clip.props.staff.behind[i] } : null,
     cam: { x0: cx[i] - width / (2 * scale), y0: ground - (0.87 * height) / scale, scale },
   }));
 

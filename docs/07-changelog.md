@@ -19,6 +19,16 @@ get new workouts from me or from every other creator" — for a physical therapi
   "Not on Android yet" (pose is iOS-only until the Kotlin port).
 - **Long-press a card** in the Library: add to a workout (the old select mode), open, share as GIF, archive,
   delete.
+- **Hands** (owner, evening: "we don't have hands … hands have joints"): MediaPipe's index / pinky / thumb bases
+  were captured but never drawn. The figure now has a palm wedge (wrist → index → pinky) and a thumb taper, only
+  when detected; hold carries them with the arm. Finger joints (21/hand) stay a Phase 16 step 2 item.
+- **Props, step 1 — the staff**: `src/pipeline/props/staff.ts` ports the rigid-rod tracker (staffproc3.py):
+  constant length (p97), completion on the side that continues the previous centre, hands-following through
+  gaps, One-Euro, outlier gating, behind-body hysteresis. On the lab staff reel the end-jerk spikes drop
+  338 → 66 px/frame (prototype 449 → 76). Stored in the figure blob (codec flag bit 2), drawn as a wood rod
+  behind or in front of the body. **Missing: the on-device line detector** — the prototype's colour mask is
+  specific to a wooden staff; a colour-agnostic detector near both wrists is the next step, so real captures
+  do not get a staff yet (the lab staff reel does, from the prototype's detections).
 - **Verified end to end** (evening): iPhone → WhatsApp → wife's Android, workout imported ("amazing … it works").
   Android needed one more fix: a WhatsApp `content://` URI cannot be read as a string; it is copied into the cache
   first (`copyAsync`) and read from there.

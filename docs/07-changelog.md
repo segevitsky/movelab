@@ -3,6 +3,26 @@
 _What was done, when, and what is open. Newest first. Keep entries short; details live in the phase docs,
 `docs/06-design-direction.md` and the commit history (`git log --format='%ad %s' --date=short`)._
 
+## 2026-11-08 (Sunday) — the first version other people can use
+Owner: "a version a person can record himself, upload videos from his gallery, create his own workouts and
+get new workouts from me or from every other creator" — for a physical therapist handing patients exercises.
+- **Share a workout as a file** (`.movelab`, `src/db/workoutPackage.ts` pure + `workoutTransfer.ts`): the
+  workout's sections, drills, dosages, rests and every exercise it uses — name, tags, skeleton, 3D track,
+  source link; never video. Share icon on the workout screen; the sender's name is asked once (new `setting`
+  table, migration 0004) and shown to the receiver ("Dana sent you a workout"). Opening the file from Files /
+  WhatsApp / AirDrop / mail (iOS UTI `com.segev.movelab.workout`; Android intent filters for content://)
+  lands on `app/import.tsx`: preview, then "Add to my workouts" upserts the exercises by id (newer wins, local
+  edits kept), puts the workout under Recent, and a re-sent file replaces the earlier copy. No backend.
+- **Add sheet** on the Library "+" (`src/ui/AddSheet.tsx`): record with the camera (ImagePicker camera, video,
+  90 s max; camera + microphone permission strings), pick a video from Photos, paste an Instagram link, type it
+  in. Videos go through the same Review and are deleted after processing. On Android the video paths say
+  "Not on Android yet" (pose is iOS-only until the Kotlin port).
+- **Long-press a card** in the Library: add to a workout (the old select mode), open, share as GIF, archive,
+  delete.
+- **Re-signing** (2026-11-04 night): "MoveLab is not available" — the free profile expires 7 days after it is
+  *created*, not installed; fixed by deleting the expired profiles and building with
+  `xcodebuild -allowProvisioningUpdates` (expo run:ios cannot create profiles). Recipe in memory.
+
 ## 2026-11-04 (Wednesday) — capture quality, round two
 - **Phase 14, 3D view (approved: "go with ur recommendations")**: every new card stores the cleaned 3D track
   (`figure3d`, 'ML3D' int16 mm, 15 fps, frame-aligned with the figure) and the camera's facing ratio

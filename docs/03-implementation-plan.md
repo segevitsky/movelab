@@ -251,7 +251,7 @@ facing ratio, with a toggle on the card; (4) eval: the lab reels + owner fixture
 Risk: MediaPipe world coordinates are noisy (bone-length p95 13–30 %); the view must tolerate it (same
 rejection rules, no clamping). Est. 1–2 days.
 
-## Phase 15 — Other people's videos: own uploads, and PTs handing exercises to patients (candidate, owner 2026-11-04)
+## Phase 15 — Other people's videos: own uploads, and PTs handing exercises to patients (owner 2026-11-04; steps 1–2 built 2026-11-08 — camera + Photos + link in an Add sheet, `.movelab` workout files with import; step 3 open)
 Owner: "we need people also to start using it … uploading videos for them and parsing them is really important …
 for physical therapists so they could give their patients exercises."
 - **Step 1 — parse an uploaded video (small, ≈ 1 day).** The native module already takes any file URI

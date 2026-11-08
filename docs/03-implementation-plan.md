@@ -269,6 +269,27 @@ for physical therapists so they could give their patients exercises."
   "text/metadata only" rule in the architecture doc before anything is uploaded).
 Decide first: who is the first outside user (a PT the owner knows?) and whether steps 1–2 are enough for them.
 
+## Phase 16 — Hands and props (candidate, owner 2026-11-08)
+Owner: "we don't have hands and we do have feet, this limits our movement recognition … hands have joints … I also
+want to recognise props like sticks and kettlebells … physicians will use bands, walls, objects … we have props
+and a framework so we need to do this also."
+- **Hands, step 1 (cheap, ≈ ½ day):** MediaPipe Pose already gives 3 points per hand (pinky 17/18, index 19/20,
+  thumb 21/22) that are captured but never drawn. Draw a palm wedge from wrist → index/pinky when detected
+  (same rule as feet: only what was detected), and use palm direction in the fingerprint (grip up / down /
+  neutral). No new model.
+- **Hands, step 2 (finger joints, ≈ 2–3 days):** 21 landmarks per hand need MediaPipe Hands (or Holistic) run on
+  a crop around each wrist — a second model on device, slower capture, and the storage/renderer gain finger
+  bones. Worth it for grip-heavy work (wrist mobility, rehab, rings). Decide after step 1 shows what is missing.
+- **Props, step 1 — the staff (proven):** port `reference/pose-pipeline/staff.py` (Arch §4.5) to TS/Swift: a line
+  tracked between the hands, drawn as a rod. Sticks, dowels, brooms, barbells-as-a-line.
+- **Props, step 2 — detected objects (≈ 3–5 days):** a small on-device detector (YOLO-class, CoreML) for
+  kettlebell / dumbbell / band / ball / chair / wall-anchor; each prop becomes a simple shape attached to the
+  nearest hand (or foot / floor); the card carries the prop type (equipment vocab already exists), and the
+  generator/framework can require or exclude props. Bands are a line between two anchors (hand–hand, hand–foot,
+  hand–fixed point). Walls: a vertical plane when a hand/foot contact is far from the floor and static.
+Hard rules stand: draw only what was detected; never invent a prop position; prop frames with no detection stay
+empty. Order to decide with the owner: hands step 1 → staff → detector → finger joints.
+
 ## Parking lot (not now)
 Props layer (staff tracker proven, see Arch §4.5; other props need detectors) · use MediaPipe 3D for twists/props ·
 Sync/accounts · ~~3D view of figure~~ (→ Phase 14 candidate) · **Android** (APK sideload is easy; needs Kotlin ports of pose (MediaPipe Android, same model), screen recorder (MediaProjection + foreground service) and a share intent, plus a real device to test; cheap first step = player-only build seeded from an iPhone library export; est. 3–5 days) · 3D view of figure · comparing my own recording to the reference (form check) ·

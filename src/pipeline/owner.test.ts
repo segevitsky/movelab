@@ -91,3 +91,17 @@ describe('owner capture 2026-11-10: reel DfWjXHKuRpu (lying floor drill filmed h
     }
   });
 });
+
+describe('Phase 17: the whole-body model output (RTMW l-m on the owner screen recording of DfWjXHKuRpu) through the pipeline', () => {
+  const cap = load('rtmw-2026-11-10-DfWjXHKuRpu-light.json');
+  const frames = at30(cap.result.frames);
+
+  it('is one exercise with the legs known in most frames (MediaPipe had leg visibility 0.15 here)', () => {
+    const segs = processCapture({ frames });
+    expect(segs.length).toBe(1);
+    const s = segs[0];
+    const legs = s.xy.filter((f) => [LM.leftKnee, LM.rightKnee, LM.leftAnkle, LM.rightAnkle].every((j) => Number.isFinite(f[j][0]))).length;
+    expect(legs / s.xy.length).toBeGreaterThan(0.7);
+    expect(Math.abs(s.floor.a)).toBeLessThan(0.364);
+  });
+});

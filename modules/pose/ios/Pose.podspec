@@ -13,10 +13,11 @@ Pod::Spec.new do |s|
 
   s.dependency 'ExpoModulesCore'
   s.dependency 'MediaPipeTasksVision', '~> 0.10.21'
+  s.dependency 'onnxruntime-objc', '~> 1.20'
 
   s.source_files = '**/*.{h,m,swift}'
   # The model ships in the app bundle (see Models/). Keep assets/models/ as the canonical copy.
-  s.resources = ['Models/*.task']
+  s.resources = ['Models/*.task', 'Models/*.onnx']
 
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',

@@ -13,6 +13,10 @@ export type ProcessOptions = {
   minDetectionConfidence?: number;
   minPresenceConfidence?: number;
   minTrackingConfidence?: number;
+  /** Phase 17: 'hybrid' = MediaPipe (3D) + RTMW whole-body for the 2D points; default 'mediapipe' */
+  engine?: 'mediapipe' | 'hybrid';
+  rtmwModelPath?: string;
+  rtmwCoreML?: boolean;
 };
 
 /** Same frame format as reference/sample-data/*_mp33.json. */
@@ -22,11 +26,16 @@ export type PoseFrame = {
   z?: number[];
   v?: number[]; // visibility 0..1 (Vision: confidence; 0 = not provided)
   w?: [number, number, number][]; // world metres (MediaPipe only)
+  /** Phase 17 (hybrid): MediaPipe's own 2D points, kept for comparison when RTMW supplied xy/v */
+  mp?: { xy: [number, number][]; v: number[] };
+  /** Phase 17: whole-body extras — 21 points per hand, 6 foot points, scores, the person box used */
+  wb?: { hands: [number, number][][]; handScores: number[][]; feet: [number, number][]; feetScores: number[]; box: number[] };
 };
 
 export type PoseResult = {
-  source: 'mediapipe' | 'vision';
+  source: 'mediapipe' | 'vision' | 'hybrid';
   model: string;
+  engine?: { rtmw?: string; coreML?: boolean; rtmwMs?: number; rtmwDetected?: number; boxesFromVision?: number };
   delegate?: string;
   fps: number;
   width: number;

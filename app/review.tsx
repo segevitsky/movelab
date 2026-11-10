@@ -78,13 +78,14 @@ export default function Review() {
     setScene(s);
     // 2. pose
     setPhase('pose');
-    const res = await Pose.process(params.uri, { cropRect: crop, delegate: 'gpu', targetFps: 30 });
+    // Phase 17: hybrid = MediaPipe (3D world track) + RTMW whole-body for the 2D points
+    const res = await Pose.process(params.uri, { cropRect: crop, delegate: 'gpu', targetFps: 30, engine: 'hybrid' });
     // Phase 13 step 3: Apple Vision as a second opinion, stored with the raw capture for offline comparison
     // (floor poses lose the legs in MediaPipe — owner fixture DfC8LdUIjV4); not drawn from yet
     let resVision: PoseResult | null = null;
     const errors: Record<string, string> = {};
     try { setProgress('Second opinion (Vision)…'); resVision = await Pose.processVision(params.uri, { cropRect: crop, targetFps: 15 }); } catch (e) { errors.vision = String(e); console.warn('vision unavailable', e); }
-    setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}`);
+    setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}${res.source === 'hybrid' ? ` · whole-body model${res.engine?.coreML ? ' (ANE)' : ' (CPU)'} ${res.engine?.rtmwDetected ?? 0} fr, ${Math.round((res.engine?.rtmwMs ?? 0) / Math.max(1, res.stats.frames))} ms/fr` : ''}`);
     // 3. pipeline
     setPhase('pipeline');
     setProgress('Splitting into exercises…');

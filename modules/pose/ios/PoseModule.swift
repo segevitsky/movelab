@@ -83,7 +83,16 @@ public final class PoseModule: Module {
 
     let t0 = CFAbsoluteTimeGetCurrent()
     let landmarker = try PoseLandmarker(options: mpOptions)
+    // Phase 17: the whole-body model for the 2D points (MediaPipe keeps giving the 3D world track)
+    var rtmw: RTMW? = nil
+    if options.engine.lowercased() == "hybrid" {
+      guard let p = options.rtmwModelPath.flatMap({ URL(string: $0)?.path ?? $0 }) ?? Self.bundledRTMWPath() else {
+        throw PoseException("RTMW model (rtmw-*.onnx) not found in bundle")
+      }
+      rtmw = try RTMW(modelPath: p, coreML: options.rtmwCoreML)
+    }
     let tInit = CFAbsoluteTimeGetCurrent() - t0
+    var rtmwMs = 0.0, rtmwDetected = 0, boxesFromVision = 0
 
     let frames = try VideoFrames(url: url, crop: options.cropRect?.cgRect, maxSeconds: options.maxSeconds)
     defer { frames.close() }
@@ -113,13 +122,53 @@ public final class PoseModule: Module {
         let ti = CFAbsoluteTimeGetCurrent()
         let result = try landmarker.detect(videoFrame: image, timestampInMilliseconds: ts)
         inferMs += (CFAbsoluteTimeGetCurrent() - ti) * 1000
+        var mpXY: [[Double]]? = nil
         if let lm = result.landmarks.first, lm.count == 33 {
           detected += 1
-          entry["xy"] = lm.map { [r2(Double($0.x) * W), r2(Double($0.y) * H)] }
+          mpXY = lm.map { [r2(Double($0.x) * W), r2(Double($0.y) * H)] }
+          entry["xy"] = mpXY
           entry["z"] = lm.map { r2(Double($0.z) * W) }
           entry["v"] = lm.map { r3(Double(truncating: $0.visibility ?? 0)) }
           if let wl = result.worldLandmarks.first, wl.count == 33 {
             entry["w"] = wl.map { [r4(Double($0.x)), r4(Double($0.y)), r4(Double($0.z))] }
+          }
+        }
+        if let rt = rtmw {
+          // person box: Vision's largest human rectangle (a drawn anatomy graphic in a reel is smaller than the
+          // real person — owner capture DfWjXHKuRpu), else MediaPipe's landmarks, else the whole frame
+          var box = RTMW.personBox(pb)
+          if box != nil { boxesFromVision += 1 }
+          if box == nil, let m = mpXY {
+            let xs = m.map { $0[0] }, ys = m.map { $0[1] }
+            if let x0 = xs.min(), let x1 = xs.max(), let y0 = ys.min(), let y1 = ys.max(), x1 > x0, y1 > y0 {
+              box = CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
+            }
+          }
+          let tr = CFAbsoluteTimeGetCurrent()
+          let res = try rt.infer(pb, box: box ?? CGRect(x: 0, y: 0, width: W, height: H))
+          rtmwMs += (CFAbsoluteTimeGetCurrent() - tr) * 1000
+          let bodyScore = res.scores[0..<17].reduce(0, +) / 17
+          if bodyScore >= 0.3 {
+            rtmwDetected += 1
+            if mpXY == nil { detected += 1 }
+            let m = RTMW.toMediaPipe33(res.kps, res.scores)
+            // keep MediaPipe's 2D under "mp"; the main xy/v become the whole-body model's (inner face points
+            // fall back to MediaPipe's when it has them)
+            if let mx = mpXY { entry["mp"] = ["xy": mx, "v": entry["v"] ?? []] }
+            let mpV = entry["v"] as? [Double]
+            entry["xy"] = (0..<33).map { j -> [Double] in
+              if let p = m.xy[j] { return [r2(p[0]), r2(p[1])] }
+              if let mx = mpXY { return mx[j] }
+              return [0, 0]
+            }
+            entry["v"] = (0..<33).map { j -> Double in m.xy[j] != nil ? r3(m.v[j]) : (mpV?[j] ?? 0) }
+            entry["wb"] = [
+              "hands": [RTMW.handL, RTMW.handR].map { base in (0..<21).map { [r2(res.kps[base + $0][0]), r2(res.kps[base + $0][1])] } },
+              "handScores": [RTMW.handL, RTMW.handR].map { base in (0..<21).map { r3(res.scores[base + $0]) } },
+              "feet": (17..<23).map { [r2(res.kps[$0][0]), r2(res.kps[$0][1])] },
+              "feetScores": (17..<23).map { r3(res.scores[$0]) },
+              "box": box.map { [r2(Double($0.minX)), r2(Double($0.minY)), r2(Double($0.maxX)), r2(Double($0.maxY))] } ?? [],
+            ]
           }
         }
         out.append(entry)
@@ -130,8 +179,9 @@ public final class PoseModule: Module {
     }
     let elapsed = CFAbsoluteTimeGetCurrent() - tStart
     return [
-      "source": "mediapipe",
-      "model": "pose_landmarker_heavy",
+      "source": rtmw != nil ? "hybrid" : "mediapipe",
+      "model": rtmw != nil ? "pose_landmarker_heavy+\(rtmw!.modelName)" : "pose_landmarker_heavy",
+      "engine": rtmw != nil ? ["rtmw": rtmw!.modelName, "coreML": rtmw!.coreML, "rtmwMs": Int(rtmwMs), "rtmwDetected": rtmwDetected, "boxesFromVision": boxesFromVision] : [:],
       "delegate": options.delegate,
       "fps": stride > 1 ? frames.info.nominalFps / Double(stride) : frames.info.nominalFps,
       "width": frames.outWidth, "height": frames.outHeight,
@@ -201,6 +251,15 @@ public final class PoseModule: Module {
   }
 
   // MARK: - helpers
+
+  /// Phase 17: the bundled RTMW ONNX model (any rtmw-*.onnx resource).
+  static func bundledRTMWPath() -> String? {
+    let bundles: [Bundle] = [Bundle.main, Bundle(for: PoseModule.self)] + [Bundle(for: PoseModule.self).url(forResource: "Pose", withExtension: "bundle").flatMap(Bundle.init(url:))].compactMap { $0 }
+    for b in bundles {
+      if let urls = b.urls(forResourcesWithExtension: "onnx", subdirectory: nil), let u = urls.first(where: { $0.lastPathComponent.hasPrefix("rtmw") }) { return u.path }
+    }
+    return nil
+  }
 
   static func bundledModelPath() -> String? {
     if let p = Bundle.main.path(forResource: "pose_landmarker_heavy", ofType: "task") { return p }

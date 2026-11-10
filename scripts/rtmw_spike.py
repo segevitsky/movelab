@@ -4,7 +4,7 @@ capture (MediaPipe-33 layout + 'wb' extras) so the TS pipeline and scripts/previ
   python scripts/rtmw_spike.py <video.mp4|mov> <out-capture.json> [--mode balanced|performance|lightweight] [--every N]
 
 Needs the rtmlib venv (see docs/07-changelog.md 2026-11-10). Models download on first run (OpenMMLab).
-Output frame: { t, xy: 33×[x,y], c: 33 visibilities, wb: { hands: [21×[x,y]]×2, feet: 6×[x,y], scores } }.
+Output frame: { t, xy: 33×[x,y], v: 33 scores, wb: { hands: [21×[x,y]]×2, feet: 6×[x,y], scores } }.
 No video leaves the Mac; this is an offline evaluation tool, not shipped code.
 """
 import json, sys, time, argparse
@@ -19,7 +19,7 @@ FEET2MP = {17: 31, 19: 29, 20: 32, 22: 30}
 # hands: 91–111 left (0 wrist, 1–4 thumb, 5–8 index, 9–12 middle, 13–16 ring, 17–20 pinky), 112–132 right
 HAND_L, HAND_R = 91, 112
 # MP pinky 17/18 = pinky knuckle, index 19/20 = index knuckle, thumb 21/22 = thumb knuckle #2
-HAND2MP = {17: HAND_L + 17, 18: HAND_R + 17, 19: HAND_L + 5, 20: HAND_R + 5, 21: HAND_L + 2, 22: HAND_R + 2}
+HAND2MP = {HAND_L + 17: 17, HAND_R + 17: 18, HAND_L + 5: 19, HAND_R + 5: 20, HAND_L + 2: 21, HAND_R + 2: 22}  # source → MP
 
 
 def main():
@@ -27,7 +27,10 @@ def main():
     ap.add_argument('video'); ap.add_argument('out')
     ap.add_argument('--mode', default='balanced'); ap.add_argument('--every', type=int, default=1)
     ap.add_argument('--min-score', type=float, default=0.3)
+    ap.add_argument('--crop', default=None, help='x,y,w,h normalised (the reel area of a screen recording)')
+    ap.add_argument('--pick', default='largest', choices=['largest', 'score'], help='which detected person to keep')
     a = ap.parse_args()
+    crop = [float(v) for v in a.crop.split(',')] if a.crop else None
     wb = Wholebody(to_openpose=False, mode=a.mode, backend='onnxruntime', device='cpu')
     cap = cv2.VideoCapture(a.video)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
@@ -38,21 +41,29 @@ def main():
         if not ok: break
         if i % a.every: i += 1; continue
         t = i / fps
+        ox = oy = 0
+        if crop:
+            x0, y0 = int(crop[0] * W), int(crop[1] * H); x1, y1 = int((crop[0] + crop[2]) * W), int((crop[1] + crop[3]) * H)
+            img = img[y0:y1, x0:x1]; ox, oy = x0, y0
         kps, scores = wb(img)  # (n_person, 133, 2), (n_person, 133)
         fr = {'t': round(t, 4)}
         if len(kps):
-            # the person with the highest mean body score
-            p = int(np.argmax(scores[:, :17].mean(axis=1)))
-            k, s = kps[p], scores[p]
+            if a.pick == 'largest':
+                # the biggest body box: a drawn anatomy graphic in the reel is a smaller "person" than the real one
+                areas = [np.ptp(k_[:17, 0]) * np.ptp(k_[:17, 1]) for k_ in kps]
+                p = int(np.argmax(areas))
+            else:
+                p = int(np.argmax(scores[:, :17].mean(axis=1)))
+            k, s = kps[p].copy(), scores[p]
+            k[:, 0] += ox; k[:, 1] += oy
             xy = [[float('nan'), float('nan')]] * 33
             c = [0.0] * 33
             for src, dst in {**COCO2MP, **FEET2MP, **HAND2MP}.items():
                 xy[dst] = [round(float(k[src][0]), 2), round(float(k[src][1]), 2)]
                 c[dst] = round(float(s[src]), 3)
-            for j in range(33):
-                if c[j] < a.min_score: xy[j] = [float('nan'), float('nan')]
-            fr['xy'] = [[None if np.isnan(v) else v for v in p_] for p_ in xy]
-            fr['c'] = c
+            # keep every point; low scores go through `v` (the TS cleaner drops visibility < threshold)
+            fr['xy'] = [[0.0, 0.0] if np.isnan(p_[0]) else p_ for p_ in xy]
+            fr['v'] = c
             fr['wb'] = {
                 'hands': [[[round(float(k[HAND_L + q][0]), 2), round(float(k[HAND_L + q][1]), 2)] for q in range(21)],
                           [[round(float(k[HAND_R + q][0]), 2), round(float(k[HAND_R + q][1]), 2)] for q in range(21)]],

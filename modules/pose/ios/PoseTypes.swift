@@ -24,6 +24,12 @@ struct ProcessOptions: Record {
   @Field var minDetectionConfidence: Double = 0.4
   @Field var minPresenceConfidence: Double = 0.4
   @Field var minTrackingConfidence: Double = 0.4
+  /// Phase 17: "mediapipe" (default) or "hybrid" = MediaPipe (3D world track) + RTMW whole-body for the 2D points.
+  @Field var engine: String = "mediapipe"
+  /// Override the RTMW model path (file:// URI). Default: the bundled rtmw-*.onnx.
+  @Field var rtmwModelPath: String? = nil
+  /// Run RTMW through the CoreML execution provider (ANE/GPU) when available.
+  @Field var rtmwCoreML: Bool = true
 }
 
 struct FrameImageOptions: Record {

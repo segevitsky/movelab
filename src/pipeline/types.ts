@@ -13,6 +13,9 @@ export type RawFrame = {
   v?: number[];
   /** world landmarks in metres, hip-centred (MediaPipe only) */
   w?: [number, number, number][];
+  /** Phase 17 (hybrid engine): MediaPipe's own 2D points, and the whole-body extras (hands, feet) */
+  mp?: { xy: [number, number][]; v: number[] };
+  wb?: { hands: [number, number][][]; handScores: number[][]; feet: [number, number][]; feetScores: number[]; box?: number[] };
 };
 
 export type RawPose = {

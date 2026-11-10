@@ -21,6 +21,22 @@ Owner's capture DfWjXHKuRpu (a lying floor drill filmed head-on): the mat in a s
   no cleaning fixes what the detector never saw. Owner's decision: **bring in the stronger whole-body model**
   (RTMW, 133 keypoints incl. fingers and feet). `scripts/rtmw_spike.py` runs it on a screen recording on the Mac
   and writes a MoveLab raw capture; the owner is recording the reel for the comparison.
+- **Spike result (16:25)**: on the owner's screen recording of that reel (a kneeling plank-to-pike drill filmed low
+  and head-on), both models were run on the identical cropped frames (`scripts/mp_spike.py` runs the app's own
+  pose_landmarker_heavy). MediaPipe: a person in 153/188 frames, leg visibility 0.15, torso drawn floating
+  off the body. RTMW-x-l (256×192): a person in 188/188, leg score 0.58, knees and feet on the mat in every
+  sampled frame, fingers on the floor. Gotcha found on the way: the reel carries an anatomy graphic (three
+  drawn torsos) and the person detector preferred those "people" — the spike now crops to the video area and
+  keeps the largest body (`--crop`, `--pick largest`); the app must do the same (Vision human rectangles or
+  MediaPipe's box, largest wins). **Decision: RTMW goes into the app (Phase 17 step 2).** Model size is the
+  open question (x-l 229 MB; the lightweight l-m variant is being measured).
+- **On device (evening)**: `modules/pose/ios/RTMW.swift` — ONNX Runtime (`onnxruntime-objc` 1.30, CoreML
+  execution provider when available) running `rtmw-dw-l-m` 256×192 (129 MB; on the spike clip legs 0.46 vs 0.58
+  for the 229 MB x-l, same joints visually — `compare-light.jpg`). Person box from Vision's human rectangles
+  (largest), else MediaPipe's landmarks, else the whole frame. `engine: 'hybrid'` in `Pose.process` keeps
+  MediaPipe for the 3D world track and replaces the 2D points with RTMW's (MediaPipe's kept under `mp`; hands
+  21×2, feet and the box under `wb`). Review uses hybrid; the stats line shows the engine, ANE/CPU and ms per
+  frame. The model is git-ignored (GitHub refuses > 100 MB): `scripts/fetch-models.sh` downloads it.
 
 ## 2026-11-08 (Sunday) — the first version other people can use
 Owner: "a version a person can record himself, upload videos from his gallery, create his own workouts and

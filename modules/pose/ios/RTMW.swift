@@ -78,12 +78,12 @@ final class RTMW {
     ctx.saveGState()
     ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
     ctx.fill(CGRect(x: 0, y: 0, width: RTMW.inputW, height: RTMW.inputH))
-    // y-down drawing: flip, then place the source so that the crop rect maps onto the whole context
-    ctx.translateBy(x: 0, y: CGFloat(RTMW.inputH))
-    ctx.scaleBy(x: 1, y: -1)
+    // default (y-up) coordinates: place the source so the crop rect [x0, x0+sw] × [y0, y0+sh] (top-left coords)
+    // fills the context; memory row 0 is then the top row. (A CTM flip here produced an upside-down crop on
+    // the first device run, 2026-11-10 — verified against rtmlib's warpAffine with a macOS copy of this code.)
     let s = CGFloat(RTMW.inputW) / sw
     ctx.interpolationQuality = .medium
-    ctx.draw(cg, in: CGRect(x: -x0 * s, y: -y0 * s, width: CGFloat(cg.width) * s, height: CGFloat(cg.height) * s))
+    ctx.draw(cg, in: CGRect(x: -x0 * s, y: CGFloat(RTMW.inputH) - (CGFloat(cg.height) - y0) * s, width: CGFloat(cg.width) * s, height: CGFloat(cg.height) * s))
     ctx.restoreGState()
 
     guard let data = ctx.data else { throw PoseException("RTMW: crop context has no data") }

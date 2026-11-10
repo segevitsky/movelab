@@ -58,12 +58,16 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
   return segment(raw.frames, opts.segment).map((seg) => {
     const frames = sliceSegment(raw.frames, seg);
     const { xy, conf } = toTrack(frames);
-    // Phase 2.5 step 4: 3D bone-length check first — flagged limb-frames become unknown in 2D too (→ gap fill)
+    // Phase 2.5 step 4: 3D bone-length check first — flagged limb-frames become unknown in 2D too (→ gap fill).
+    // Phase 17 (hybrid engine): the 2D points come from the whole-body model and the 3D track from MediaPipe;
+    // MediaPipe's 3D failures must not veto joints the other model saw (owner capture 2026-11-10 17:05: the 3D
+    // flags blanked good limbs), so the 3D issues only mask the world track there, never the 2D points.
+    const hybrid = frames.some((f) => !!f.wb);
     const rawWorld: World = frames.map((f) => (f.w && f.w.length === 33 ? f.w : undefined));
     const w3 = cleanWorld(rawWorld, fps);
-    for (const is of w3.issues) for (const limb of is.limbs) for (const j of LIMB_DISTAL_JOINTS[limb]) conf[is.frame][j] = 0;
+    if (!hybrid) for (const is of w3.issues) for (const limb of is.limbs) for (const j of LIMB_DISTAL_JOINTS[limb]) conf[is.frame][j] = 0;
     const full = clean(xy, conf, fps);
-    const issues = [...sanityCheck(full), ...w3.issues];
+    const issues = hybrid ? sanityCheck(full) : [...sanityCheck(full), ...w3.issues];
     const cl = hideImplausibleLimbs(clean(xy, conf, fps, { maxGapSeconds: 1.0 }), issues, fps);
     const period = findPeriod(full, fps);
     const world: World = w3.world;

@@ -124,4 +124,12 @@ describe('owner capture 2026-11-10 17:05: the same reel through the hybrid engin
     expect(legs / s.xy.length).toBeGreaterThan(0.95);
     expect(qualityScore(s.xy, s.issues).score).toBeGreaterThanOrEqual(0.9);
   });
+
+  it('the Review path (processRange) agrees with the main pipeline', async () => {
+    const { processRange } = await import('./edit');
+    const { qualityScore } = await import('./sanity');
+    const { estimateFps } = await import('./resample');
+    const s = processRange(frames, { start: 0, end: frames.length - 1 }, estimateFps(frames));
+    expect(qualityScore(s.xy, s.issues).score).toBeGreaterThanOrEqual(0.9);
+  });
 });

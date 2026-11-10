@@ -25,11 +25,15 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
   const slice = frames.slice(range.start, range.end + 1);
   const { xy, conf } = toTrack(slice);
   // Phase 2.5 step 4: 3D bone-length check first — flagged limb-frames become unknown in 2D too (→ gap fill)
+  // Phase 17 hybrid rules, same as processCapture: MediaPipe's 3D flags never veto the whole-body model's 2D
+  // points, and the limb "collapse" rule (a MediaPipe failure mode) is off (Review runs this path — 57 % on
+  // the phone vs ≥ 90 % in the main pipeline until both paths matched, 2026-11-10)
+  const hybrid = slice.some((f) => !!f.wb);
   const rawWorld: World = slice.map((f) => (f.w && f.w.length === 33 ? f.w : undefined));
   const w3 = cleanWorld(rawWorld, fps);
-  for (const is of w3.issues) for (const limb of is.limbs) for (const j of LIMB_DISTAL_JOINTS[limb]) conf[is.frame][j] = 0;
+  if (!hybrid) for (const is of w3.issues) for (const limb of is.limbs) for (const j of LIMB_DISTAL_JOINTS[limb]) conf[is.frame][j] = 0;
   const full = clean(xy, conf, fps);
-  const issues = [...sanityCheck(full), ...w3.issues];
+  const issues = hybrid ? sanityCheck(full, { collapseRatio: 0 }) : [...sanityCheck(full), ...w3.issues];
   const cl = hideImplausibleLimbs(clean(xy, conf, fps, { maxGapSeconds: 1.0 }), issues, fps);
   const period = full.length > fps * 2 ? findPeriod(full, fps) : null;
   const world: World = w3.world;

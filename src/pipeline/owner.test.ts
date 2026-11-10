@@ -105,3 +105,23 @@ describe('Phase 17: the whole-body model output (RTMW l-m on the owner screen re
     expect(Math.abs(s.floor.a)).toBeLessThan(0.364);
   });
 });
+
+describe('owner capture 2026-11-10 17:05: the same reel through the hybrid engine on the phone (RTMW 2D + MediaPipe 3D)', () => {
+  const cap = load('capture-2026-11-10-DfWjXHKuRpu-hybrid.json') as Capture & { sceneDiff?: { t: number; hist: number; pix: number }[] };
+  const w = playbackWindow(cap.timeline ?? []);
+  const frames = at30(cap.result.frames).filter((f) => f.t >= w.start && f.t <= w.end - 0.3);
+
+  it('one periodic exercise, every limb known, quality ≥ 90 % (MediaPipe alone: 3 %)', async () => {
+    const { detectSceneCuts } = await import('./sceneCuts');
+    const { qualityScore } = await import('./sanity');
+    const cuts = detectSceneCuts(cap.sceneDiff ?? []).map((c) => c.t).filter((t) => t > w.start && t <= w.end);
+    const segs = processCapture({ frames }, { segment: { cutTimes: cuts } });
+    expect(segs.length).toBe(1);
+    const s = segs[0];
+    expect(s.period?.periodic).toBe(true);
+    expect(Math.abs(s.floor.a)).toBeLessThan(0.364);
+    const legs = s.xy.filter((f) => [LM.leftKnee, LM.rightKnee, LM.leftAnkle, LM.rightAnkle].every((j) => Number.isFinite(f[j][0]))).length;
+    expect(legs / s.xy.length).toBeGreaterThan(0.95);
+    expect(qualityScore(s.xy, s.issues).score).toBeGreaterThanOrEqual(0.9);
+  });
+});

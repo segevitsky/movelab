@@ -37,6 +37,14 @@ Owner's capture DfWjXHKuRpu (a lying floor drill filmed head-on): the mat in a s
   MediaPipe for the 3D world track and replaces the 2D points with RTMW's (MediaPipe's kept under `mp`; hands
   21×2, feet and the box under `wb`). Review uses hybrid; the stats line shows the engine, ANE/CPU and ms per
   frame. The model is git-ignored (GitHub refuses > 100 MB): `scripts/fetch-models.sh` downloads it.
+- **First device runs (16:53, 17:05)**: ANE, 7 ms/frame. Run 1 accepted only 114/409 frames with scores half of
+  the Mac's — the crop was upside down (a CTM flip in the CGContext draw); found by running the phone's crop code
+  on macOS against rtmlib's warpAffine (`abs diff 39 → 2.6`, model score on the crop 0.19 → 0.55). Run 2:
+  379/395 frames, one exercise, 1.9 s/rep, the figure on the mat ("much better and now actually visible").
+  Pipeline then re-tuned for the hybrid engine: MediaPipe's 3D bone flags no longer veto the 2D joints, and the
+  limb "collapse" rule (a MediaPipe failure mode) is off for hybrid frames — knees together in the pike were
+  flagged every rep. Quality on the fixture `capture-2026-11-10-DfWjXHKuRpu-hybrid.json`: 3 % (MediaPipe) →
+  51 % (hybrid, first run) → 82 % (no 3D veto) → ≥ 90 % (no collapse rule), legs known in every frame.
 
 ## 2026-11-08 (Sunday) — the first version other people can use
 Owner: "a version a person can record himself, upload videos from his gallery, create his own workouts and

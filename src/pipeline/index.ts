@@ -67,7 +67,9 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
     const w3 = cleanWorld(rawWorld, fps);
     if (!hybrid) for (const is of w3.issues) for (const limb of is.limbs) for (const j of LIMB_DISTAL_JOINTS[limb]) conf[is.frame][j] = 0;
     const full = clean(xy, conf, fps);
-    const issues = hybrid ? sanityCheck(full) : [...sanityCheck(full), ...w3.issues];
+    // (the leg/arm "collapse" rule guards against MediaPipe folding two limbs into one; the whole-body model does
+    // not fail that way, and knees genuinely together — a pike, a kneeling plank — were flagged every rep)
+    const issues = hybrid ? sanityCheck(full, { collapseRatio: 0 }) : [...sanityCheck(full), ...w3.issues];
     const cl = hideImplausibleLimbs(clean(xy, conf, fps, { maxGapSeconds: 1.0 }), issues, fps);
     const period = findPeriod(full, fps);
     const world: World = w3.world;

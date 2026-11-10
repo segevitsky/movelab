@@ -7,6 +7,9 @@ export type SanityOptions = {
   collapseRatio?: number; // 0.2
   /** bone longer than this × its 97th-percentile length → implausible */
   boneRatio?: number; // 1.4
+  /** 2D bone-jump gate: frame-to-frame change > jumpRatio × median AND > deviateRatio off the median */
+  jumpRatio?: number; // 0.5
+  deviateRatio?: number; // 0.4
 };
 
 const BONES: { limb: Limb; a: number; b: number }[] = [
@@ -28,7 +31,11 @@ export function sanityCheck(xy: Track, opts: SanityOptions = {}): SanityIssue[] 
   const torso = median(torsoLengths(xy));
   if (!(torso > 0)) return issues;
 
-  const p97 = BONES.map((bn) => percentile(xy.map((fr) => hypot2(fr[bn.a], fr[bn.b])), 97));
+  const lens = BONES.map((bn) => xy.map((fr) => hypot2(fr[bn.a], fr[bn.b])));
+  const p97 = lens.map((l) => percentile(l, 97));
+  const med = lens.map((l) => median(l.filter((v) => !Number.isNaN(v))));
+  const jumpRatio = opts.jumpRatio ?? 0.5;
+  const deviateRatio = opts.deviateRatio ?? 0.4;
 
   xy.forEach((fr, i) => {
     const kneeD = hypot2(fr[LM.leftKnee], fr[LM.rightKnee]);
@@ -43,8 +50,12 @@ export function sanityCheck(xy: Track, opts: SanityOptions = {}): SanityIssue[] 
     }
     const bad = new Set<Limb>();
     BONES.forEach((bn, k) => {
-      const len = hypot2(fr[bn.a], fr[bn.b]);
+      const len = lens[k][i];
       if (p97[k] > 0 && len > boneRatio * p97[k]) bad.add(bn.limb);
+      // 2D twin of the 3D rule (Phase 2.5): a bone that jumps > 50 % between consecutive frames AND sits > 40 %
+      // off its median is a wrong detection (owner fixture DfWjXHKuRpu-lying: an arm "firing to the sky")
+      const prev = i > 0 ? lens[k][i - 1] : NaN;
+      if (med[k] > 0 && !Number.isNaN(prev) && Math.abs(len - prev) > jumpRatio * med[k] && Math.abs(len - med[k]) > deviateRatio * med[k]) bad.add(bn.limb);
     });
     if (bad.size) issues.push({ frame: i, kind: 'bone-length', limbs: [...bad] });
   });

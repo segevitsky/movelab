@@ -4,6 +4,7 @@
  *  2. skeleton features → body orientation (standing / floor / inverted), periodicity → dosage type
  * The user confirms in Review; nothing here is final.
  */
+import type { World } from './floor';
 import { LM, type Track } from './types';
 import type { Features } from './features';
 import type { Dosage, Equipment, Pattern, Slot } from '../db/vocab';
@@ -50,8 +51,17 @@ const KEYWORDS: { re: RegExp; pattern?: Pattern; slots?: Slot[]; equipment?: Equ
 ];
 
 /** Posture from the cleaned track: torso angle vs vertical and height of the hips over the ankles. */
-export function posture(xy: Track): TagSuggestion['posture'] {
+export function posture(xy: Track, world?: World): TagSuggestion['posture'] {
   if (xy.length === 0) return 'unknown';
+  // 3D: are the shoulders really below the hips (handstand), or does the torso just point at the camera?
+  const torsoDown: number[] = [];
+  for (const w of world ?? []) {
+    if (!w) continue;
+    const v = [0, 1, 2].map((c) => (w[LM.leftShoulder][c] + w[LM.rightShoulder][c]) / 2 - (w[LM.leftHip][c] + w[LM.rightHip][c]) / 2);
+    const n = Math.hypot(v[0], v[1], v[2]);
+    if (n > 0.05) torsoDown.push(v[1] / n);
+  }
+  const invertedIn3d = torsoDown.length ? median(torsoDown) > 0.8 : true;
   const angles: number[] = [];
   const hipAboveAnkle: number[] = [];
   const hipBelowShoulder: number[] = [];
@@ -68,14 +78,18 @@ export function posture(xy: Track): TagSuggestion['posture'] {
   }
   const a = median(angles);
   const hipUp = median(hipAboveAnkle);
-  if (a > 135) return 'inverted';
+  // inverted = the torso points down AND the feet are well above the hips (handstand, headstand). A body lying with
+  // its head toward the camera also shows the torso pointing down in the image, but its feet stay level with the
+  // hips (owner fixture DfWjXHKuRpu-lying was tagged "inverted → skill").
+  if (a > 135 && invertedIn3d) return 'inverted';
+  if (a > 135) return 'floor';
   if (a > 55) return 'floor';
   if (hipUp > 1.2 && mean(hipBelowShoulder) > 0.8) return 'standing';
   if (hipUp < 0.6) return 'floor';
   return 'standing';
 }
 
-export function suggestTags(input: { xy: Track; features: Features; periodSeconds: number | null; caption?: string | null; ocr?: string | null; username?: string | null }): TagSuggestion {
+export function suggestTags(input: { xy: Track; world?: World; features: Features; periodSeconds: number | null; caption?: string | null; ocr?: string | null; username?: string | null }): TagSuggestion {
   const text = `${input.caption ?? ''}\n${input.ocr ?? ''}`;
   const reasons: string[] = [];
   const slots = new Set<Slot>();
@@ -88,7 +102,7 @@ export function suggestTags(input: { xy: Track; features: Features; periodSecond
     k.slots?.forEach((s) => slots.add(s));
     k.equipment?.forEach((e) => equipment.add(e));
   }
-  const post = posture(input.xy);
+  const post = posture(input.xy, input.world);
   const active = input.features.activeJoints.map((j) => j.name);
   if (!pattern) {
     if (post === 'inverted') { pattern = 'skill'; slots.add('skill'); reasons.push('inverted posture → skill'); }

@@ -165,7 +165,7 @@ export default function Review() {
 
   function makeItem(fr: RawFrame[], range: Range, fpsUsed: number, index: number, prev?: Partial<Item>): Item {
     const processed = processRange(fr, range, fpsUsed);
-    const suggestion = suggestTags({ xy: processed.xyFull, features: processed.features, periodSeconds: processed.period?.periodic ? processed.period.period : null, caption: params.caption ?? null, username: params.username ?? null });
+    const suggestion = suggestTags({ xy: processed.xyFull, world: processed.worldClean, features: processed.features, periodSeconds: processed.period?.periodic ? processed.period.period : null, caption: params.caption ?? null, username: params.username ?? null });
     return {
       id: `${range.start}-${range.end}-${Math.random().toString(36).slice(2, 6)}`,
       range,
@@ -188,6 +188,12 @@ export default function Review() {
     if (!b) return;
     const merged = makeItem(frames, mergeRanges(a.range, b.range), fps, idx, { name: a.name, include: a.include });
     setItems((xs) => [...xs.slice(0, idx), merged, ...xs.slice(idx + 2)]);
+  };
+  /** owner, 2026-11-10: "three exercises where I can only add one — which one is it?" → one tap makes them one */
+  const mergeAll = () => {
+    if (items.length < 2) return;
+    const range = items.map((x) => x.range).reduce((a, b) => mergeRanges(a, b));
+    setItems([makeItem(frames, range, fps, 0, { name: items[0].name, include: true })]);
   };
   const split = (idx: number) => {
     const it = items[idx];
@@ -254,6 +260,9 @@ export default function Review() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.h1}>Found {items.length} exercise{items.length === 1 ? '' : 's'}{params.username ? ` from @${params.username}` : ''}</Text>
         <Text style={styles.small}>{stats}</Text>
+        {items.length > 1 && (
+          <Pressable onPress={mergeAll} style={styles.linkBtn}><Text style={styles.link}>These are one exercise — merge all {items.length}</Text></Pressable>
+        )}
         {scene && !scene.matQuad && scene.cameraStatic && (
           <Pressable onPress={() => setMatEditor(true)} style={styles.matHint}><Ionicons name="square-outline" size={14} color={colors.accent} /><Text style={styles.matHintText}>No mat detected — tap to mark its 4 corners (optional)</Text></Pressable>
         )}

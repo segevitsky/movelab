@@ -14,8 +14,8 @@ exports[`segment() by pose discontinuity > reel 1 (3 moves with hard cuts) → 3
   ],
   [
     13,
-    27.8,
-    "hip-jump",
+    28.0667,
+    "pose-jump",
   ],
 ]
 `;

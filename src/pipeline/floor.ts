@@ -139,6 +139,9 @@ export function fitDepthTerm(xy: Track, contacts: Contacts, world: World | undef
   return Math.max(-cap, Math.min(0, ts.a));
 }
 
+/** tan(20°): steeper fitted floors are rejected as camera roll that reels never have */
+export const MAX_FLOOR_SLOPE = 0.364;
+
 export function fitFloor(xy: Track, contacts: Contacts, opts: { matQuad?: XY[]; fallbackY?: number; world?: World } = {}): FloorLine {
   if (opts.matQuad && opts.matQuad.length === 4) {
     const [, , br, bl] = opts.matQuad; // TL, TR, BR, BL
@@ -148,7 +151,11 @@ export function fitFloor(xy: Track, contacts: Contacts, opts: { matQuad?: XY[]; 
     return { ...line, c: fitDepthTerm(xy, contacts, opts.world, line), source: 'mat', points: 4 };
   }
   const pts = contactPoints(xy, contacts);
-  const fit = pts.length >= 8 ? theilSen(pts) : null;
+  let fit = pts.length >= 8 ? theilSen(pts) : null;
+  // a floor sloping more than 20° would mean a rolled camera, which reels do not have; it happens when a lying
+  // body's contacts all come from one side (owner fixture DfWjXHKuRpu-lying: toe + knee + hand of one side gave
+  // a = −0.70 and a mat drawn in a strange perspective). Keep the level, drop the slope.
+  if (fit && Math.abs(fit.a) > MAX_FLOOR_SLOPE) fit = { a: 0, b: median(pts.map((p) => p[1])) };
   if (fit) {
     const torsoPx = median(xy.map((f) => Math.hypot((f[11][0] + f[12][0]) / 2 - (f[23][0] + f[24][0]) / 2, (f[11][1] + f[12][1]) / 2 - (f[23][1] + f[24][1]) / 2)).filter((v) => !Number.isNaN(v)));
     const c = fitDepthTerm(xy, contacts, opts.world, fit, torsoPx);

@@ -57,3 +57,37 @@ describe('owner capture 2026-11-02: reel DfC8LdUIjV4 (floor core drill — the l
   // captures from 2026-11-04 on as `resultVision`), merged per joint — plan Phase 13 step 3.
   it.todo('legs stay drawn in floor poses via the Vision second opinion');
 });
+
+describe('owner capture 2026-11-10: reel DfWjXHKuRpu (lying floor drill filmed head-on, one periodic exercise)', () => {
+  const cap = load('capture-2026-11-10-DfWjXHKuRpu-lying.json') as Capture & { sceneDiff?: { t: number; hist: number; pix: number }[] };
+  const w = playbackWindow(cap.timeline ?? []);
+  const frames = at30(cap.result.frames).filter((f) => f.t >= w.start && f.t <= w.end - 0.3);
+
+  it('is one exercise: the model glitch at 2.1 s and the flash at 4.3 s do not split it', async () => {
+    const { detectSceneCuts } = await import('./sceneCuts');
+    const cuts = detectSceneCuts(cap.sceneDiff ?? []).map((c) => c.t).filter((t) => t > w.start && t <= w.end);
+    expect(cuts.length).toBeGreaterThan(0); // the picture did change at 4.3 s
+    const segs = segment(frames, { cutTimes: cuts });
+    expect(segs.length).toBe(1);
+    const seg = processCapture({ frames }, { segment: { cutTimes: cuts } })[0];
+    expect(seg.period?.periodic).toBe(true);
+  });
+
+  it('the floor stays level (a one-sided contact fit gave a 35° slope and a mat in a strange perspective)', () => {
+    const seg = processCapture({ frames })[0];
+    expect(Math.abs(seg.floor.a)).toBeLessThan(0.364);
+  });
+
+  it('is a floor drill, not an inverted skill, and the flying arm is rejected', async () => {
+    const seg = processCapture({ frames })[0];
+    const { posture } = await import('./tagger');
+    expect(posture(seg.xyFull, seg.worldClean)).toBe('floor');
+    // no arm bone in the drawn track is longer than 1.6 × its median
+    const arm = (f: typeof seg.xy[number], a: number, b: number) => Math.hypot(f[a][0] - f[b][0], f[a][1] - f[b][1]);
+    for (const [a, b] of [[LM.leftElbow, LM.leftWrist], [LM.rightElbow, LM.rightWrist]] as const) {
+      const lens = seg.xy.map((f) => arm(f, a, b)).filter((v) => !Number.isNaN(v));
+      const med = [...lens].sort((p, q) => p - q)[lens.length >> 1];
+      expect(Math.max(...lens)).toBeLessThan(med * 1.6);
+    }
+  });
+});

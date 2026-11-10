@@ -3,6 +3,25 @@
 _What was done, when, and what is open. Newest first. Keep entries short; details live in the phase docs,
 `docs/06-design-direction.md` and the commit history (`git log --format='%ad %s' --date=short`)._
 
+## 2026-11-10 (Tuesday) — "the core of our product, we can't compromise here"
+Owner's capture DfWjXHKuRpu (a lying floor drill filmed head-on): the mat in a strange perspective, an arm
+"firing to the sky", one drill split into three of which only one could be added. Fixture
+`capture-2026-11-10-DfWjXHKuRpu-lying.json`, four fixes, all owner tests green:
+- **Floor slope capped at 20°** (`MAX_FLOOR_SLOPE`): a one-sided contact fit (left toe + knee + hand) had given
+  a = −0.70; reels never roll the camera that far, so the level is kept and the slope dropped.
+- **Segmenter: glitches and flashes are not cuts.** A jump that comes back to the last trusted pose within 0.5 s
+  is the model losing the body (the reference never advances onto a glitch frame); a scene cut with the same
+  pose on both sides is a flash / overlay. The clip is now one periodic exercise (1.9 s/rep). Review also got
+  "These are one exercise — merge all N".
+- **2D bone-jump gate** in `sanityCheck`: a bone that changes > 50 % between frames and sits > 40 % off its median
+  is rejected (the 3D rule missed an arm whose 3D length was plausible).
+- **Inverted posture needs the 3D torso pointing down** (shoulders below hips, y > 0.8); a torso pointing at
+  the camera is 'floor', not a handstand → no more "inverted → skill" on lying drills.
+- **What stays wrong**: the legs. MediaPipe's own leg visibility on this clip averages 0.27 and Vision is worse;
+  no cleaning fixes what the detector never saw. Owner's decision: **bring in the stronger whole-body model**
+  (RTMW, 133 keypoints incl. fingers and feet). `scripts/rtmw_spike.py` runs it on a screen recording on the Mac
+  and writes a MoveLab raw capture; the owner is recording the reel for the comparison.
+
 ## 2026-11-08 (Sunday) — the first version other people can use
 Owner: "a version a person can record himself, upload videos from his gallery, create his own workouts and
 get new workouts from me or from every other creator" — for a physical therapist handing patients exercises.

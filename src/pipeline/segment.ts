@@ -14,6 +14,8 @@ export type SegmentOptions = {
   cutTimes?: number[];
   /** only cut on external cutTimes, never on pose discontinuity */
   externalOnly?: boolean;
+  /** a jump that comes back to the previous pose within this many seconds is a glitch, not a cut */
+  returnSeconds?: number; // 0.5
 };
 
 function hipCentre(xy: XY[]): XY {
@@ -58,6 +60,25 @@ export function segment(frames: RawFrame[], opts: SegmentOptions = {}): Segment[
     segs.push({ start, end, t0: frames[start].t, t1: frames[end].t, cutReason: reason });
   };
 
+  // distance between two detected frames: hip centre (torso units) and mean joint displacement
+  const dist = (i: number, j: number) => {
+    const a = norm.get(i)!, b = norm.get(j)!;
+    const hip = hypot2(a.hip, b.hip) / b.torso;
+    const d: number[] = [];
+    for (let q = 0; q < a.vec.length; q += 2) { const dx = a.vec[q] - b.vec[q], dy = a.vec[q + 1] - b.vec[q + 1]; d.push(Math.sqrt(dx * dx + dy * dy)); }
+    return { hip, pose: mean(d) };
+  };
+  const jumped = ({ hip, pose }: { hip: number; pose: number }) => hip > hipJumpThr || (isNum(pose) && pose > poseJumpThr);
+  // a jump that comes straight back (within `returnSec`) is the model losing the body for a few frames, not a
+  // new exercise (owner fixture DfWjXHKuRpu-lying: one periodic drill was cut into three)
+  const returnSec = opts.returnSeconds ?? 0.5;
+  // does the pose come back to `ref` within returnSec after index k? (then frames in between are glitches)
+  const returns = (ref: number, k: number) => {
+    for (let m = k; m < detected.length && frames[detected[m]].t - frames[ref].t <= returnSec; m++) if (!jumped(dist(ref, detected[m]))) return true;
+    return false;
+  };
+
+  let ref = detected[0]; // the last trusted frame; glitch frames never become the reference
   for (let k = 1; k < detected.length; k++) {
     const prev = detected[k - 1];
     const cur = detected[k];
@@ -66,29 +87,27 @@ export function segment(frames: RawFrame[], opts: SegmentOptions = {}): Segment[
     let reason: Segment['cutReason'] | null = null;
 
     while (cutIdx < cutTimes.length && cutTimes[cutIdx] <= tPrev) cutIdx++;
-    if (cutIdx < cutTimes.length && cutTimes[cutIdx] > tPrev && cutTimes[cutIdx] <= tCur) reason = 'external';
+    if (cutIdx < cutTimes.length && cutTimes[cutIdx] > tPrev && cutTimes[cutIdx] <= tCur) {
+      // a picture change with the same pose on both sides is a flash or an overlay, not an edit
+      reason = jumped(dist(ref, cur)) || opts.externalOnly ? 'external' : null;
+    }
 
     if (!reason && tCur - tPrev > gapSec) reason = 'gap';
 
+    let glitch = false;
     if (!reason && !opts.externalOnly) {
-      const a = norm.get(prev)!;
-      const b = norm.get(cur)!;
-      const hipJump = hypot2(a.hip, b.hip) / b.torso;
-      const d: number[] = [];
-      for (let j = 0; j < a.vec.length; j += 2) {
-        const dx = a.vec[j] - b.vec[j];
-        const dy = a.vec[j + 1] - b.vec[j + 1];
-        d.push(Math.sqrt(dx * dx + dy * dy));
+      const { hip, pose } = dist(ref, cur);
+      if (jumped({ hip, pose })) {
+        if (returns(ref, k)) glitch = true;
+        else reason = hip > hipJumpThr ? 'hip-jump' : 'pose-jump';
       }
-      const poseJump = mean(d);
-      if (hipJump > hipJumpThr) reason = 'hip-jump';
-      else if (isNum(poseJump) && poseJump > poseJumpThr) reason = 'pose-jump';
     }
 
     if (reason) {
       close(prev, reason);
       start = cur;
     }
+    if (!glitch) ref = cur;
   }
   close(detected[detected.length - 1], 'end');
 

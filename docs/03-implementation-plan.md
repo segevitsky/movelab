@@ -269,6 +269,18 @@ for physical therapists so they could give their patients exercises."
   "text/metadata only" rule in the architecture doc before anything is uploaded).
 Decide first: who is the first outside user (a PT the owner knows?) and whether steps 1–2 are enough for them.
 
+## Phase 17 — Stronger whole-body model (owner 2026-11-10: "this is the core of our product, we can't compromise here")
+Why: three captures of floor work (kneeling 11-04, lying 11-10) fail for the same reason — MediaPipe does not see
+legs folded toward or away from a camera that looks down; its own leg confidence is 0.27 on the lying drill.
+What: RTMW (RTMPose whole-body, COCO-WholeBody 133 points: body, feet incl. heel/toes, 21 per hand, face).
+1. Mac spike (`scripts/rtmw_spike.py`, rtmlib + onnxruntime): run on the owner's screen recordings, write raw
+   captures in the MP-33 layout (+ `wb` extras), compare figures side by side with MediaPipe. Decide.
+2. On device: ONNX Runtime (CoreML EP) or a CoreML conversion of RTMW-m/l; top-down on a person box
+   (MediaPipe's box or the YOLOX det); SimCC decode → keypoints; keep MediaPipe for the 3D world track (depth
+   order, bone check, 3D view) — hybrid: RTMW 2D + MP 3D. Hands get finger joints (Phase 16 step 2 for free).
+3. Pipeline: MP-33 stays the storage order; extras (hand 21s, feet) stored as `wb`; renderer draws fingers.
+Risk: speed on an iPhone (RTMW-m 256×192 ≈ 10–20 ms on ANE; RTMW-l 384×288 slower); licence (Apache-2.0).
+
 ## Phase 16 — Hands and props (owner 2026-11-08; hands step 1 + staff tracker/renderer built the same night; staff *detector* and object detector open)
 Owner: "we don't have hands and we do have feet, this limits our movement recognition … hands have joints … I also
 want to recognise props like sticks and kettlebells … physicians will use bands, walls, objects … we have props

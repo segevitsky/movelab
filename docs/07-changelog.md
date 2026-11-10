@@ -45,6 +45,8 @@ Owner's capture DfWjXHKuRpu (a lying floor drill filmed head-on): the mat in a s
   limb "collapse" rule (a MediaPipe failure mode) is off for hybrid frames — knees together in the pike were
   flagged every rep. Quality on the fixture `capture-2026-11-10-DfWjXHKuRpu-hybrid.json`: 3 % (MediaPipe) →
   51 % (hybrid, first run) → 82 % (no 3D veto) → ≥ 90 % (no collapse rule), legs known in every frame.
+  The Review path (`processRange`) needed the same two rules (57 % on the phone until it had them; a test now
+  keeps both paths in step). Owner, 17:40: **"this is insane, I get good tracking, everything looks much clearer."**
 
 ## 2026-11-08 (Sunday) — the first version other people can use
 Owner: "a version a person can record himself, upload videos from his gallery, create his own workouts and

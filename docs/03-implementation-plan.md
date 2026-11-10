@@ -269,7 +269,7 @@ for physical therapists so they could give their patients exercises."
   "text/metadata only" rule in the architecture doc before anything is uploaded).
 Decide first: who is the first outside user (a PT the owner knows?) and whether steps 1–2 are enough for them.
 
-## Phase 17 — Stronger whole-body model (owner 2026-11-10: "this is the core of our product, we can't compromise here")
+## Phase 17 — Stronger whole-body model (owner 2026-11-10; **steps 1–2 shipped the same day**: RTMW l-m on device via ONNX Runtime + CoreML, hybrid with MediaPipe 3D; owner: "good tracking, everything looks much clearer". Step 3 open: fingers/feet drawn from `wb`, depth order without MediaPipe, Android)
 Why: three captures of floor work (kneeling 11-04, lying 11-10) fail for the same reason — MediaPipe does not see
 legs folded toward or away from a camera that looks down; its own leg confidence is 0.27 on the lying drill.
 What: RTMW (RTMPose whole-body, COCO-WholeBody 133 points: body, feet incl. heel/toes, 21 per hand, face).

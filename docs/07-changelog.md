@@ -3,6 +3,26 @@
 _What was done, when, and what is open. Newest first. Keep entries short; details live in the phase docs,
 `docs/06-design-direction.md` and the commit history (`git log --format='%ad %s' --date=short`)._
 
+## 2026-11-13 (Friday) — fingers and feet from the whole-body model (Phase 17 step 3)
+Owner: "lets go in order" (fingers/feet → re-capture old cards → Android capture → staff/props). Commit `05417fb`.
+- **Hands:** `src/pipeline/hands.ts` carries the 21 points per hand in the forearm frame (same recipe as `feet()`),
+  smoothed 0.25 s; a hand whose own wrist is not at this arm's wrist is dropped, points beyond a hand's reach are
+  dropped, gaps ≤ 2 s bridged (hold rule), longer stay empty. Drawn as a palm (wrist + four finger bases) and
+  tapered finger chains; MediaPipe-only clips keep the three-point wedge. On the owner's 11-10 hybrid capture both
+  hands are drawn in ≥ 94 % of frames.
+- **Feet bug found while measuring:** the raw heel/toe points were measured against the *pinned* ankle, so every
+  foot was off by the root-pinning offset (30 px on a 73 px shin in the lying drill — misplaced, and many rejected
+  by `maxRatio`). `feet()` now takes `pinOffset`; measured frames 108 → 187, toe error vs the model 15 → 2 px median.
+  Whole-body feet use score ≥ 0.4 (two 30 px misses sat in the 0.3–0.4 band, none above). The small toe (`wb.feet`)
+  gives the foot a sole. Codec flags bit 3 (hands) and bit 4 (small toes); ≈ 4.9 KB/s at 15 fps with hands.
+- Dev: `app/figures.tsx` shows the hybrid owner capture as a fourth fixture (default selection).
+- **Walls / bars (owner question):** infer the support surface from the body, like the floor from contacts — hands
+  or feet still, off the floor, at one x → a wall; hands still above the head with the body hanging → a bar. Manual
+  prop tag as fallback; moving props (bands, kettlebells) still need a detector. Planned as the first item of the
+  props step (plan Phase 16).
+- APK `MoveLab-0.0.3.apk` built 11-11 from the same main (import/play only; no capture on Android).
+- Open: re-capture older cards with the new engine; Android capture; staff/props detectors; 3D view follow-up.
+
 ## 2026-11-10 (Tuesday) — "the core of our product, we can't compromise here"
 Owner's capture DfWjXHKuRpu (a lying floor drill filmed head-on): the mat in a strange perspective, an arm
 "firing to the sky", one drill split into three of which only one could be added. Fixture

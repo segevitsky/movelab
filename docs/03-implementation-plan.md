@@ -269,7 +269,7 @@ for physical therapists so they could give their patients exercises."
   "text/metadata only" rule in the architecture doc before anything is uploaded).
 Decide first: who is the first outside user (a PT the owner knows?) and whether steps 1–2 are enough for them.
 
-## Phase 17 — Stronger whole-body model (owner 2026-11-10; **steps 1–2 shipped the same day**: RTMW l-m on device via ONNX Runtime + CoreML, hybrid with MediaPipe 3D; owner: "good tracking, everything looks much clearer". Step 3 open: fingers/feet drawn from `wb`, depth order without MediaPipe, Android)
+## Phase 17 — Stronger whole-body model (owner 2026-11-10; **steps 1–2 shipped the same day**: RTMW l-m on device via ONNX Runtime + CoreML, hybrid with MediaPipe 3D; owner: "good tracking, everything looks much clearer". **Step 3 shipped 2026-11-13**: fingers + small toes drawn from `wb`, feet pin-offset fix. Open: depth order without MediaPipe, Android)
 Why: three captures of floor work (kneeling 11-04, lying 11-10) fail for the same reason — MediaPipe does not see
 legs folded toward or away from a camera that looks down; its own leg confidence is 0.27 on the lying drill.
 What: RTMW (RTMPose whole-body, COCO-WholeBody 133 points: body, feet incl. heel/toes, 21 per hand, face).
@@ -279,6 +279,12 @@ What: RTMW (RTMPose whole-body, COCO-WholeBody 133 points: body, feet incl. heel
    (MediaPipe's box or the YOLOX det); SimCC decode → keypoints; keep MediaPipe for the 3D world track (depth
    order, bone check, 3D view) — hybrid: RTMW 2D + MP 3D. Hands get finger joints (Phase 16 step 2 for free).
 3. Pipeline: MP-33 stays the storage order; extras (hand 21s, feet) stored as `wb`; renderer draws fingers.
+   **Done 2026-11-13:** `src/pipeline/hands.ts` (forearm-frame tracking, reach / wrist / score / 2 s gap rules),
+   `feet('smallToe')`, codec flags bit 3–4, palm + finger chains and a foot sole in `draw.ts`. Found and fixed on the
+   way: `feet()` measured raw points against the pinned ankle (feet off by the root-pinning offset).
+4. Walls and bars (owner 2026-11-13, "a person doing a handstand on the wall"): infer the support from the body —
+   still hands/feet off the floor at one x → wall slab; hands still overhead with the body hanging → bar through the
+   wrists; manual prop tag as fallback. Reuses contacts + floor fit; no detector. Goes with Phase 16 props step 2.
 Risk: speed on an iPhone (RTMW-m 256×192 ≈ 10–20 ms on ANE; RTMW-l 384×288 slower); licence (Apache-2.0).
 
 ## Phase 16 — Hands and props (owner 2026-11-08; hands step 1 + staff tracker/renderer built the same night; staff *detector* and object detector open)

@@ -22,6 +22,8 @@ final class RTMW {
   private let outputNames: [String]
   let modelName: String
   let coreML: Bool
+  /// session creation time (ms) — large on the first run while CoreML compiles, small once cached
+  let loadMs: Int
   private let ctx: CGContext
   private var input = [Float](repeating: 0, count: 3 * RTMW.inputW * RTMW.inputH)
 
@@ -32,13 +34,23 @@ final class RTMW {
     var usedCoreML = false
     if coreML {
       do {
-        let cml = ORTCoreMLExecutionProviderOptions()
-        cml.enableOnSubgraphs = true
-        try opts.appendCoreMLExecutionProvider(with: cml)
+        // CoreML EP through the generic provider API so the compiled model can be cached: without a cache
+        // directory the ANE compiler recompiled the model on every capture (ANECompilerService disk-writes
+        // report on the owner's phone, 2026-11-11: 4 GB/day) and every session start paid the compile.
+        let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!.appendingPathComponent("rtmw-coreml", isDirectory: true)
+        try? FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        try opts.appendExecutionProvider("CoreML", providerOptions: [
+          "ModelFormat": "NeuralNetwork",
+          "MLComputeUnits": "ALL",
+          "EnableOnSubgraphs": "1",
+          "ModelCacheDirectory": cache.path,
+        ])
         usedCoreML = true
       } catch { NSLog("RTMW: CoreML execution provider unavailable, using CPU (\(error))") }
     }
+    let tLoad = CFAbsoluteTimeGetCurrent()
     session = try ORTSession(env: env, modelPath: modelPath, sessionOptions: opts)
+    loadMs = Int((CFAbsoluteTimeGetCurrent() - tLoad) * 1000)
     inputName = try session.inputNames().first ?? "input"
     outputNames = try session.outputNames()
     modelName = (modelPath as NSString).lastPathComponent

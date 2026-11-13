@@ -5,6 +5,7 @@ import { WebView, type WebViewMessageEvent, type WebViewProps } from 'react-nati
 // react-native-webview's class typings don't resolve under React 19.3 + TS 6; cast once.
 const WebViewC = WebView as unknown as React.ComponentType<WebViewProps & { ref?: React.Ref<WebView> }>;
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useKeepAwake } from 'expo-keep-awake';
 import { DESKTOP_UA, EMBED_INJECTED_JS, embedUrl, reelPageUrl, type EmbedMessage } from '../src/capture/embed';
 import { upsertAttempt, patchAttempt } from '../src/capture/log';
 import { ScreenRecorder } from '../modules/screen-recorder';
@@ -17,6 +18,9 @@ import { Button } from '../src/ui/Button';
  * position, normalised by the screen size (the recording covers the whole screen).
  */
 export default function Capture() {
+  // a minute-long clip processes for a minute or more; if the screen locks meanwhile iOS backgrounds the app and
+  // kills its GPU / Neural Engine work (owner 2026-11-13: "app crashed on 1811 frames", no crash report)
+  useKeepAwake();
   const { code, kind, url } = useLocalSearchParams<{ code: string; kind: 'reel' | 'p'; url: string }>();
   const router = useRouter();
   const webRef = useRef<WebView>(null);

@@ -181,7 +181,7 @@ public final class PoseModule: Module {
     return [
       "source": rtmw != nil ? "hybrid" : "mediapipe",
       "model": rtmw != nil ? "pose_landmarker_heavy+\(rtmw!.modelName)" : "pose_landmarker_heavy",
-      "engine": rtmw != nil ? ["rtmw": rtmw!.modelName, "coreML": rtmw!.coreML, "rtmwMs": Int(rtmwMs), "rtmwDetected": rtmwDetected, "boxesFromVision": boxesFromVision] : [:],
+      "engine": rtmw != nil ? ["rtmw": rtmw!.modelName, "coreML": rtmw!.coreML, "loadMs": rtmw!.loadMs, "rtmwMs": Int(rtmwMs), "rtmwDetected": rtmwDetected, "boxesFromVision": boxesFromVision] : [:],
       "delegate": options.delegate,
       "fps": stride > 1 ? frames.info.nominalFps / Double(stride) : frames.info.nominalFps,
       "width": frames.outWidth, "height": frames.outHeight,

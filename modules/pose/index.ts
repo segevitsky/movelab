@@ -35,7 +35,7 @@ export type PoseFrame = {
 export type PoseResult = {
   source: 'mediapipe' | 'vision' | 'hybrid';
   model: string;
-  engine?: { rtmw?: string; coreML?: boolean; rtmwMs?: number; rtmwDetected?: number; boxesFromVision?: number };
+  engine?: { rtmw?: string; coreML?: boolean; loadMs?: number; rtmwMs?: number; rtmwDetected?: number; boxesFromVision?: number };
   delegate?: string;
   fps: number;
   width: number;

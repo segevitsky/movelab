@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useKeepAwake } from 'expo-keep-awake';
 import { saveRawCapture } from '../src/capture/rawStore';
 import { playbackWindow } from '../src/pipeline/playback';
 import { detectSceneCuts, restartPrefix, type SceneDiffSample } from '../src/pipeline/sceneCuts';
@@ -45,6 +46,9 @@ type Phase = 'scene' | 'pose' | 'pipeline' | 'review' | 'saving' | 'error';
  * exercise → confirm → saved to the library. The video is deleted after saving or discarding.
  */
 export default function Review() {
+  // a minute-long clip processes for a minute or more; if the screen locks meanwhile iOS backgrounds the app and
+  // kills its GPU / Neural Engine work (owner 2026-11-13: "app crashed on 1811 frames", no crash report)
+  useKeepAwake();
   const params = useLocalSearchParams<{ uri: string; title?: string; code?: string; url?: string; username?: string; caption?: string; crop?: string; timeline?: string; recordingSeconds?: string; /** Phase 13: re-process a raw capture (file uri of Documents/captures/*.json) instead of a video */ raw?: string }>();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('scene');
@@ -85,7 +89,7 @@ export default function Review() {
     let resVision: PoseResult | null = null;
     const errors: Record<string, string> = {};
     try { setProgress('Second opinion (Vision)…'); resVision = await Pose.processVision(params.uri, { cropRect: crop, targetFps: 15 }); } catch (e) { errors.vision = String(e); console.warn('vision unavailable', e); }
-    setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}${res.source === 'hybrid' ? ` · whole-body model${res.engine?.coreML ? ' (ANE)' : ' (CPU)'} ${res.engine?.rtmwDetected ?? 0} fr, ${Math.round((res.engine?.rtmwMs ?? 0) / Math.max(1, res.stats.frames))} ms/fr` : ''}`);
+    setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}${res.source === 'hybrid' ? ` · whole-body model${res.engine?.coreML ? ' (ANE)' : ' (CPU)'} ${res.engine?.rtmwDetected ?? 0} fr, ${Math.round((res.engine?.rtmwMs ?? 0) / Math.max(1, res.stats.frames))} ms/fr, load ${((res.engine?.loadMs ?? 0) / 1000).toFixed(1)} s` : ''}`);
     // 3. pipeline
     setPhase('pipeline');
     setProgress('Splitting into exercises…');

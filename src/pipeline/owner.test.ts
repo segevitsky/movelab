@@ -125,6 +125,24 @@ describe('owner capture 2026-11-10 17:05: the same reel through the hybrid engin
     expect(qualityScore(s.xy, s.issues).score).toBeGreaterThanOrEqual(0.9);
   });
 
+  it('step 3: both hands have their 21 points in ≥ 90 % of frames, the small toes are tracked, feet sit on their ankles', () => {
+    const s = processCapture({ frames })[0];
+    const n = s.xy.length;
+    for (const side of [0, 1]) {
+      expect(s.hands!.xy.filter((f) => f[side]).length / n).toBeGreaterThan(0.9);
+      expect(s.smallToes!.xy.filter((f) => f[side]).length / n).toBeGreaterThan(0.9);
+    }
+    // the root-pinning offset used to be missing from the foot points (feet 30 px off their ankles here)
+    let bad = 0, drawn = 0;
+    s.xy.forEach((f, i) => { for (const [side, an, kn] of [[0, LM.leftAnkle, LM.leftKnee], [1, LM.rightAnkle, LM.rightKnee]] as const) {
+      const toe = s.toes.xy[i][side]; if (!toe || !Number.isFinite(f[an][0])) continue; drawn++;
+      const shin = Math.hypot(f[an][0] - f[kn][0], f[an][1] - f[kn][1]);
+      if (Math.hypot(toe[0] - f[an][0], toe[1] - f[an][1]) > 0.8 * shin) bad++;
+    } });
+    expect(drawn).toBeGreaterThan(n);
+    expect(bad / drawn).toBeLessThan(0.02);
+  });
+
   it('the Review path (processRange) agrees with the main pipeline', async () => {
     const { processRange } = await import('./edit');
     const { qualityScore } = await import('./sanity');

@@ -9,11 +9,13 @@ const FIXTURES: { name: string; load: () => RawFrame[]; pick: (segs: ReturnType<
   { name: 'seated flow (reel 1 · seg 2)', load: () => require('../reference/sample-data/reel1_mobility_mp33.json'), pick: (s) => s[1] },
   { name: 'burpee-lunge loop (reel 3)', load: () => require('../reference/sample-data/reel3_burpee_mp33.json'), pick: (s) => s.reduce((a, b) => (b.xy.length > a.xy.length ? b : a)) },
   { name: 'staff flow (reel 2)', load: () => require('../reference/sample-data/reel2_staff_mp33.json'), pick: (s) => s[0] },
+  // Phase 17 step 3: the owner's hybrid-engine capture (whole-body hands + feet) — longest segment
+  { name: 'lying drill · whole-body hands (owner 11-10)', load: () => require('../src/pipeline/__fixtures__/owner/capture-2026-11-10-DfWjXHKuRpu-hybrid.json').result.frames, pick: (s) => s.reduce((a, b) => (b.xy.length > a.xy.length ? b : a)) },
 ];
 
 export default function Figures() {
   const fps = useFps();
-  const [sel, setSel] = useState(1);
+  const [sel, setSel] = useState(FIXTURES.length - 1);
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
   const [mirror, setMirror] = useState(false);
@@ -35,12 +37,12 @@ export default function Figures() {
       const rawClip: FigureClip = { ...clip, xy: clip.xy.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] - seg.pinOffset[i]] as [number, number])))), scene: undefined };
       return { name: f.name, clip, rawClip, frames: seg.xy.length, period: seg.period?.periodic ? seg.period.period : undefined, fps: seg.fps, t0: seg.segment.t0 };
     });
-    console.log(`figures: pipeline on 3 fixtures took ${Date.now() - t0} ms`);
+    console.log(`figures: pipeline on ${FIXTURES.length} fixtures took ${Date.now() - t0} ms`);
     return out;
   }, []);
 
   const W = Dimensions.get('window').width;
-  const cardW = Math.floor((W - 16 * 2 - 8 * 2) / 3);
+  const cardW = Math.floor((W - 16 * 2 - 8 * 3) / 4);
   const cardH = Math.round(cardW * 1.25);
   const playerW = W - 32;
   const playerH = Math.round(playerW * 1.25);

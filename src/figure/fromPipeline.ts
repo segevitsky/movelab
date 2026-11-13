@@ -13,6 +13,8 @@ export function clipFromProcessed(seg: ProcessedSegment): FigureClip {
     xy: seg.xy,
     toes: seg.toes,
     heels: seg.heels,
+    smallToes: seg.smallToes,
+    hands: seg.hands,
     loop: seg.loop ? { i0: seg.loop.i0, i1: seg.loop.i1 } : undefined,
     hud,
     scene: { floor: { a: seg.floor.a, b: seg.floor.b } },

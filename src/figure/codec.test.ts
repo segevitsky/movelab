@@ -67,3 +67,27 @@ describe('codec: staff prop (Phase 16)', () => {
     expect(half.props?.staff?.a[1]).toBeNull();
   });
 });
+
+describe('codec: hands + small toes (Phase 17 step 3)', () => {
+  it('round-trips 21-point hands and small toes, nulls included, and survives downsampling', () => {
+    const n = 6;
+    const xy = Array.from({ length: n }, () => Array.from({ length: 33 }, () => [10, 20] as [number, number]));
+    const hand = (i: number) => Array.from({ length: 21 }, (_, j) => (j === 4 ? null : ([i * 10 + j, 100 + j] as [number, number])));
+    const clip = {
+      fps: 30, xy, loop: { i0: 0, i1: n - 1 },
+      hands: { xy: xy.map((_, i) => [i === 2 ? null : hand(i), hand(i)]), ok: xy.map(() => [true, false] as [boolean, boolean]) },
+      smallToes: { xy: xy.map((_, i) => [i === 1 ? null : ([i, 7] as [number, number]), [i + 50, 9] as [number, number]]), ok: xy.map(() => [true, true] as [boolean, boolean]) },
+    };
+    const back = decodeClip(encodeClip(clip as any));
+    expect(back.hands!.xy[0][0]![3]).toEqual([3, 103]);
+    expect(back.hands!.xy[0][0]![4]).toBeNull();
+    expect(back.hands!.xy[2][0]).toBeNull();
+    expect(back.hands!.xy[2][1]![0]).toEqual([20, 100]);
+    expect(back.smallToes!.xy[1][0]).toBeNull();
+    expect(back.smallToes!.xy[3]).toEqual([[3, 7], [53, 9]]);
+    const half = downsampleClip(clip as any, 15);
+    expect(half.hands!.xy.length).toBe(3);
+    expect(half.hands!.xy[1][0]).toBeNull();
+    expect(half.smallToes!.xy[2][0]).toEqual([4, 7]);
+  });
+});

@@ -83,5 +83,13 @@ export type FootTrack = {
   ok: [boolean, boolean][];
 };
 
+/** Phase 17 step 3: the whole-body model's 21-point hands, per frame per side (null = no hand drawn this frame) */
+export type HandTrack = {
+  /** [frame] → [left, right] → 21 × ([x, y] | null) | null */
+  xy: ((XY | null)[] | null)[][];
+  /** [frame] → [left measured, right measured] (false inside an interpolated gap) */
+  ok: [boolean, boolean][];
+};
+
 export type JointName = 'elbow' | 'shoulder' | 'hip' | 'knee';
 export type ActiveJoint = { name: JointName; side: 'R' | 'L'; range: number; tri: [number, number, number] };

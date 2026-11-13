@@ -5,6 +5,7 @@
  * perspective floor + cast shadow. Draws only what was detected.
  */
 import { PaintStyle, Skia, StrokeCap, type SkCanvas, type SkPaint } from '@shopify/react-native-skia';
+import { FINGERS, PALM } from '../pipeline/hands';
 import { LM, type XY } from '../pipeline/types';
 import { HEAD, projectToFloor, type Prepared, type PreparedFrame } from './prepare';
 
@@ -176,15 +177,35 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
       dot(P[s.wr], tt * 0.6 + g / 2, color);
       // hand (owner, 2026-11-08: "we don't have hands"): MediaPipe's index / pinky / thumb bases, drawn only
       // when detected — a palm wedge wrist → index → pinky, and the thumb as a short taper. Nothing invented.
-      const ix = P[s.ix], pk = P[s.pk], th = P[s.th];
-      if (ok(P[s.wr]) && ok(ix) && ok(pk)) {
-        const W0 = T(P[s.wr]), I = T(ix), K = T(pk);
-        canvas.drawPath(Skia.Path.Polygon([{ x: W0[0], y: W0[1] }, { x: I[0], y: I[1] }, { x: K[0], y: K[1] }], true), fill(color));
-        capsule(ix, pk, color, tt * 0.5 + g);
-        taper(P[s.wr], ix, color, tt * 0.7 + g, tt * 0.45 + g);
-        taper(P[s.wr], pk, color, tt * 0.7 + g, tt * 0.45 + g);
+      // Phase 17 step 3: with the whole-body model's 21 points the hand gets a palm (wrist + four finger bases)
+      // and finger chains with their joints; MediaPipe-only clips keep the three-point wedge below.
+      const hand = fr.hand[s.idx];
+      const palmPts = hand ? PALM.map((j) => hand[j]) : null;
+      if (hand && palmPts && palmPts.every((p) => ok(p)) && ok(P[s.wr])) {
+        const poly = palmPts.map((p) => { const q = T(p as XY); return { x: q[0], y: q[1] }; });
+        canvas.drawPath(Skia.Path.Polygon(poly, true), fill(color));
+        for (let i = 0; i < PALM.length; i++) capsule(palmPts[i] as XY, palmPts[(i + 1) % PALM.length] as XY, color, tt * 0.45 + g);
+        capsule(P[s.wr], hand[0] as XY, color, tt * 0.7 + g);
+        for (const chain of FINGERS) {
+          const thumb = chain[0] === 0;
+          for (let i = 0; i + 1 < chain.length; i++) {
+            const a = hand[chain[i]], b = hand[chain[i + 1]];
+            if (!ok(a) || !ok(b)) break;
+            const w1 = tt * (thumb ? 0.5 : 0.42) * (1 - 0.08 * i) + g, w2 = tt * (thumb ? 0.5 : 0.42) * (1 - 0.08 * (i + 1)) + g;
+            taper(a, b, color, w1, w2);
+          }
+        }
+      } else {
+        const ix = P[s.ix], pk = P[s.pk], th = P[s.th];
+        if (ok(P[s.wr]) && ok(ix) && ok(pk)) {
+          const W0 = T(P[s.wr]), I = T(ix), K = T(pk);
+          canvas.drawPath(Skia.Path.Polygon([{ x: W0[0], y: W0[1] }, { x: I[0], y: I[1] }, { x: K[0], y: K[1] }], true), fill(color));
+          capsule(ix, pk, color, tt * 0.5 + g);
+          taper(P[s.wr], ix, color, tt * 0.7 + g, tt * 0.45 + g);
+          taper(P[s.wr], pk, color, tt * 0.7 + g, tt * 0.45 + g);
+        }
+        if (ok(P[s.wr]) && ok(th)) taper(P[s.wr], th, color, tt * 0.55 + g, tt * 0.35 + g);
       }
-      if (ok(P[s.wr]) && ok(th)) taper(P[s.wr], th, color, tt * 0.55 + g, tt * 0.35 + g);
     }
     if (which === 'arm') return;
     taper(P[s.hp], P[s.kn], color, tt * 1.1 + g, tt * 1.0 + g);
@@ -201,6 +222,14 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
         canvas.drawPath(path, fill(color));
         capsule(heel, toe, color, t * 0.55 + g);
         capsule(P[s.an], heel, color, t * 0.7 + g);
+        // Phase 17 step 3: the small toe (whole-body model) gives the foot its width — a sole heel → big toe → small toe
+        const small = fr.smallToe[s.idx];
+        if (small) {
+          const Ss = T(small);
+          canvas.drawPath(Skia.Path.Polygon([{ x: Hh[0], y: Hh[1] }, { x: Tt[0], y: Tt[1] }, { x: Ss[0], y: Ss[1] }], true), fill(color));
+          capsule(toe, small, color, t * 0.5 + g);
+          taper(P[s.an], small, color, t * 0.7 + g, t * 0.45 + g);
+        }
       }
       taper(P[s.an], toe, color, t * 0.85 + g, t * 0.5 + g);
     }

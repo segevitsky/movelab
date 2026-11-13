@@ -1,13 +1,16 @@
 /**
  * Compact storage of a FigureClip (Architecture §5: 15 fps, 33 landmarks int16 → ≈ 2 KB/s).
  * Pure TS, no native. Layout (little-endian):
- *   magic 'MLF1' (4) | fps f32 | nFrames u32 | loopI0 i32 | loopI1 i32 | flags u8 (bit0: feet, bit1: depth, bit2: staff)
+ *   magic 'MLF1' (4) | fps f32 | nFrames u32 | loopI0 i32 | loopI1 i32 |
+ *   flags u8 (bit0: feet, bit1: depth, bit2: staff, bit3: hands, bit4: small toes)
  *   per frame: 33 × (x i16, y i16) [+ toeL toeR heelL heelR × (x i16, y i16), sentinel -32768 = none]
  *             [+ depth u8: bit0 legsRightNear, bit1 armsRightNear]
  *             [+ staff: a (x i16, y i16), b (x i16, y i16), behind u8]  (Phase 16 props)
+ *             [+ hands: 2 × 21 × (x i16, y i16)]  [+ small toes: L R × (x i16, y i16)]  (Phase 17 step 3)
  * Coordinates are stored in 1/4 px (int16 range ±8192 px).
  */
-import type { FootTrack, XY } from '../pipeline/types';
+import type { FootTrack, HandTrack, XY } from '../pipeline/types';
+import { HAND_POINTS } from '../pipeline/hands';
 import type { FigureClip, StaffProp } from './prepare';
 
 const MAGIC = 0x314c4d46; // 'FML1' little-endian read of 'F','M','L','1'
@@ -23,7 +26,9 @@ export function encodeClip(clip: FigureClip): Uint8Array {
   const feet = !!(clip.toes || clip.heels);
   const depth = !!clip.depth;
   const staff = clip.props?.staff;
-  const perFrame = 33 * 4 + (feet ? 4 * 4 : 0) + (depth ? 1 : 0) + (staff ? 9 : 0);
+  const hands = !!clip.hands;
+  const small = !!clip.smallToes;
+  const perFrame = 33 * 4 + (feet ? 4 * 4 : 0) + (depth ? 1 : 0) + (staff ? 9 : 0) + (hands ? 2 * HAND_POINTS * 4 : 0) + (small ? 2 * 4 : 0);
   const buf = new ArrayBuffer(21 + n * perFrame);
   const dv = new DataView(buf);
   let o = 0;
@@ -32,7 +37,7 @@ export function encodeClip(clip: FigureClip): Uint8Array {
   dv.setUint32(o, n, true); o += 4;
   dv.setInt32(o, clip.loop?.i0 ?? 0, true); o += 4;
   dv.setInt32(o, clip.loop?.i1 ?? n - 1, true); o += 4;
-  dv.setUint8(o, (feet ? 1 : 0) | (depth ? 2 : 0) | (staff ? 4 : 0)); o += 1;
+  dv.setUint8(o, (feet ? 1 : 0) | (depth ? 2 : 0) | (staff ? 4 : 0) | (hands ? 8 : 0) | (small ? 16 : 0)); o += 1;
   const put = (p: XY | null) => {
     if (!p || Number.isNaN(p[0]) || Number.isNaN(p[1])) { dv.setInt16(o, NONE, true); dv.setInt16(o + 2, NONE, true); }
     else { dv.setInt16(o, clampI16(p[0] * Q), true); dv.setInt16(o + 2, clampI16(p[1] * Q), true); }
@@ -48,6 +53,8 @@ export function encodeClip(clip: FigureClip): Uint8Array {
     }
     if (depth) { dv.setUint8(o, (clip.depth!.legsRightNear[i] ? 1 : 0) | (clip.depth!.armsRightNear[i] ? 2 : 0)); o += 1; }
     if (staff) { put(staff.a[i] ?? null); put(staff.b[i] ?? null); dv.setUint8(o, staff.behind[i] ? 1 : 0); o += 1; }
+    if (hands) for (let s = 0; s < 2; s++) { const h = clip.hands!.xy[i][s]; for (let j = 0; j < HAND_POINTS; j++) put(h ? h[j] ?? null : null); }
+    if (small) { put(clip.smallToes!.xy[i][0] ?? null); put(clip.smallToes!.xy[i][1] ?? null); }
   }
   return new Uint8Array(buf);
 }
@@ -65,6 +72,10 @@ export function decodeClip(bytes: Uint8Array): FigureClip {
   const feet = (flags & 1) === 1;
   const hasDepth = (flags & 2) === 2;
   const hasStaff = (flags & 4) === 4;
+  const hasHands = (flags & 8) === 8;
+  const hasSmall = (flags & 16) === 16;
+  const hands: HandTrack = { xy: [], ok: [] };
+  const smallToes: FootTrack = { xy: [], ok: [] };
   const legsRightNear: boolean[] = [], armsRightNear: boolean[] = [];
   const staff: StaffProp = { a: [], b: [], behind: [] };
   const get = (): XY | null => {
@@ -87,8 +98,14 @@ export function decodeClip(bytes: Uint8Array): FigureClip {
     }
     if (hasDepth) { const b = dv.getUint8(o); o += 1; legsRightNear.push((b & 1) === 1); armsRightNear.push((b & 2) === 2); }
     if (hasStaff) { staff.a.push(get()); staff.b.push(get()); staff.behind.push(dv.getUint8(o) === 1); o += 1; }
+    if (hasHands) {
+      const sides: ((XY | null)[] | null)[] = [];
+      for (let s = 0; s < 2; s++) { const h: (XY | null)[] = []; for (let j = 0; j < HAND_POINTS; j++) h.push(get()); sides.push(h.some((p) => p) ? h : null); }
+      hands.xy.push(sides); hands.ok.push([!!sides[0], !!sides[1]]);
+    }
+    if (hasSmall) { const l = get(), r = get(); smallToes.xy.push([l, r]); smallToes.ok.push([!!l, !!r]); }
   }
-  return { fps, xy, toes: feet ? toes : undefined, heels: feet ? heels : undefined, loop: { i0, i1 }, depth: hasDepth ? { legsRightNear, armsRightNear } : undefined, props: hasStaff ? { staff } : undefined };
+  return { fps, xy, toes: feet ? toes : undefined, heels: feet ? heels : undefined, loop: { i0, i1 }, depth: hasDepth ? { legsRightNear, armsRightNear } : undefined, props: hasStaff ? { staff } : undefined, hands: hasHands ? hands : undefined, smallToes: hasSmall ? smallToes : undefined };
 }
 
 /** Keep every k-th frame so the stored clip runs at ≈ targetFps (loop indices rescaled). */
@@ -102,6 +119,8 @@ export function downsampleClip(clip: FigureClip, targetFps = 15): FigureClip {
     xy: idx.map((i) => clip.xy[i]),
     toes: clip.toes ? { xy: idx.map((i) => clip.toes!.xy[i]), ok: idx.map((i) => clip.toes!.ok[i]) } : undefined,
     heels: clip.heels ? { xy: idx.map((i) => clip.heels!.xy[i]), ok: idx.map((i) => clip.heels!.ok[i]) } : undefined,
+    smallToes: clip.smallToes ? { xy: idx.map((i) => clip.smallToes!.xy[i]), ok: idx.map((i) => clip.smallToes!.ok[i]) } : undefined,
+    hands: clip.hands ? { xy: idx.map((i) => clip.hands!.xy[i]), ok: idx.map((i) => clip.hands!.ok[i]) } : undefined,
     loop: clip.loop ? { i0: Math.floor(clip.loop.i0 / k), i1: Math.floor(clip.loop.i1 / k) } : undefined,
     hud: clip.hud?.map((h) => ({ name: h.name, angles: idx.map((i) => h.angles[i]) })),
     depth: clip.depth ? { legsRightNear: idx.map((i) => clip.depth!.legsRightNear[i]), armsRightNear: idx.map((i) => clip.depth!.armsRightNear[i]) } : undefined,

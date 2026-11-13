@@ -5,6 +5,7 @@ export { segment, sliceSegment, type SegmentOptions } from './segment';
 export { sanityCheck, framesToRecheck, type SanityOptions } from './sanity';
 export { findPeriod, bestLoop, normalise, repCount } from './reps';
 export { feet, type FeetOptions } from './feet';
+export { hands, FINGERS, PALM, HAND_POINTS, type HandsOptions } from './hands';
 export { features, topJoints, jointAngle, poseDistance, JOINT_TRIPLES, type Features } from './features';
 export { resample, estimateFps } from './resample';
 export { contacts, footContact, type Contacts, type ContactPoint } from './contacts';
@@ -13,6 +14,7 @@ export { oneEuro } from './oneEuro';
 
 import { clean, toTrack, torsoLengths } from './clean';
 import { feet } from './feet';
+import { hands } from './hands';
 import { features, type Features } from './features';
 import { bestLoop, findPeriod } from './reps';
 import { estimateFps } from './resample';
@@ -26,7 +28,7 @@ import { median } from './math';
 import { segment, sliceSegment, type SegmentOptions } from './segment';
 import { trackStaff, type StaffLine, type StaffTrack } from './props/staff';
 export { trackStaff, type StaffLine, type StaffTrack } from './props/staff';
-import type { FootTrack, LoopResult, PeriodResult, RawPose, SanityIssue, Segment, Track } from './types';
+import type { FootTrack, HandTrack, LoopResult, PeriodResult, RawPose, SanityIssue, Segment, Track } from './types';
 
 export type ProcessedSegment = {
   segment: Segment;
@@ -47,6 +49,9 @@ export type ProcessedSegment = {
   loop: LoopResult | null;
   toes: FootTrack;
   heels: FootTrack;
+  /** Phase 17 step 3 (whole-body model only): small toes and 21-point hands */
+  smallToes?: FootTrack;
+  hands?: HandTrack;
   features: Features;
   /** Phase 16 props: a staff tracked as a rigid rod (only when the capture had line detections) */
   props?: { staff?: { a: StaffTrack['a']; b: StaffTrack['b']; behind: boolean[] } };
@@ -79,6 +84,9 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
     const pinned = pinToFloor(full, contacts, floor, fps, { torso, world });
     // Phase 13: short dropouts of a limb keep its last detected pose, carried with its root joint (owner's call)
     const clHeld = holdLimbs(cl, fps, { maxSeconds: 2 }).xy;
+    // feet: the raw foot points get the root-pinning offset the cleaned track already has; whole-body model scores
+    // between 0.3 and 0.4 are its "not sure" band (two 30 px toe misses on the owner's 11-10 capture, none at 0.4)
+    const footOpts = { pinOffset: pinned.offset, ...(hybrid ? { minVisibility: 0.4 } : {}) };
     const clPinned: Track = clHeld.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
     let props: ProcessedSegment['props'];
     if (opts.staffLines?.length) {
@@ -99,8 +107,10 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
       issues,
       period,
       loop: period && period.periodic ? bestLoop(full, period.lag) : null,
-      toes: feet(frames, clPinned, fps, 'toe'),
-      heels: feet(frames, clPinned, fps, 'heel'),
+      toes: feet(frames, clPinned, fps, 'toe', footOpts),
+      heels: feet(frames, clPinned, fps, 'heel', footOpts),
+      smallToes: hybrid ? feet(frames, clPinned, fps, 'smallToe', footOpts) : undefined,
+      hands: hybrid ? hands(frames, clPinned, fps, { torso, pinOffset: pinned.offset }) : undefined,
       features: features(full, fps),
     };
   });

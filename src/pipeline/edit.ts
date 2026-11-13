@@ -4,6 +4,7 @@
  */
 import { clean, toTrack } from './clean';
 import { feet } from './feet';
+import { hands } from './hands';
 import { features } from './features';
 import { bestLoop, findPeriod } from './reps';
 import { hideImplausibleLimbs, sanityCheck } from './sanity';
@@ -42,6 +43,9 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
   const floor = fitFloor(full, contacts, { world, matQuad: opts.matQuad });
   const pinned = pinToFloor(full, contacts, floor, fps, { torso, world });
   const clHeld = holdLimbs(cl, fps, { maxSeconds: 2 }).xy; // Phase 13: short limb dropouts keep the last pose
+  // feet: the raw foot points get the root-pinning offset the cleaned track already has; whole-body model scores
+  // between 0.3 and 0.4 are its "not sure" band (two 30 px toe misses on the owner's 11-10 capture, none at 0.4)
+  const footOpts = { pinOffset: pinned.offset, ...(hybrid ? { minVisibility: 0.4 } : {}) };
   const clPinned = clHeld.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
   return {
     segment: seg,
@@ -56,8 +60,10 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
     issues,
     period,
     loop: period && period.periodic ? bestLoop(full, period.lag) : null,
-    toes: feet(slice, clPinned, fps, 'toe'),
-    heels: feet(slice, clPinned, fps, 'heel'),
+    toes: feet(slice, clPinned, fps, 'toe', footOpts),
+    heels: feet(slice, clPinned, fps, 'heel', footOpts),
+    smallToes: hybrid ? feet(slice, clPinned, fps, 'smallToe', footOpts) : undefined,
+    hands: hybrid ? hands(slice, clPinned, fps, { torso, pinOffset: pinned.offset }) : undefined,
     features: features(full, fps),
   };
 }

@@ -8,6 +8,10 @@ export type FeetOptions = {
   maxRatio?: number; // 0.7
   /** smoothing window in seconds (order 2) */
   smoothSeconds?: number; // 0.25
+  /** per-frame vertical offset already applied to `cleaned` (pinToFloor root pinning); the raw foot points get
+   *  the same, otherwise every foot is measured `offset` px off its ankle (found 2026-11-13: 30 px on a 73 px
+   *  shin in the owner's lying drill — feet misplaced, and many rejected by `maxRatio`) */
+  pinOffset?: number[];
 };
 
 /**
@@ -16,7 +20,10 @@ export type FeetOptions = {
  * leg; gaps are interpolated and smoothed in that space; then projected back onto the *cleaned* shin.
  * Only measured feet are returned (`ok`); nothing is invented.
  */
-export function feet(raw: RawFrame[], cleaned: Track, fps: number, key: 'toe' | 'heel' = 'toe', opts: FeetOptions = {}): FootTrack {
+/** whole-body model foot points (`wb.feet`): L big toe, L small toe, L heel, R big toe, R small toe, R heel */
+const WB_SMALL_TOE = [1, 4];
+
+export function feet(raw: RawFrame[], cleaned: Track, fps: number, key: 'toe' | 'heel' | 'smallToe' = 'toe', opts: FeetOptions = {}): FootTrack {
   const minV = opts.minVisibility ?? 0.3;
   const maxRatio = opts.maxRatio ?? 0.7;
   const n = cleaned.length;
@@ -33,9 +40,19 @@ export function feet(raw: RawFrame[], cleaned: Track, fps: number, key: 'toe' | 
     // measured feet, matched to ankles by nearest total distance (as the prototype did)
     const meas: { side: number; p: XY }[] = [];
     for (let s = 0; s < 2; s++) {
+      if (key === 'smallToe') {
+        // Phase 17 step 3: only the whole-body model has it; needs the foot's own big toe + heel too
+        const wb = f.wb;
+        if (!wb || !wb.feet || !wb.feetScores) continue;
+        const j = WB_SMALL_TOE[s];
+        if (Math.min(wb.feetScores[j], f.v[heelIdx[s]], f.v[toeIdx[s]]) > minV) meas.push({ side: s, p: wb.feet[j] });
+        continue;
+      }
       if (Math.min(f.v[heelIdx[s]], f.v[toeIdx[s]]) > minV) meas.push({ side: s, p: f.xy[key === 'toe' ? toeIdx[s] : heelIdx[s]] });
     }
     if (meas.length === 0) continue;
+    const off = opts.pinOffset?.[k] ?? 0;
+    if (off) for (const m of meas) m.p = [m.p[0], m.p[1] + off];
     const A = [cleaned[k][LM.leftAnkle], cleaned[k][LM.rightAnkle]];
     let pairs: [number, XY][];
     if (meas.length === 2) {

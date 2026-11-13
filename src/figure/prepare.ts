@@ -3,7 +3,7 @@
  * reference/pose-pipeline/render.py). No Skia here, so it is unit-testable.
  */
 import { hypot2, median, percentile, savgol } from '../pipeline/math';
-import { LM, type FootTrack, type Track, type XY } from '../pipeline/types';
+import { LM, type FootTrack, type HandTrack, type Track, type XY } from '../pipeline/types';
 
 export type FigureClip = {
   fps: number;
@@ -11,6 +11,9 @@ export type FigureClip = {
   xy: Track;
   toes?: FootTrack;
   heels?: FootTrack;
+  /** Phase 17 step 3 (whole-body model): small toes and 21-point hands, drawn only when detected */
+  smallToes?: FootTrack;
+  hands?: HandTrack;
   /** optional loop window (frame indices, inclusive) — cards loop this; default whole clip */
   loop?: { i0: number; i1: number };
   /** optional HUD: two joints with per-frame angles in degrees */
@@ -35,6 +38,9 @@ export type PreparedFrame = {
   armsRightNear: boolean;
   toe: (XY | null)[]; // [left, right]
   heel: (XY | null)[];
+  smallToe: (XY | null)[];
+  /** 21 hand points per side (null = no hand this frame) */
+  hand: ((XY | null)[] | null)[];
   /** the staff's two ends this frame, if tracked */
   staff: { a: XY; b: XY; behind: boolean } | null;
   cam: { x0: number; y0: number; scale: number };
@@ -98,10 +104,11 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
   // extents per frame (joints + head + feet) for the camera
   const pts: XY[][] = xy.map((f, i) => {
     const arr: XY[] = [...f.slice(0, 33), [hx[i], hy[i]]];
-    for (const ft of [clip.toes, clip.heels]) {
+    for (const ft of [clip.toes, clip.heels, clip.smallToes]) {
       if (!ft) continue;
       for (const p of ft.xy[i]) if (p) arr.push(p);
     }
+    for (const h of clip.hands?.xy[i] ?? []) if (h) for (const p of h) if (p) arr.push(p);
     const st = clip.props?.staff;
     if (st) { const a = st.a[i], b = st.b[i]; if (a) arr.push(a); if (b) arr.push(b); }
     return arr;
@@ -122,6 +129,8 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
     armsRightNear: clip.depth?.armsRightNear[i] ?? true,
     toe: clip.toes ? clip.toes.xy[i].map((p) => (p ? ([p[0], p[1]] as XY) : null)) : [null, null],
     heel: clip.heels ? clip.heels.xy[i].map((p) => (p ? ([p[0], p[1]] as XY) : null)) : [null, null],
+    smallToe: clip.smallToes ? clip.smallToes.xy[i].map((p) => (p ? ([p[0], p[1]] as XY) : null)) : [null, null],
+    hand: clip.hands ? clip.hands.xy[i].map((h) => (h ? h.map((p) => (p ? ([p[0], p[1]] as XY) : null)) : null)) : [null, null],
     staff: clip.props?.staff && clip.props.staff.a[i] && clip.props.staff.b[i] ? { a: [...clip.props.staff.a[i]!] as XY, b: [...clip.props.staff.b[i]!] as XY, behind: !!clip.props.staff.behind[i] } : null,
     cam: { x0: cx[i] - width / (2 * scale), y0: ground - (0.87 * height) / scale, scale },
   }));

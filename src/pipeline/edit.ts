@@ -48,8 +48,9 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
   // between 0.3 and 0.4 are its "not sure" band (two 30 px toe misses on the owner's 11-10 capture, none at 0.4)
   const footOpts = { pinOffset: pinned.offset, ...(hybrid ? { minVisibility: 0.4 } : {}) };
   const clPinned = clHeld.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
+  const toes = feet(slice, clPinned, fps, 'toe', footOpts);
   return {
-    support: detectSupport(pinned.xy, contacts, floor, fps, torso),
+    support: detectSupport(pinned.xy, contacts, floor, fps, torso, { toes }),
     segment: seg,
     fps,
     xy: clPinned,
@@ -62,7 +63,7 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
     issues,
     period,
     loop: period && period.periodic ? bestLoop(full, period.lag) : null,
-    toes: feet(slice, clPinned, fps, 'toe', footOpts),
+    toes,
     heels: feet(slice, clPinned, fps, 'heel', footOpts),
     smallToes: hybrid ? feet(slice, clPinned, fps, 'smallToe', footOpts) : undefined,
     hands: hybrid ? hands(slice, clPinned, fps, { torso, pinOffset: pinned.offset }) : undefined,

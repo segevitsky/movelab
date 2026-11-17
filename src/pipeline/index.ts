@@ -97,7 +97,8 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
       const st = trackStaff(opts.staffLines, clPinned, frames.map((f) => f.t), fps, torso, { pinOffset: pinned.offset });
       if (st.L > 0) props = { staff: { a: st.a, b: st.b, behind: st.behind } };
     }
-    const support = detectSupport(pinned.xy, contacts, floor, fps, torso);
+    const toes = feet(frames, clPinned, fps, 'toe', footOpts);
+    const support = detectSupport(pinned.xy, contacts, floor, fps, torso, { toes });
     return {
       props,
       support,
@@ -113,7 +114,7 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
       issues,
       period,
       loop: period && period.periodic ? bestLoop(full, period.lag) : null,
-      toes: feet(frames, clPinned, fps, 'toe', footOpts),
+      toes,
       heels: feet(frames, clPinned, fps, 'heel', footOpts),
       smallToes: hybrid ? feet(frames, clPinned, fps, 'smallToe', footOpts) : undefined,
       hands: hybrid ? hands(frames, clPinned, fps, { torso, pinOffset: pinned.offset }) : undefined,

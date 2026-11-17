@@ -21,7 +21,7 @@
 import type { Contacts } from './contacts';
 // `contacts` is accepted for future use (hands planted on the floor are never a bar); the rules below use geometry and motion
 import { hypot2, median, percentile } from './math';
-import { LM, type Track } from './types';
+import { LM, type FootTrack, type Track } from './types';
 
 export type Support = {
   /** x = the wall face where the nearest foot/hand touches it; x2 = where the farthest one does (the face seen
@@ -41,6 +41,9 @@ export type SupportOptions = {
   offFloor?: number; // 0.5
   /** bar: hips at least this far below the hands */
   hang?: number; // 1.2
+  /** the drawn foot track (toes): when given, the wall face is measured from the feet as they are drawn — the
+   *  analysis track's toes sat 15–25 px away from them on the owner's wall plank (2026-11-17), leaving a 5 px band */
+  toes?: FootTrack;
 };
 
 const known = (p: readonly number[] | undefined) => !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]);
@@ -75,12 +78,12 @@ export function detectSupport(xy: Track, _contacts: Contacts, floor: { a: number
 
   // --- wall: one point at a time
   const WALL_POINTS = [LM.leftHeel, LM.rightHeel, LM.leftToe, LM.rightToe, LM.leftAnkle, LM.rightAnkle, LM.leftWrist, LM.rightWrist];
-  const wallX: number[] = [], wallSign: number[] = [], wallEnd: boolean[] = [];
+  const wallX: number[] = [], wallSign: number[] = [], wallEnd: boolean[] = [], wallFrame: number[] = [];
   const END_POINTS = new Set<number>([LM.leftToe, LM.rightToe, LM.leftWrist, LM.rightWrist]); // the points that touch
   for (const j of WALL_POINTS) {
     const speed = smoothedSpeed(xy, j, fps, torso);
     let run: number[] = [];
-    const flush = () => { if (run.length >= minFrames) for (const i of run) { wallX.push(xy[i][j][0]); wallSign.push(Math.sign(xy[i][j][0] - hipX[i])); wallEnd.push(END_POINTS.has(j)); } run = []; };
+    const flush = () => { if (run.length >= minFrames) for (const i of run) { wallX.push(xy[i][j][0]); wallSign.push(Math.sign(xy[i][j][0] - hipX[i])); wallEnd.push(END_POINTS.has(j)); wallFrame.push(i); } run = []; };
     for (let i = 0; i < n; i++) {
       const p = xy[i][j];
       let ok = known(p) && Number.isFinite(hipX[i]) && speed[i] <= maxSpeed;
@@ -121,8 +124,15 @@ export function detectSupport(xy: Track, _contacts: Contacts, floor: { a: number
     // wall's existence). Seen slightly from the side, the far foot touches the face nearer the camera's middle than
     // the near foot does, so the face is a band from the outermost touch (x) to the innermost (x2) — with a single
     // line the toes pierced it and the other foot floated (owner, 2026-11-17).
-    const ends = xs.filter((_, i) => wallEnd.filter((__, k) => wallSign[k] === sign)[i]);
-    const src = ends.length >= minFrames ? ends : xs;
+    const idx = wallSign.map((sg, k) => (sg === sign ? k : -1)).filter((k) => k >= 0);
+    const ends = idx.filter((k) => wallEnd[k]).map((k) => wallX[k]);
+    let src = ends.length >= minFrames ? ends : xs;
+    if (opts.toes) {
+      // measure from the drawn feet over the qualifying frames (both feet: the far one touches nearer the middle)
+      const drawn: number[] = [];
+      for (const k of new Set(idx.map((k) => wallFrame[k]))) for (const p of opts.toes.xy[k] ?? []) if (p && Number.isFinite(p[0]) && Math.sign(p[0] - hipX[k]) === sign) drawn.push(p[0]);
+      if (drawn.length >= minFrames) src = drawn;
+    }
     const x = sign > 0 ? percentile(src, 92) : percentile(src, 8);
     const x2 = sign > 0 ? percentile(src, 8) : percentile(src, 92);
     if (share >= 0.85 && spread <= 0.15 * torso && xs.length >= minFrames) out.wall = { x, x2, bodyLeft: sign > 0, frames: xs.length };

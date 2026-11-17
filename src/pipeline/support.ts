@@ -24,7 +24,9 @@ import { hypot2, median, percentile } from './math';
 import { LM, type Track } from './types';
 
 export type Support = {
-  wall?: { x: number; bodyLeft: boolean; frames: number };
+  /** x = the wall face where the nearest foot/hand touches it; x2 = where the farthest one does (the face seen
+   *  obliquely is a band between them, so both feet read as touching it; equal when one point touches) */
+  wall?: { x: number; x2: number; bodyLeft: boolean; frames: number };
   bar?: { y: number; x0: number; x1: number; frames: number };
 };
 
@@ -73,11 +75,12 @@ export function detectSupport(xy: Track, _contacts: Contacts, floor: { a: number
 
   // --- wall: one point at a time
   const WALL_POINTS = [LM.leftHeel, LM.rightHeel, LM.leftToe, LM.rightToe, LM.leftAnkle, LM.rightAnkle, LM.leftWrist, LM.rightWrist];
-  const wallX: number[] = [], wallSign: number[] = [];
+  const wallX: number[] = [], wallSign: number[] = [], wallEnd: boolean[] = [];
+  const END_POINTS = new Set<number>([LM.leftToe, LM.rightToe, LM.leftWrist, LM.rightWrist]); // the points that touch
   for (const j of WALL_POINTS) {
     const speed = smoothedSpeed(xy, j, fps, torso);
     let run: number[] = [];
-    const flush = () => { if (run.length >= minFrames) for (const i of run) { wallX.push(xy[i][j][0]); wallSign.push(Math.sign(xy[i][j][0] - hipX[i])); } run = []; };
+    const flush = () => { if (run.length >= minFrames) for (const i of run) { wallX.push(xy[i][j][0]); wallSign.push(Math.sign(xy[i][j][0] - hipX[i])); wallEnd.push(END_POINTS.has(j)); } run = []; };
     for (let i = 0; i < n; i++) {
       const p = xy[i][j];
       let ok = known(p) && Number.isFinite(hipX[i]) && speed[i] <= maxSpeed;
@@ -114,11 +117,15 @@ export function detectSupport(xy: Track, _contacts: Contacts, floor: { a: number
     const xs = wallX.filter((_, i) => wallSign[i] === sign);
     const mid = median(xs);
     const spread = median(xs.map((v) => Math.abs(v - mid)));
-    // the wall face is where the body ends: the outermost of the pooled heel / toe / ankle / wrist points (a
-    // robust percentile), not their middle — with the middle, the toes pierced the slab and the heels floated
-    // (owner, 2026-11-17: "one leg looks like it's floating")
-    const x = sign > 0 ? percentile(xs, 92) : percentile(xs, 8);
-    if (share >= 0.85 && spread <= 0.15 * torso && xs.length >= minFrames) out.wall = { x, bodyLeft: sign > 0, frames: xs.length };
+    // the wall face is where the body ends — the toes / wrists that touch it (heels and ankles only vote for the
+    // wall's existence). Seen slightly from the side, the far foot touches the face nearer the camera's middle than
+    // the near foot does, so the face is a band from the outermost touch (x) to the innermost (x2) — with a single
+    // line the toes pierced it and the other foot floated (owner, 2026-11-17).
+    const ends = xs.filter((_, i) => wallEnd.filter((__, k) => wallSign[k] === sign)[i]);
+    const src = ends.length >= minFrames ? ends : xs;
+    const x = sign > 0 ? percentile(src, 92) : percentile(src, 8);
+    const x2 = sign > 0 ? percentile(src, 8) : percentile(src, 92);
+    if (share >= 0.85 && spread <= 0.15 * torso && xs.length >= minFrames) out.wall = { x, x2, bodyLeft: sign > 0, frames: xs.length };
   }
 
   // --- bar: both hands together

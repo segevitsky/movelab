@@ -19,7 +19,7 @@ export type FigureClip = {
   /** optional HUD: two joints with per-frame angles in degrees */
   hud?: { name: string; angles: number[] }[];
   /** Architecture §5a: floor mat quad in the same pixel space as xy (TL, TR, BR, BL); Phase 2.5: fitted floor */
-  scene?: { matQuad?: XY[]; floor?: { a: number; b: number }; wall?: { x: number; bodyLeft: boolean }; bar?: { y: number; x0: number; x1: number } };
+  scene?: { matQuad?: XY[]; floor?: { a: number; b: number }; wall?: { x: number; x2?: number; bodyLeft: boolean }; bar?: { y: number; x0: number; x1: number } };
   /** debug overlays (dev screen only): per-frame contact flags per point, flagged limb-frames */
   debug?: { contacts?: Record<string, boolean[]>; flagged?: { frame: number; limbs: string[] }[] };
   /** Phase 2.5 step 5: per frame, is the right side nearer the camera (legs / arms)? default true */
@@ -59,7 +59,7 @@ export type Prepared = {
   loop: { i0: number; i1: number };
   matQuad?: XY[];
   floor?: { a: number; b: number };
-  wall?: { x: number; bodyLeft: boolean };
+  wall?: { x: number; x2?: number; bodyLeft: boolean };
   bar?: { y: number; x0: number; x1: number };
   debug?: FigureClip['debug'];
 };

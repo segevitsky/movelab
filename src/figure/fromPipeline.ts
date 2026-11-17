@@ -17,7 +17,7 @@ export function clipFromProcessed(seg: ProcessedSegment): FigureClip {
     hands: seg.hands,
     loop: seg.loop ? { i0: seg.loop.i0, i1: seg.loop.i1 } : undefined,
     hud,
-    scene: { floor: { a: seg.floor.a, b: seg.floor.b }, wall: seg.support?.wall ? { x: seg.support.wall.x, bodyLeft: seg.support.wall.bodyLeft } : undefined, bar: seg.support?.bar ? { y: seg.support.bar.y, x0: seg.support.bar.x0, x1: seg.support.bar.x1 } : undefined },
+    scene: { floor: { a: seg.floor.a, b: seg.floor.b }, wall: seg.support?.wall ? { x: seg.support.wall.x, x2: seg.support.wall.x2, bodyLeft: seg.support.wall.bodyLeft } : undefined, bar: seg.support?.bar ? { y: seg.support.bar.y, x0: seg.support.bar.x0, x1: seg.support.bar.x1 } : undefined },
     depth: seg.depth,
     props: seg.props,
     debug: { contacts: seg.contacts, flagged: seg.issues.filter((i) => i.kind === 'bone-length').map((i) => ({ frame: i.frame, limbs: i.limbs })) },

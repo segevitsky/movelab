@@ -19,6 +19,7 @@ export const COLORS = {
   staff: '#8a6a48', // Phase 16 props: wood
   staffEdge: '#5e462e',
   wall: '#ebe6dd', // support inferred from the body: a wall slab, a bar
+  wallFace: '#e2dcd1',
   wallEdge: '#cfc7b9',
   bar: '#4a4f5c',
   floor: '#e9e4db',
@@ -129,10 +130,12 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
   // figure; a bar a rod through the hands. Both sit behind the figure.
   if (prep.wall && opts.floor !== false) {
     const wx = (prep.wall.x - x0) * scale;
+    const wx2 = ((prep.wall.x2 ?? prep.wall.x) - x0) * scale;
     const far = prep.wall.bodyLeft ? W + 4 : -4;
-    const r = Skia.XYWHRect(Math.min(wx, far), -4, Math.abs(far - wx), gy + 4);
-    canvas.drawRect(r, fill(COLORS.wall));
-    canvas.drawLine(wx, -4, wx, gy, stroke(COLORS.wallEdge, Math.max(1.5, t * 0.22)));
+    // the wall body beyond the outer touch, and its face as a band to the inner touch (the face seen obliquely)
+    canvas.drawRect(Skia.XYWHRect(Math.min(wx, far), -4, Math.abs(far - wx), gy + 4), fill(COLORS.wall));
+    if (Math.abs(wx2 - wx) > 1) canvas.drawRect(Skia.XYWHRect(Math.min(wx, wx2), -4, Math.abs(wx2 - wx), gy + 4), fill(COLORS.wallFace));
+    canvas.drawLine(wx2, -4, wx2, gy, stroke(COLORS.wallEdge, Math.max(1.5, t * 0.22)));
   }
   if (prep.bar) {
     const A = T([prep.bar.x0 - prep.torso * 0.6, prep.bar.y]), B = T([prep.bar.x1 + prep.torso * 0.6, prep.bar.y]);

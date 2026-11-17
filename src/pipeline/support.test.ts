@@ -92,6 +92,9 @@ describe('detectSupport(): walls and bars inferred from where the body holds sti
     expect(seg.support?.bar).toBeUndefined();
     const hipX = median(seg.xyFull.map((f) => (f[LM.leftHip][0] + f[LM.rightHip][0]) / 2));
     expect(seg.support!.wall!.x).toBeLessThan(hipX);
+    // the face band: the far foot touches it nearer the middle than the near foot
+    expect(seg.support!.wall!.x2).toBeGreaterThan(seg.support!.wall!.x);
+    expect(seg.support!.wall!.x2 - seg.support!.wall!.x).toBeLessThan(0.4 * median(seg.xyFull.map((f) => Math.hypot(f[LM.leftShoulder][0] - f[LM.leftHip][0], f[LM.leftShoulder][1] - f[LM.leftHip][1]))));
   });
 
   it('none of the lab reels (floor work, burpees, a staff flow) nor the owner captures grows a wall or a bar', () => {

@@ -17,7 +17,7 @@ export function exerciseFromProcessed(seg: ProcessedSegment, fields: Partial<New
   // overwrote the floor and the renderer fell back to "lowest ankle + 1.1 torso"
   const facing = facingRatio(seg.xyFull, seg.worldClean);
   const scene = { ...(fields.scene ?? { cameraStatic: false }), floor: { a: seg.floor.a, b: seg.floor.b }, ...(Number.isFinite(facing) ? { facing } : {}),
-    ...(seg.support?.wall ? { wall: { x: seg.support.wall.x, bodyLeft: seg.support.wall.bodyLeft } } : {}),
+    ...(seg.support?.wall ? { wall: { x: seg.support.wall.x, x2: seg.support.wall.x2, bodyLeft: seg.support.wall.bodyLeft } } : {}),
     ...(seg.support?.bar ? { bar: { y: seg.support.bar.y, x0: seg.support.bar.x0, x1: seg.support.bar.x1 } } : {}) };
   // Phase 14: the cleaned 3D track, downsampled with the same step as the figure so frames stay aligned
   const w3 = downsampleWorld(seg.worldClean, seg.fps, 15);

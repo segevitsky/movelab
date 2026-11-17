@@ -282,9 +282,10 @@ What: RTMW (RTMPose whole-body, COCO-WholeBody 133 points: body, feet incl. heel
    **Done 2026-11-13:** `src/pipeline/hands.ts` (forearm-frame tracking, reach / wrist / score / 2 s gap rules),
    `feet('smallToe')`, codec flags bit 3–4, palm + finger chains and a foot sole in `draw.ts`. Found and fixed on the
    way: `feet()` measured raw points against the pinned ankle (feet off by the root-pinning offset).
-4. Walls and bars (owner 2026-11-13, "a person doing a handstand on the wall"): infer the support from the body —
-   still hands/feet off the floor at one x → wall slab; hands still overhead with the body hanging → bar through the
-   wrists; manual prop tag as fallback. Reuses contacts + floor fit; no detector. Goes with Phase 16 props step 2.
+4. Walls and bars (owner 2026-11-13, "a person doing a handstand on the wall"): **done 2026-11-17** —
+   `src/pipeline/support.ts` infers the support from the body (wall: a still foot/hand off the floor, beyond the body,
+   with the body leaning on it; bar: still hands overhead with the hips swinging beneath them), `scene.wall/bar` on
+   the card, slab / rod drawn behind the figure, equipment suggested. The equipment tag stays the owner's override.
 Risk: speed on an iPhone (RTMW-m 256×192 ≈ 10–20 ms on ANE; RTMW-l 384×288 slower); licence (Apache-2.0).
 
 ## Phase 16 — Hands and props (owner 2026-11-08; hands step 1 + staff tracker/renderer built the same night; staff *detector* and object detector open)

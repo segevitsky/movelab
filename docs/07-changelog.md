@@ -3,6 +3,23 @@
 _What was done, when, and what is open. Newest first. Keep entries short; details live in the phase docs,
 `docs/06-design-direction.md` and the commit history (`git log --format='%ad %s' --date=short`)._
 
+## 2026-11-17 (Tuesday) — walls and bars from the body; Android capture port in progress
+Owner: "u can do all android captures, and than move on to the walls and bars and well test it all together".
+- **Walls and bars** (`src/pipeline/support.ts`, commit `e4780f5`): never seen, inferred from where the body holds
+  still. Wall = a foot or hand still ≥ 1 s, off the floor and above the hips, beyond every joint on that side, hips
+  well off the floor, body leaning on it (feet above the shoulders, or the shoulders leaning toward it; hands only by
+  leaning — reel 2's staff held out to the side passed everything else). Bar = both hands still above the shoulders
+  and level while the hips swing ≥ 0.3 torso beneath them, reaching ≥ 1.2 torso below the hands (a standing overhead
+  hold has the shape but nothing hangs; the floor cannot tell them apart because hanging feet count as contacts, the
+  motion can). Stored as `scene.wall` / `scene.bar` on the card, drawn as a slab / a rod behind the figure, tagger
+  suggests `wall` / `pullup-bar`. No false support on the three lab reels and the owner captures.
+- **Android capture** (`modules/pose/android`, Kotlin): port of the iOS module — MediaMetadataRetriever frame reader,
+  MediaPipe Pose Landmarker (GPU → CPU fallback), RTMW through ONNX Runtime (NNAPI → CPU), scene analysis and scene
+  diff ports, same JSON. Both models ship as assets (APK ≈ 260 MB). Found on the emulator: R8 renamed the protobuf
+  fields MediaPipe reads by reflection → keep rules; ORT 1.32's telemetry JNI symbol missing → pinned 1.20. Verification
+  on the emulator in progress; Vision second opinion and reel-link capture stay iOS-only.
+- Weekend: the owner's phone needed re-signing (profile to 2026-11-24); Apple Developer enrollment still pending.
+
 ## 2026-11-13 (Friday) — fingers and feet from the whole-body model (Phase 17 step 3)
 Owner: "lets go in order" (fingers/feet → re-capture old cards → Android capture → staff/props). Commit `05417fb`.
 - **Hands:** `src/pipeline/hands.ts` carries the 21 points per hand in the forearm frame (same recipe as `feet()`),

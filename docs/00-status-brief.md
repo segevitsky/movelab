@@ -23,11 +23,12 @@ him. Specs: `docs/01-product-spec.md` (what/why), `docs/02-architecture.md` (how
 | 7 — goals as drill ladders + feedback adaptation | **built** (2026-10-28) | `docs/phase7-results.md` |
 | 8 — AI remix | not started (needs the optional text-only backend) | plan |
 | UI design pass | **done** (2026-11-01): dark tokens, primitives, Library/Player/Today/saved-workout, share-as-GIF | `docs/06-design-direction.md` |
-| 9 — Android, player-first | **in progress** (2026-11-01): platform guards + library export/import done, JDK + SDK installed, first APK building; device pass pending | plan Phase 9 |
+| 9 — Android | **capture ported** (2026-11-17): Kotlin pose module (MediaPipe + RTMW/ONNX Runtime), camera / Photos capture verified on the emulator; APK 0.0.4 (≈ 260 MB, models bundled); real-phone speed unmeasured; reel links + Vision stay iOS | plan Phase 9 |
 | 13 — capture quality | **in progress** (2026-11-04): raw captures + fixtures, scene cuts + restart prefix, kneeling contacts + depth term, held limbs ≤ 2 s, full-screen preview | plan Phase 13 |
 | 14 — 3D view for frontal reels | **built, opt-in** (2026-11-04): 3D track stored, floor levelled in 3D, "3/4 view" chip per card (never a default — owner found it distorted on a standing drill); legs on kneeling floor work still limited by MediaPipe | plan Phase 14 |
 | 15 — uploads + sharing workouts | **built** (2026-11-08): Add sheet (camera / Photos / link / manual), `.movelab` workout files shared phone-to-phone and imported on open, library long-press menu; Android receives + builds, no capture yet | plan Phase 15 |
 | 17 — whole-body model | **shipped** (2026-11-10): RTMW on device (ANE, 7 ms/fr) + MediaPipe 3D, pipeline re-tuned; owner: "good tracking, much clearer". Step 3 (2026-11-13): finger joints + small toes drawn, feet pin-offset fix | plan Phase 17 |
+| Walls and bars | **built** (2026-11-17): inferred from where the body holds still (`src/pipeline/support.ts`), slab / rod behind the figure, equipment suggested; owner test pending | plan Phase 17 step 4 |
 | Owner's session notes | workout builder wizard + drag-to-reorder (next), bold design pass v2, balanced-workout standards (to discuss) | `docs/07-changelog.md` |
 
 ## What the app does today (2026-11-01)

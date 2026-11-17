@@ -17,7 +17,11 @@ Owner: "u can do all android captures, and than move on to the walls and bars an
   MediaPipe Pose Landmarker (GPU → CPU fallback), RTMW through ONNX Runtime (NNAPI → CPU), scene analysis and scene
   diff ports, same JSON. Both models ship as assets (APK ≈ 260 MB). Found on the emulator: R8 renamed the protobuf
   fields MediaPipe reads by reflection → keep rules; ORT 1.32's telemetry JNI symbol missing → pinned 1.20. Verification
-  on the emulator in progress; Vision second opinion and reel-link capture stay iOS-only.
+  on the Android 35 arm64 emulator (4 GB): the owner's 6 s lying-drill recording → auto-crop, 184/188 frames with
+  a person, one push exercise with fingers, saved to the library (309 ms/fr on the emulator's software path; a
+  real phone is the open question). Also found: the GPU delegate can fail on its first *run* (software GL) → CPU
+  retry on that frame; the .onnx asset is stored compressed → streamed out once. APK `MoveLab-0.0.4-capture.apk`
+  (≈ 260 MB with both models) on the Desktop. Vision second opinion and reel-link capture stay iOS-only.
 - Weekend: the owner's phone needed re-signing (profile to 2026-11-24); Apple Developer enrollment still pending.
 
 ## 2026-11-13 (Friday) — fingers and feet from the whole-body model (Phase 17 step 3)

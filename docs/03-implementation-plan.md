@@ -169,8 +169,14 @@ Kotlin ports land (parking lot). Steps:
    prebuild --platform android` clean ✅; JDK + SDK installed 2026-11-01 ✅; first debug APK build running
    (Gradle, first run stalled on downloads once). Then a release APK to sideload. ⏳
 4. **Device pass.** Library grid at 60 fps with 3 loops, player with timers/haptics/audio, share-as-GIF.
-5. Later (own phases): MediaPipe Pose Android (same model file), MediaProjection screen recorder, share intent
-   from Instagram, scene analysis port.
+5. **Capture port ✅ 2026-11-17** (`modules/pose/android`, Kotlin): MediaPipe Pose Landmarker (same .task; GPU →
+   CPU fallback at creation and on the first failed run), RTMW whole-body through ONNX Runtime 1.20 (NNAPI → CPU),
+   MediaMetadataRetriever frame reader, scene analysis + scene diff ports; same JSON as iOS. Camera and Photos
+   capture on Android; verified on the emulator (one push exercise with fingers from the owner's lying drill).
+   Open: speed on a real phone (emulator software path: 309 ms/fr whole-body); reel links need the MediaProjection
+   screen recorder + share intent from Instagram (still iOS-only); no Vision second opinion; APK ≈ 260 MB with the
+   models bundled (Play Store later: asset packs or a one-time model download). Release minification must stay off
+   (MediaPipe reflection / stack walking break under R8).
 
 Acceptance: an Android phone imports an iPhone export and plays a generated workout end-to-end; `npm test`
 and `npm run typecheck` green; iOS unchanged.

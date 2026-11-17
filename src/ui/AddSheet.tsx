@@ -13,7 +13,9 @@ import { OptionRow, PromptSheet, Sheet } from './primitives';
 export function AddSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const router = useRouter();
   const [link, setLink] = useState(false);
-  const noPose = () => Alert.alert('Not on Android yet', 'Turning a video into a figure runs on iPhone for now. You can still receive workouts and build your own from the library.');
+  const noPose = () => Alert.alert('Not on this platform yet', 'Turning a video into a figure is not available here yet. You can still receive workouts and build your own from the library.');
+  // the reel capture records a logged-in WebView with the iOS screen recorder; Android has no port of it yet
+  const noLink = () => Alert.alert('Not on Android yet', 'Reel links are captured on iPhone for now. On Android, record with the camera or pick a video from your gallery.');
 
   const fromPhotos = async () => {
     if (!POSE_SUPPORTED) return noPose();
@@ -35,6 +37,7 @@ export function AddSheet({ visible, onClose }: { visible: boolean; onClose: () =
     const r = parseReel(url.trim());
     if (!r) { Alert.alert('Not a reel link', 'Paste an Instagram reel or post link.'); return; }
     if (!POSE_SUPPORTED) return noPose();
+    if (Platform.OS === 'android') return noLink();
     setLink(false); onClose();
     router.push({ pathname: '/capture', params: { code: r.code, kind: r.kind, url: url.trim() } });
   };

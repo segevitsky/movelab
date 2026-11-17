@@ -71,8 +71,8 @@ declare class PoseNative extends NativeModule<PoseEvents> {
   processVision(fileUri: string, options: ProcessOptions): Promise<PoseResult>;
 }
 
-/** True where the native pose module is built (iOS). Android: plan Phase 9 step 5. */
-export const POSE_SUPPORTED = Platform.OS === 'ios';
+/** True where the native pose module is built (iOS since Phase 2, Android since 2026-11-17 — Kotlin port). */
+export const POSE_SUPPORTED = Platform.OS === 'ios' || Platform.OS === 'android';
 export const Pose: PoseNative = POSE_SUPPORTED
   ? requireNativeModule<PoseNative>('Pose')
   : unsupportedModule<PoseNative>('Pose', { modelInfo: () => ({ path: null, bytes: 0, found: false }), cancel: () => {} } as Partial<PoseNative>);

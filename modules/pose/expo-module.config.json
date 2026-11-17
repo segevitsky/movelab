@@ -1,6 +1,9 @@
 {
-  "platforms": ["apple"],
+  "platforms": ["apple", "android"],
   "apple": {
     "modules": ["PoseModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.pose.PoseModule"]
   }
 }

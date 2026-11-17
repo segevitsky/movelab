@@ -1,0 +1,32 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.segev.movelab'
+version = '0.0.1'
+
+android {
+  namespace "expo.modules.pose"
+  defaultConfig {
+    versionCode 1
+    versionName "0.0.1"
+    consumerProguardFiles 'proguard-rules.pro'
+  }
+  // the models ship as assets (assets/models is the canonical copy; scripts/fetch-models.sh downloads them)
+  sourceSets {
+    main {
+      assets.srcDirs += ['../../../assets/models']
+    }
+  }
+  androidResources {
+    noCompress += ['task', 'onnx']
+  }
+}
+
+dependencies {
+  implementation 'com.google.mediapipe:tasks-vision:0.10.21'
+  // 1.32.0's telemetry component is missing its JNI symbol on this build (UnsatisfiedLinkError at app start,
+  // ExceptionInInitializerError when the session is created, emulator 2026-11-17); 1.20 has no telemetry
+  implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.20.0'
+}

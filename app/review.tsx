@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { saveRawCapture } from '../src/capture/rawStore';
@@ -89,7 +89,7 @@ export default function Review() {
     let resVision: PoseResult | null = null;
     const errors: Record<string, string> = {};
     try { setProgress('Second opinion (Vision)…'); resVision = await Pose.processVision(params.uri, { cropRect: crop, targetFps: 15 }); } catch (e) { errors.vision = String(e); console.warn('vision unavailable', e); }
-    setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}${res.source === 'hybrid' ? ` · whole-body model${res.engine?.coreML ? ' (ANE)' : ' (CPU)'} ${res.engine?.rtmwDetected ?? 0} fr, ${Math.round((res.engine?.rtmwMs ?? 0) / Math.max(1, res.stats.frames))} ms/fr, load ${((res.engine?.loadMs ?? 0) / 1000).toFixed(1)} s` : ''}`);
+    setStats(`${res.stats.detected}/${res.stats.frames} frames with a person · ${(res.stats.ms / 1000).toFixed(1)} s · ${res.width}×${res.height}${sc.matQuad ? ' · mat found' : ''}${crop ? ' · cropped' : ''}${res.source === 'hybrid' ? ` · whole-body model${res.engine?.coreML ? (Platform.OS === 'ios' ? ' (ANE)' : ' (NNAPI)') : ' (CPU)'} ${res.engine?.rtmwDetected ?? 0} fr, ${Math.round((res.engine?.rtmwMs ?? 0) / Math.max(1, res.stats.frames))} ms/fr, load ${((res.engine?.loadMs ?? 0) / 1000).toFixed(1)} s` : ''}`);
     // 3. pipeline
     setPhase('pipeline');
     setProgress('Splitting into exercises…');
@@ -170,7 +170,7 @@ export default function Review() {
 
   function makeItem(fr: RawFrame[], range: Range, fpsUsed: number, index: number, prev?: Partial<Item>): Item {
     const processed = processRange(fr, range, fpsUsed);
-    const suggestion = suggestTags({ xy: processed.xyFull, world: processed.worldClean, features: processed.features, periodSeconds: processed.period?.periodic ? processed.period.period : null, caption: params.caption ?? null, username: params.username ?? null });
+    const suggestion = suggestTags({ xy: processed.xyFull, world: processed.worldClean, features: processed.features, support: processed.support, periodSeconds: processed.period?.periodic ? processed.period.period : null, caption: params.caption ?? null, username: params.username ?? null });
     return {
       id: `${range.start}-${range.end}-${Math.random().toString(36).slice(2, 6)}`,
       range,

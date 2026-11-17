@@ -13,6 +13,13 @@ Owner: "u can do all android captures, and than move on to the walls and bars an
   hold has the shape but nothing hangs; the floor cannot tell them apart because hanging feet count as contacts, the
   motion can). Stored as `scene.wall` / `scene.bar` on the card, drawn as a slab / a rod behind the figure, tagger
   suggests `wall` / `pullup-bar`. No false support on the three lab reels and the owner captures.
+  **Owner test the same evening** (hannahbarrettyoga wall plank, fixture `capture-2026-11-17-DfSGZN3Dn7V-wallplank.json`):
+  no wall at first — the feet were "contacts", so the fitted floor tilted 19° up to them and against it they were on
+  the floor. Fixes: "off the floor" is judged against a level line through the clip's lowest contacts; a horizontal
+  body with raised feet counts as leaning on the wall; the face is a *band* between the nearest and farthest touch
+  points, measured from the drawn feet (the analysis track's toes sat 15–25 px off them: "one leg looks like it's
+  floating"). Open: the fitted floor itself still tilts toward wall contacts (re-fit from the other contacts once a
+  wall is found); the 3/4 view knows nothing about walls (parked with Phase 14).
 - **Android capture** (`modules/pose/android`, Kotlin): port of the iOS module — MediaMetadataRetriever frame reader,
   MediaPipe Pose Landmarker (GPU → CPU fallback), RTMW through ONNX Runtime (NNAPI → CPU), scene analysis and scene
   diff ports, same JSON. Both models ship as assets (APK ≈ 260 MB). Found on the emulator: R8 renamed the protobuf

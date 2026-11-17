@@ -5,6 +5,7 @@
 import { clean, toTrack } from './clean';
 import { feet } from './feet';
 import { hands } from './hands';
+import { detectSupport } from './support';
 import { features } from './features';
 import { bestLoop, findPeriod } from './reps';
 import { hideImplausibleLimbs, sanityCheck } from './sanity';
@@ -48,6 +49,7 @@ export function processRange(frames: RawFrame[], range: Range, fps: number, opts
   const footOpts = { pinOffset: pinned.offset, ...(hybrid ? { minVisibility: 0.4 } : {}) };
   const clPinned = clHeld.map((fr, i) => fr.map((p) => (Number.isNaN(p[0]) ? p : ([p[0], p[1] + pinned.offset[i]] as [number, number]))));
   return {
+    support: detectSupport(pinned.xy, contacts, floor, fps, torso),
     segment: seg,
     fps,
     xy: clPinned,

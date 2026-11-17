@@ -16,7 +16,9 @@ export function exerciseFromProcessed(seg: ProcessedSegment, fields: Partial<New
   // `fields` first, then set `scene` — owner fixture DfC8LdUIjV4-float floated because the caller's scene
   // overwrote the floor and the renderer fell back to "lowest ankle + 1.1 torso"
   const facing = facingRatio(seg.xyFull, seg.worldClean);
-  const scene = { ...(fields.scene ?? { cameraStatic: false }), floor: { a: seg.floor.a, b: seg.floor.b }, ...(Number.isFinite(facing) ? { facing } : {}) };
+  const scene = { ...(fields.scene ?? { cameraStatic: false }), floor: { a: seg.floor.a, b: seg.floor.b }, ...(Number.isFinite(facing) ? { facing } : {}),
+    ...(seg.support?.wall ? { wall: { x: seg.support.wall.x, bodyLeft: seg.support.wall.bodyLeft } } : {}),
+    ...(seg.support?.bar ? { bar: { y: seg.support.bar.y, x0: seg.support.bar.x0, x1: seg.support.bar.x1 } } : {}) };
   // Phase 14: the cleaned 3D track, downsampled with the same step as the figure so frames stay aligned
   const w3 = downsampleWorld(seg.worldClean, seg.fps, 15);
   const figure3d = w3.world.some((f) => !!f) ? toBase64(encodeWorld(w3.world, w3.fps)) : null;

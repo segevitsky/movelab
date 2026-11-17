@@ -89,7 +89,7 @@ export function posture(xy: Track, world?: World): TagSuggestion['posture'] {
   return 'standing';
 }
 
-export function suggestTags(input: { xy: Track; world?: World; features: Features; periodSeconds: number | null; caption?: string | null; ocr?: string | null; username?: string | null }): TagSuggestion {
+export function suggestTags(input: { xy: Track; world?: World; features: Features; periodSeconds: number | null; caption?: string | null; ocr?: string | null; username?: string | null; /** walls / bars inferred from the body (src/pipeline/support.ts) */ support?: { wall?: unknown; bar?: unknown } }): TagSuggestion {
   const text = `${input.caption ?? ''}\n${input.ocr ?? ''}`;
   const reasons: string[] = [];
   const slots = new Set<Slot>();
@@ -102,6 +102,8 @@ export function suggestTags(input: { xy: Track; world?: World; features: Feature
     k.slots?.forEach((s) => slots.add(s));
     k.equipment?.forEach((e) => equipment.add(e));
   }
+  if (input.support?.wall) { equipment.add('wall'); reasons.push('the body holds still against a wall'); }
+  if (input.support?.bar) { equipment.add('pullup-bar'); reasons.push('the body hangs from a bar'); }
   const post = posture(input.xy, input.world);
   const active = input.features.activeJoints.map((j) => j.name);
   if (!pattern) {

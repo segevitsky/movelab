@@ -11,6 +11,7 @@ export { resample, estimateFps } from './resample';
 export { contacts, footContact, type Contacts, type ContactPoint } from './contacts';
 export { fitFloor, pinToFloor, floorYAt, type FloorLine } from './floor';
 export { oneEuro } from './oneEuro';
+export { detectSupport, type Support, type SupportOptions } from './support';
 
 import { clean, toTrack, torsoLengths } from './clean';
 import { feet } from './feet';
@@ -27,6 +28,7 @@ import { depthOrder, type DepthOrder } from './depth';
 import { median } from './math';
 import { segment, sliceSegment, type SegmentOptions } from './segment';
 import { trackStaff, type StaffLine, type StaffTrack } from './props/staff';
+import { detectSupport, type Support } from './support';
 export { trackStaff, type StaffLine, type StaffTrack } from './props/staff';
 import type { FootTrack, HandTrack, LoopResult, PeriodResult, RawPose, SanityIssue, Segment, Track } from './types';
 
@@ -55,6 +57,8 @@ export type ProcessedSegment = {
   features: Features;
   /** Phase 16 props: a staff tracked as a rigid rod (only when the capture had line detections) */
   props?: { staff?: { a: StaffTrack['a']; b: StaffTrack['b']; behind: boolean[] } };
+  /** walls and bars inferred from where the body holds still (src/pipeline/support.ts); absent keys = none found */
+  support?: Support;
 };
 
 /** Whole pipeline for one capture: segment → clean → sanity → reps/loop → feet → features. */
@@ -93,8 +97,10 @@ export function processCapture(raw: RawPose, opts: { segment?: SegmentOptions; m
       const st = trackStaff(opts.staffLines, clPinned, frames.map((f) => f.t), fps, torso, { pinOffset: pinned.offset });
       if (st.L > 0) props = { staff: { a: st.a, b: st.b, behind: st.behind } };
     }
+    const support = detectSupport(pinned.xy, contacts, floor, fps, torso);
     return {
       props,
+      support,
       segment: seg,
       fps,
       xy: clPinned,

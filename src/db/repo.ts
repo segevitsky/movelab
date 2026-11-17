@@ -69,7 +69,7 @@ export function clipFromExercise(e: Pick<Exercise, 'figure' | 'scene'>): FigureC
   if (!e.figure) return null;
   try {
     const clip = decodeClip(fromBase64(e.figure));
-    if (e.scene?.matQuad || e.scene?.floor) clip.scene = { matQuad: e.scene.matQuad?.map((p) => [p[0], p[1]] as [number, number]), floor: e.scene.floor };
+    if (e.scene?.matQuad || e.scene?.floor || e.scene?.wall || e.scene?.bar) clip.scene = { matQuad: e.scene.matQuad?.map((p) => [p[0], p[1]] as [number, number]), floor: e.scene.floor, wall: e.scene.wall, bar: e.scene.bar };
     return clip;
   } catch {
     return null;

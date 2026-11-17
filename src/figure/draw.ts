@@ -18,6 +18,9 @@ export const COLORS = {
   torso: '#2b3142',
   staff: '#8a6a48', // Phase 16 props: wood
   staffEdge: '#5e462e',
+  wall: '#ebe6dd', // support inferred from the body: a wall slab, a bar
+  wallEdge: '#cfc7b9',
+  bar: '#4a4f5c',
   floor: '#e9e4db',
   floorLine: '#dad3c7',
   horizon: '#ded8ce',
@@ -120,6 +123,20 @@ export function drawFrame(canvas: SkCanvas, prep: Prepared, k: number, opts: Dra
     const path = Skia.Path.Polygon(pts, true);
     canvas.drawPath(path, fill(COLORS.mat));
     canvas.drawPath(path, stroke(COLORS.matRim, Math.max(1, t * 0.12)));
+  }
+
+  // --- support (walls / bars inferred from the body): a wall is a slab from the floor up, on the far side of the
+  // figure; a bar a rod through the hands. Both sit behind the figure.
+  if (prep.wall && opts.floor !== false) {
+    const wx = (prep.wall.x - x0) * scale;
+    const far = prep.wall.bodyLeft ? W + 4 : -4;
+    const r = Skia.XYWHRect(Math.min(wx, far), -4, Math.abs(far - wx), gy + 4);
+    canvas.drawRect(r, fill(COLORS.wall));
+    canvas.drawLine(wx, -4, wx, gy, stroke(COLORS.wallEdge, Math.max(1.5, t * 0.22)));
+  }
+  if (prep.bar) {
+    const A = T([prep.bar.x0 - prep.torso * 0.6, prep.bar.y]), B = T([prep.bar.x1 + prep.torso * 0.6, prep.bar.y]);
+    canvas.drawLine(A[0], A[1], B[0], B[1], stroke(COLORS.bar, t * 0.5));
   }
 
   // --- cast shadow (translucent when there is a mat so it reads on both surfaces)

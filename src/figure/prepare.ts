@@ -19,7 +19,7 @@ export type FigureClip = {
   /** optional HUD: two joints with per-frame angles in degrees */
   hud?: { name: string; angles: number[] }[];
   /** Architecture §5a: floor mat quad in the same pixel space as xy (TL, TR, BR, BL); Phase 2.5: fitted floor */
-  scene?: { matQuad?: XY[]; floor?: { a: number; b: number } };
+  scene?: { matQuad?: XY[]; floor?: { a: number; b: number }; wall?: { x: number; bodyLeft: boolean }; bar?: { y: number; x0: number; x1: number } };
   /** debug overlays (dev screen only): per-frame contact flags per point, flagged limb-frames */
   debug?: { contacts?: Record<string, boolean[]>; flagged?: { frame: number; limbs: string[] }[] };
   /** Phase 2.5 step 5: per frame, is the right side nearer the camera (legs / arms)? default true */
@@ -59,6 +59,8 @@ export type Prepared = {
   loop: { i0: number; i1: number };
   matQuad?: XY[];
   floor?: { a: number; b: number };
+  wall?: { x: number; bodyLeft: boolean };
+  bar?: { y: number; x0: number; x1: number };
   debug?: FigureClip['debug'];
 };
 
@@ -135,7 +137,7 @@ export function prepare(clip: FigureClip, width: number, height: number): Prepar
     cam: { x0: cx[i] - width / (2 * scale), y0: ground - (0.87 * height) / scale, scale },
   }));
 
-  return { width, height, fps, torso, th, ground, frames, loop: clip.loop ?? { i0: 0, i1: n - 1 }, matQuad: clip.scene?.matQuad, floor: clip.scene?.floor, debug: clip.debug };
+  return { width, height, fps, torso, th, ground, frames, loop: clip.loop ?? { i0: 0, i1: n - 1 }, matQuad: clip.scene?.matQuad, floor: clip.scene?.floor, wall: clip.scene?.wall, bar: clip.scene?.bar, debug: clip.debug };
 }
 
 /** Shadow projection: light from front-left, high. Point → floor (render.py `proj`). */

@@ -3,11 +3,13 @@
  * We never see the wall or the bar; the body tells us where the support surface is, the same way the floor is fitted
  * from heel/toe contacts. Pure, deterministic, tested.
  *
- * - **Wall**: a foot or hand that holds still, well above the floor and above the hips, consistently to one side of
- *   the hips and beyond every other joint on that side, while the body leans on it (the point is above the shoulders,
- *   or the shoulders lean toward it from the hips), for ≥ `minSeconds` → a wall at that x, the body on the other
- *   side (wall handstand, wall walk, leaning push-up). A hand holding a staff out to the side while standing upright
- *   (reel 2) passes everything but the lean.
+ * - **Wall**: a foot or hand that holds still, well above the floor and not below the hips (feet) / above them
+ *   (hands), consistently to one side of the hips and beyond every other joint on that side, while the body leans on
+ *   it (feet above the shoulders, a horizontal body with the feet raised, or the shoulders leaning toward it from the
+ *   hips), for ≥ `minSeconds` → a wall at that x, the body on the other side (wall handstand, wall walk, wall plank,
+ *   leaning push-up). A hand holding a staff out to the side while standing upright (reel 2) passes everything but
+ *   the lean. "Off the floor" is judged against a *level* line through the lowest contacts of the clip, not the
+ *   fitted floor: with the feet on a wall the fitted floor tilts up to meet them (owner capture 2026-11-17, 19°).
  * - **Bar**: both hands holding still, above the shoulders and level with each other, while the hips swing up and
  *   down beneath them (≥ 0.3 torso of travel, reaching ≥ 1.2 torso below the hands) for ≥ `minSeconds` → a bar
  *   through the hands (pull-ups, leg raises). A standing overhead hold has the same shape but nothing hangs; the
@@ -18,7 +20,7 @@
  */
 import type { Contacts } from './contacts';
 // `contacts` is accepted for future use (hands planted on the floor are never a bar); the rules below use geometry and motion
-import { hypot2, median } from './math';
+import { hypot2, median, percentile } from './math';
 import { LM, type Track } from './types';
 
 export type Support = {
@@ -60,7 +62,12 @@ export function detectSupport(xy: Track, _contacts: Contacts, floor: { a: number
   const minFrames = Math.max(2, Math.round((opts.minSeconds ?? 1.0) * fps));
   const wallSide = (opts.wallSide ?? 0.35) * torso, wallAbove = (opts.wallAbove ?? 0.3) * torso;
   const offFloor = (opts.offFloor ?? 0.5) * torso, hang = (opts.hang ?? 1.2) * torso;
-  const floorY = (x: number) => floor.a * x + floor.b;
+  // level floor: the lowest hand / foot point of the clip (97th percentile over frames of the per-frame lowest);
+  // the fitted line is the fallback when no contact point is known
+  const lowest: number[] = [];
+  for (const f of xy) { const ys = [LM.leftWrist, LM.rightWrist, LM.leftHeel, LM.rightHeel, LM.leftToe, LM.rightToe].map((j) => f[j]).filter(known).map((p) => p[1]); if (ys.length) lowest.push(Math.max(...ys)); }
+  const level = lowest.length ? percentile(lowest, 97) : NaN;
+  const floorY = (x: number) => (Number.isFinite(level) ? level : floor.a * x + floor.b);
   const hipX = xy.map((f) => (known(f[LM.leftHip]) && known(f[LM.rightHip]) ? (f[LM.leftHip][0] + f[LM.rightHip][0]) / 2 : NaN));
   const hipY = xy.map((f) => (known(f[LM.leftHip]) && known(f[LM.rightHip]) ? (f[LM.leftHip][1] + f[LM.rightHip][1]) / 2 : NaN));
 
@@ -76,20 +83,22 @@ export function detectSupport(xy: Track, _contacts: Contacts, floor: { a: number
       let ok = known(p) && Number.isFinite(hipX[i]) && speed[i] <= maxSpeed;
       if (ok) {
         const dx = p[0] - hipX[i];
-        // the body leans on it: hips well off the floor (a seated flow's raised foot is not a wall) and either the
-        // point is above the shoulders (feet on the wall) or the shoulders lean toward it from the hips
-        ok = Math.abs(dx) >= wallSide && hipY[i] - p[1] >= wallAbove && floorY(p[0]) - p[1] >= offFloor && floorY(hipX[i]) - hipY[i] >= 0.8 * torso;
+        // the body leans on it: hips well off the floor (a seated flow's raised foot is not a wall); feet may sit
+        // at hip height (wall plank), hands must be above the hips
+        const isHand = j === LM.leftWrist || j === LM.rightWrist;
+        ok = Math.abs(dx) >= wallSide && hipY[i] - p[1] >= (isHand ? wallAbove : -wallAbove) && floorY(p[0]) - p[1] >= offFloor && floorY(hipX[i]) - hipY[i] >= 0.8 * torso;
         if (ok) {
           const shL = xy[i][LM.leftShoulder], shR = xy[i][LM.rightShoulder];
           if (!known(shL) || !known(shR)) ok = false;
           else {
             const shX = (shL[0] + shR[0]) / 2, shY = (shL[1] + shR[1]) / 2;
             const lean = shX - hipX[i];
-            // feet: on the wall above the shoulders, or the body leaning; hands: leaning only (a hand raised to the
-            // side above the shoulders — a staff held up — is never a wall; in a handstand the hands are on the floor)
-            const isHand = j === LM.leftWrist || j === LM.rightWrist;
+            // feet: above the shoulders (handstand), or the body horizontal with the feet raised (wall plank), or the
+            // body leaning; hands: leaning only (a hand raised to the side above the shoulders — a staff held up — is
+            // never a wall; in a handstand the hands are on the floor)
             const leaning = Math.sign(lean) === Math.sign(dx) && Math.abs(lean) >= 0.15 * torso;
-            ok = leaning || (!isHand && p[1] < shY);
+            const horizontal = Math.abs(shY - hipY[i]) <= 0.5 * torso;
+            ok = leaning || (!isHand && (p[1] < shY || horizontal));
           }
         }
         // beyond every other joint on that side: nothing of the body is past the wall

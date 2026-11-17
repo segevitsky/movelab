@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { contacts } from './contacts';
+import { median } from './math';
 import { detectSupport } from './support';
 import { processCapture } from './index';
 import { loadReel } from './__fixtures__/load';
@@ -76,6 +77,21 @@ describe('detectSupport(): walls and bars inferred from where the body holds sti
       [LM.leftToe]: i < 12 ? [655, 230] : [535 + i * 6, 230], [LM.rightToe]: i < 12 ? [658, 230] : [538 + i * 6, 230],
     }));
     expect(sup(xy).wall).toBeUndefined();
+  });
+
+  it("owner capture 2026-11-17 (hannahbarrettyoga wall plank: hands on the floor, feet on the wall at hip height): a wall on the feet's side", async () => {
+    const { playbackWindow } = await import('./playback');
+    const { estimateFps, resample } = await import('./resample');
+    const cap = JSON.parse(readFileSync(join(__dirname, '__fixtures__', 'owner', 'capture-2026-11-17-DfSGZN3Dn7V-wallplank.json'), 'utf8')) as { timeline?: { e: string; t: number; d: number; rec: number }[]; result: { frames: RawFrame[] } };
+    const w = playbackWindow(cap.timeline ?? []);
+    let frames = cap.result.frames; if (Math.abs(estimateFps(frames) - 30) > 1) frames = resample(frames, 30);
+    frames = frames.filter((f) => f.t >= w.start && f.t <= w.end);
+    const seg = processCapture({ frames }).reduce((a, b) => (b.xy.length > a.xy.length ? b : a));
+    expect(seg.support?.wall).toBeDefined();
+    expect(seg.support!.wall!.bodyLeft).toBe(false); // the feet (and the wall) are on the left, the body on the right
+    expect(seg.support?.bar).toBeUndefined();
+    const hipX = median(seg.xyFull.map((f) => (f[LM.leftHip][0] + f[LM.rightHip][0]) / 2));
+    expect(seg.support!.wall!.x).toBeLessThan(hipX);
   });
 
   it('none of the lab reels (floor work, burpees, a staff flow) nor the owner captures grows a wall or a bar', () => {

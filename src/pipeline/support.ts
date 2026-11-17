@@ -112,8 +112,12 @@ export function detectSupport(xy: Track, _contacts: Contacts, floor: { a: number
     const pos = wallSign.filter((s) => s > 0).length, neg = wallSign.length - pos;
     const sign = pos >= neg ? 1 : -1, share = Math.max(pos, neg) / wallSign.length;
     const xs = wallX.filter((_, i) => wallSign[i] === sign);
-    const x = median(xs);
-    const spread = median(xs.map((v) => Math.abs(v - x)));
+    const mid = median(xs);
+    const spread = median(xs.map((v) => Math.abs(v - mid)));
+    // the wall face is where the body ends: the outermost of the pooled heel / toe / ankle / wrist points (a
+    // robust percentile), not their middle — with the middle, the toes pierced the slab and the heels floated
+    // (owner, 2026-11-17: "one leg looks like it's floating")
+    const x = sign > 0 ? percentile(xs, 92) : percentile(xs, 8);
     if (share >= 0.85 && spread <= 0.15 * torso && xs.length >= minFrames) out.wall = { x, bodyLeft: sign > 0, frames: xs.length };
   }
 
